@@ -18,12 +18,23 @@ const INTERESTS = [
   'Parties', 'Studying', 'Cars', 'Netflix', 'Gym', 'Finance'
 ]
 
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = error => reject(error)
+  })
+}
+
 export default function Onboarding() {
   const { user, fetchProfile } = useAuthStore()
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [idUploading, setIdUploading] = useState(false)
+  const [idVerified, setIdVerified] = useState<boolean | null>(null)
 
   const [form, setForm] = useState({
     name: '', age: '', gender: '', campus: '',
@@ -37,13 +48,13 @@ export default function Onboarding() {
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file || !user) return
 
     setUploading(true)
     try {
       const fileExt = file.name.split('.').pop()
       const fileName = `${Math.random()}.${fileExt}`
-      const filePath = `${fileName}`
+      const filePath = `${user.id}/${fileName}`
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
@@ -65,6 +76,50 @@ export default function Onboarding() {
     }
   }
 
+  const handleIDUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+
+    setIdUploading(true)
+    try {
+      // 1. Upload to storage
+      const filePath = `${user.id}-studentid.jpg`
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      // 2. Call verification API
+      const base64 = await fileToBase64(file)
+      const response = await fetch('/api/verify-student-id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: base64,
+          name: form.name,
+          campus: form.campus
+        })
+      })
+
+      if (!response.ok) throw new Error('Verification failed')
+      
+      const result = await response.json()
+      setIdVerified(result.verified)
+      
+      if (result.verified) {
+        toast.success('Identity verified! 🎉')
+      } else {
+        toast.info('ID uploaded. Under review.')
+      }
+    } catch (err: any) {
+      toast.error('ID verification error')
+      console.error(err)
+    } finally {
+      setIdUploading(false)
+    }
+  }
+
   const toggleInterest = (i: string) => {
     setForm(f => ({
       ...f,
@@ -79,9 +134,10 @@ export default function Onboarding() {
     if (step === 2) return form.campus && form.course && form.year
     if (step === 3) return form.bio.length >= 20
     if (step === 4) return form.interests.length >= 3
-    if (step === 5) return form.vibe !== ''
-    if (step === 6) return form.weekend_plan !== ''
-    if (step === 7) return form.relationship_goal !== ''
+    if (step === 5) return idVerified !== null
+    if (step === 6) return form.vibe !== ''
+    if (step === 7) return form.weekend_plan !== ''
+    if (step === 8) return form.relationship_goal !== ''
     return true
   }
 
@@ -104,7 +160,7 @@ export default function Onboarding() {
         weekend_plan: form.weekend_plan,
         relationship_goal: form.relationship_goal,
         photos: [form.photo_url],
-        verified: false,
+        verified: !!idVerified,
         premium: false,
         premium_until: null,
       }
@@ -120,7 +176,7 @@ export default function Onboarding() {
     }
   }
 
-  const steps = ['About You', 'Campus Info', 'Your Bio', 'Interests', 'Your Vibe', 'Weekend Plans', 'Looking for', 'Ready!']
+  const steps = ['About You', 'Campus Info', 'Your Bio', 'Interests', 'Verify Identity', 'Your Vibe', 'Weekend Plans', 'Looking for', 'Ready!']
 
   return (
     <main className="min-h-screen pt-14 flex items-center justify-center px-4 py-12">
@@ -148,10 +204,11 @@ export default function Onboarding() {
             {step === 2 && 'Where do you study?'}
             {step === 3 && 'Write a bio that shows your vibe'}
             {step === 4 && 'Pick up to 6 interests'}
-            {step === 5 && 'What defines your campus energy?'}
-            {step === 6 && 'Friday night arrives. What are you doing?'}
-            {step === 7 && 'What are you hoping to find on TurnUp?'}
-            {step === 8 && "You're all set to turn up!"}
+            {step === 5 && "We need to verify you're a student"}
+            {step === 6 && 'What defines your campus energy?'}
+            {step === 7 && 'Friday night arrives. What are you doing?'}
+            {step === 8 && 'What are you hoping to find on TurnUp?'}
+            {step === 9 && "You're all set to turn up!"}
           </p>
 
           {step === 1 && (
@@ -265,6 +322,37 @@ export default function Onboarding() {
 
           {step === 5 && (
             <div className="space-y-4">
+              <label className="block w-full cursor-pointer">
+                <div className="border-2 border-dashed border-white/10 rounded-2xl p-8 flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-all">
+                  {idUploading ? (
+                    <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+                  ) : idVerified === true ? (
+                    <div className="flex flex-col items-center text-green-400">
+                      <CheckCircle className="w-8 h-8 mb-2" />
+                      <span className="text-sm font-bold">Verified Successfully</span>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 text-gray-500 mb-2" />
+                      <span className="text-sm text-gray-400">Upload Student ID Photo</span>
+                      <span className="text-[10px] text-gray-600 mt-1">Clear photo showing name & campus</span>
+                    </>
+                  )}
+                </div>
+                <input type="file" className="hidden" accept="image/*" onChange={handleIDUpload} disabled={idUploading || idVerified === true} />
+              </label>
+              {idVerified === false && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                  <p className="text-xs text-amber-500">
+                    Identity verification is under review. You can still continue, but your "Verified" badge will appear once approved.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 {['🎉 Party Animal', '📚 Study Buddy', '🏋️ Gym Rat', '🎵 Music Head', '🍔 Foodie', '🎮 Gamer'].map(v => (
                   <button
@@ -283,7 +371,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 6 && (
+          {step === 7 && (
             <div className="space-y-3">
               {['Clubbing 🥂', 'House party 🏠', 'Netflix & chill 🛋️', 'Nyama choma 🍖', 'Still deciding 😂'].map(w => (
                 <button
@@ -301,7 +389,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 7 && (
+          {step === 8 && (
             <div className="space-y-3">
               {['Something serious 💍', 'Just vibing 😎', 'Study partner 📖', 'Weekend plans only 🗓️', 'New friends 👥', 'Smoking weed & feeling the buzz 💨'].map(r => (
                 <button
@@ -319,7 +407,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 8 && (
+          {step === 9 && (
             <div className="text-center py-4">
               <div className="w-20 h-20 rounded-full grad-bg flex items-center justify-center mx-auto mb-5">
                 <CheckCircle className="w-10 h-10 text-white" />
@@ -347,7 +435,7 @@ export default function Onboarding() {
                 <ChevronLeft className="w-4 h-4" /> Back
               </button>
             )}
-            {step < 8 ? (
+            {step < 9 ? (
               <button
                 onClick={() => setStep(s => s + 1)}
                 disabled={!canNext()}
