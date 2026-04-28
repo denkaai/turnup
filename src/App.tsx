@@ -16,7 +16,7 @@ import Pricing from '@/sections/Pricing'
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile } = useAuthStore()
   if (!user) return <Navigate to="/auth" replace />
-  if (user && !profile?.name) return <Navigate to="/onboarding" replace />
+  if (user && profile !== null && !profile?.name) return <Navigate to="/onboarding" replace />
   return <>{children}</>
 }
 
