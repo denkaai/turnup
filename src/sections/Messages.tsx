@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { Send, ArrowLeft, Shield, Loader2, MessageCircle, CheckCheck, Check } from 'lucide-react'
+import { Send, ArrowLeft, Shield, Loader2, MessageCircle, CheckCheck, Check, Smile, Plus, Mic, Image, MapPin, Play, Square, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
+import { toast } from 'sonner'
 import type { Match, Message } from '@/lib/supabase'
 
 // Demo data for when Supabase isn't configured
@@ -40,7 +41,17 @@ export default function Messages() {
   const [messages, setMessages] = useState<any[]>([])
   const [newMsg, setNewMsg] = useState('')
   const [sending, setSending] = useState(false)
+  const [showEmojis, setShowEmojis] = useState(false)
+  const [showAttachments, setShowAttachments] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingTime, setRecordingTime] = useState(0)
+  
   const bottomRef = useRef<HTMLDivElement>(null)
+  const mediaRecorder = useRef<MediaRecorder | null>(null)
+  const audioChunks = useRef<Blob[]>([])
+  const recordingTimer = useRef<NodeJS.Timeout | null>(null)
+
+  const EMOJIS = ['😊', '😂', '🔥', '❤️', '🙌', '😎', '😍', '✨', '👌', '🙏', '💯', '🤔', '😢', '💀', '👀', '🎉']
   const matches = DEMO_MATCHES
 
   useEffect(() => {
@@ -53,23 +64,118 @@ export default function Messages() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const send = async () => {
-    if (!newMsg.trim() || !selected || sending) return
+  const send = async (type: string = 'text', content: string = '') => {
+    const messageContent = type === 'text' ? newMsg : content
+    if (!messageContent.trim() || !selected || sending) return
+    
     setSending(true)
-    const msg = { id: Date.now().toString(), text: newMsg, sender: 'me', time: 'now', read: false }
+    const msg = { 
+      id: Date.now().toString(), 
+      type,
+      content: messageContent, 
+      sender: 'me', 
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
+      read: false 
+    }
     setMessages(prev => [...prev, msg])
     setNewMsg('')
+    setShowEmojis(false)
+    setShowAttachments(false)
 
-    // Simulate reply after 1.5s (in production this would be real Supabase Realtime)
+    // Simulate reply
     setTimeout(() => {
-      const replies = [
-        'Haha yes! 😂', 'Sounds good!', 'Let me check my schedule', 'Yoooo for real?? 🔥',
-        'Okay sawa 👌', 'I was just thinking the same thing!', 'Kama kawaida 😄'
-      ]
-      const reply = { id: (Date.now() + 1).toString(), text: replies[Math.floor(Math.random() * replies.length)], sender: 'them', time: 'now', read: true }
+      const replies = ['Haha yes! 😂', 'Sounds good!', 'Okay sawa 👌', 'Kama kawaida 😄']
+      const reply = { 
+        id: (Date.now() + 1).toString(), 
+        type: 'text',
+        content: replies[Math.floor(Math.random() * replies.length)], 
+        sender: 'them', 
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
+        read: true 
+      }
       setMessages(prev => [...prev, reply])
       setSending(false)
     }, 1500)
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+
+    setSending(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Math.random()}.${fileExt}`
+      const filePath = `${user.id}/chat/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      send('image', publicUrl)
+    } catch (err) {
+      toast.error('Failed to send image')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const handleLocation = () => {
+    if (!navigator.geolocation) return toast.error('Geolocation not supported')
+    
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const url = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`
+      send('location', url)
+    }, () => toast.error('Location access denied'))
+  }
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaRecorder.current = new MediaRecorder(stream)
+      audioChunks.current = []
+
+      mediaRecorder.current.ondataavailable = (e) => audioChunks.current.push(e.data)
+      mediaRecorder.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' })
+        const file = new File([audioBlob], 'voice-note.webm', { type: 'audio/webm' })
+        
+        // Upload audio
+        const fileName = `${Math.random()}.webm`
+        const filePath = `${user?.id}/chat/${fileName}`
+        
+        const { data, error } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, file)
+
+        if (!error) {
+          const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath)
+          send('audio', publicUrl)
+        }
+      }
+
+      mediaRecorder.current.start()
+      setIsRecording(true)
+      setRecordingTime(0)
+      recordingTimer.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
+    } catch (err) {
+      toast.error('Microphone access denied')
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorder.current && isRecording) {
+      mediaRecorder.current.stop()
+      setIsRecording(false)
+      if (recordingTimer.current) clearInterval(recordingTimer.current)
+      mediaRecorder.current.stream.getTracks().forEach(t => t.stop())
+    }
   }
 
   const selectedMatch = matches.find(m => m.id === selected)
@@ -138,13 +244,42 @@ export default function Messages() {
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
             {messages.map(msg => (
               <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                <div className={`max-w-[75%] rounded-2xl text-sm leading-relaxed overflow-hidden ${
                   msg.sender === 'me'
                     ? 'grad-bg text-white rounded-br-sm'
                     : 'bg-white/8 text-gray-200 rounded-bl-sm'
                 }`}>
-                  {msg.text}
-                  <div className={`flex items-center gap-1 mt-0.5 ${msg.sender === 'me' ? 'justify-end' : ''}`}>
+                  {msg.type === 'text' && <div className="px-4 py-2.5">{msg.content || msg.text}</div>}
+                  {msg.type === 'image' && (
+                    <div className="p-1">
+                      <img src={msg.content} className="max-w-full rounded-xl" alt="Sent photo" />
+                    </div>
+                  )}
+                  {msg.type === 'audio' && (
+                    <div className="px-4 py-3 flex items-center gap-3">
+                      <button className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                        <Play className="w-4 h-4 fill-current" />
+                      </button>
+                      <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                        <div className="w-1/3 h-full bg-white/40" />
+                      </div>
+                      <span className="text-[10px] opacity-60">0:12</span>
+                    </div>
+                  )}
+                  {msg.type === 'location' && (
+                    <a href={msg.content} target="_blank" rel="noreferrer" className="block p-1 group">
+                      <div className="bg-white/5 rounded-xl p-3 flex items-center gap-3 hover:bg-white/10 transition-all">
+                        <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
+                          <MapPin className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-xs">Shared Location</p>
+                          <p className="text-[10px] opacity-50">View on Google Maps</p>
+                        </div>
+                      </div>
+                    </a>
+                  )}
+                  <div className={`flex items-center gap-1 px-4 pb-2 mt-[-4px] ${msg.sender === 'me' ? 'justify-end' : ''}`}>
                     <span className="text-[10px] opacity-60">{msg.time}</span>
                     {msg.sender === 'me' && (msg.read ? <CheckCheck className="w-3 h-3 opacity-70" /> : <Check className="w-3 h-3 opacity-50" />)}
                   </div>
@@ -172,21 +307,87 @@ export default function Messages() {
           </div>
 
           {/* Input */}
-          <div className="px-4 py-3 border-t border-white/5 flex gap-2 items-center">
-            <input
-              className="input-dark flex-1 text-sm"
-              placeholder="Type a message..."
-              value={newMsg}
-              onChange={e => setNewMsg(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
-            />
-            <button
-              onClick={send}
-              disabled={!newMsg.trim() || sending}
-              className="w-10 h-10 grad-bg rounded-xl flex items-center justify-center disabled:opacity-40 transition-all"
-            >
-              <Send className="w-4 h-4 text-white" />
-            </button>
+          <div className="px-4 py-3 border-t border-white/5 relative">
+            {showEmojis && (
+              <div className="absolute bottom-full mb-2 left-4 p-2 bg-[#1a1a2e] border border-white/10 rounded-2xl shadow-2xl z-20 grid grid-cols-8 gap-1 animate-slide-up">
+                {EMOJIS.map(e => (
+                  <button key={e} onClick={() => setNewMsg(p => p + e)} className="w-8 h-8 flex items-center justify-center hover:bg-white/5 rounded-lg text-lg">
+                    {e}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {showAttachments && (
+              <div className="absolute bottom-full mb-2 left-4 p-1 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl z-20 flex flex-col gap-1 animate-slide-up">
+                <label className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 rounded-lg transition-all cursor-pointer">
+                  <Image className="w-4 h-4 text-purple-400" />
+                  <span className="text-sm text-gray-300">Photo</span>
+                  <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
+                </label>
+                <button onClick={handleLocation} className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 rounded-lg transition-all text-left">
+                  <MapPin className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm text-gray-300">Location</span>
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-2 items-center">
+              <button 
+                onClick={() => { setShowAttachments(!showAttachments); setShowEmojis(false); }}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${showAttachments ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                <Plus className={`w-5 h-5 transition-transform ${showAttachments ? 'rotate-45' : ''}`} />
+              </button>
+              
+              <button 
+                onClick={() => { setShowEmojis(!showEmojis); setShowAttachments(false); }}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${showEmojis ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+              >
+                <Smile className="w-5 h-5" />
+              </button>
+
+              <div className="flex-1 relative flex items-center">
+                <input
+                  className="input-dark w-full text-sm py-2.5 pr-10"
+                  placeholder={isRecording ? 'Recording voice note...' : 'Type a message...'}
+                  value={newMsg}
+                  onChange={e => setNewMsg(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send('text')}
+                  disabled={isRecording}
+                />
+              </div>
+
+              {newMsg.trim() ? (
+                <button
+                  onClick={() => send('text')}
+                  disabled={sending}
+                  className="w-10 h-10 grad-bg rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg"
+                >
+                  <Send className="w-4 h-4 text-white" />
+                </button>
+              ) : (
+                <button
+                  onMouseDown={startRecording}
+                  onMouseUp={stopRecording}
+                  onTouchStart={startRecording}
+                  onTouchEnd={stopRecording}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                    isRecording ? 'grad-bg animate-pulse' : 'bg-white/5 text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  {isRecording ? <Square className="w-4 h-4 text-white" /> : <Mic className="w-5 h-5" />}
+                </button>
+              )}
+            </div>
+            {isRecording && (
+              <div className="mt-2 flex items-center gap-2 justify-center">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+                <span className="text-[10px] text-red-500 font-bold uppercase tracking-widest">
+                  Recording {Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       ) : (
