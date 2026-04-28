@@ -34,12 +34,12 @@ export default function Landing() {
             <Shield className="w-3.5 h-3.5" /> Thika Road Campus Students Only
           </div>
 
-          <h1 className="font-syne font-extrabold text-6xl sm:text-7xl md:text-8xl leading-[0.95] mb-6">
+          <h1 className="font-syne font-extrabold text-4xl sm:text-6xl md:text-8xl leading-[0.95] mb-6">
             <span className="block text-white">Weekend</span>
             <span className="block grad-text">TURNUP</span>
           </h1>
 
-          <p className="text-gray-400 text-lg sm:text-xl max-w-xl mx-auto mb-3 leading-relaxed">
+          <p className="text-gray-400 text-base sm:text-lg max-w-xl mx-auto mb-3 leading-relaxed">
             The exclusive dating & social hub for students across{' '}
             <span className="text-purple-400 font-medium">11 Thika Road campuses</span>
           </p>
