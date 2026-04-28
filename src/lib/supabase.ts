@@ -20,6 +20,9 @@ export type Profile = {
   premium_until: string | null
   gender: string
   looking_for: string
+  vibe?: string
+  weekend_plan?: string
+  relationship_goal?: string
   created_at: string
 }
 

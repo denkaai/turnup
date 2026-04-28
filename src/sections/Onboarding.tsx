@@ -28,6 +28,7 @@ export default function Onboarding() {
     name: '', age: '', gender: '', campus: '',
     course: '', year: '1', bio: '',
     looking_for: 'everyone', interests: [] as string[],
+    vibe: '', weekend_plan: '', relationship_goal: '',
     photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=500&fit=crop'
   })
 
@@ -47,6 +48,9 @@ export default function Onboarding() {
     if (step === 2) return form.campus && form.course && form.year
     if (step === 3) return form.bio.length >= 20
     if (step === 4) return form.interests.length >= 3
+    if (step === 5) return form.vibe !== ''
+    if (step === 6) return form.weekend_plan !== ''
+    if (step === 7) return form.relationship_goal !== ''
     return true
   }
 
@@ -65,6 +69,9 @@ export default function Onboarding() {
         bio: form.bio,
         looking_for: form.looking_for,
         interests: form.interests,
+        vibe: form.vibe,
+        weekend_plan: form.weekend_plan,
+        relationship_goal: form.relationship_goal,
         photos: [form.photo_url],
         verified: false,
         premium: false,
@@ -82,7 +89,7 @@ export default function Onboarding() {
     }
   }
 
-  const steps = ['About You', 'Campus Info', 'Your Bio', 'Interests', 'Ready!']
+  const steps = ['About You', 'Campus Info', 'Your Bio', 'Interests', 'Your Vibe', 'Weekend Plans', 'Looking for', 'Ready!']
 
   return (
     <main className="min-h-screen pt-14 flex items-center justify-center px-4 py-12">
@@ -110,7 +117,10 @@ export default function Onboarding() {
             {step === 2 && 'Where do you study?'}
             {step === 3 && 'Write a bio that shows your vibe'}
             {step === 4 && 'Pick up to 6 interests'}
-            {step === 5 && "You're all set to turn up!"}
+            {step === 5 && 'What defines your campus energy?'}
+            {step === 6 && 'Friday night arrives. What are you doing?'}
+            {step === 7 && 'What are you hoping to find on TurnUp?'}
+            {step === 8 && "You're all set to turn up!"}
           </p>
 
           {step === 1 && (
@@ -205,6 +215,62 @@ export default function Onboarding() {
           )}
 
           {step === 5 && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {['🎉 Party Animal', '📚 Study Buddy', '🏋️ Gym Rat', '🎵 Music Head', '🍔 Foodie', '🎮 Gamer'].map(v => (
+                  <button
+                    key={v}
+                    onClick={() => update('vibe', v)}
+                    className={`py-4 px-3 rounded-xl text-sm transition-all border ${
+                      form.vibe === v 
+                        ? 'border-purple-500 grad-bg text-white' 
+                        : 'border-white/5 bg-white/5 text-gray-400 hover:bg-white/10'
+                    }`}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="space-y-3">
+              {['Clubbing 🥂', 'House party 🏠', 'Netflix & chill 🛋️', 'Nyama choma 🍖', 'Still deciding 😂'].map(w => (
+                <button
+                  key={w}
+                  onClick={() => update('weekend_plan', w)}
+                  className={`w-full py-3.5 px-4 rounded-xl text-left text-sm transition-all border ${
+                    form.weekend_plan === w
+                      ? 'border-purple-500 grad-bg text-white'
+                      : 'border-white/5 bg-white/5 text-gray-400 hover:bg-white/10'
+                  }`}
+                >
+                  {w}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {step === 7 && (
+            <div className="space-y-3">
+              {['Something serious 💍', 'Just vibing 😎', 'Study partner 📖', 'Weekend plans only 🗓️', 'New friends 👥', 'Smoking weed & feeling the buzz 💨'].map(r => (
+                <button
+                  key={r}
+                  onClick={() => update('relationship_goal', r)}
+                  className={`w-full py-3.5 px-4 rounded-xl text-left text-sm transition-all border ${
+                    form.relationship_goal === r
+                      ? 'border-purple-500 grad-bg text-white'
+                      : 'border-white/5 bg-white/5 text-gray-400 hover:bg-white/10'
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {step === 8 && (
             <div className="text-center py-4">
               <div className="w-20 h-20 rounded-full grad-bg flex items-center justify-center mx-auto mb-5">
                 <CheckCircle className="w-10 h-10 text-white" />
@@ -218,6 +284,7 @@ export default function Onboarding() {
                   `📍 ${form.campus}`,
                   `📚 ${form.course}, Year ${form.year}`,
                   `🎯 ${form.interests.slice(0, 3).join(' · ')}`,
+                  `✨ ${form.vibe}`,
                 ].map(t => (
                   <div key={t} className="px-4 py-2 rounded-xl bg-white/5 text-sm text-gray-300">{t}</div>
                 ))}
@@ -231,11 +298,11 @@ export default function Onboarding() {
                 <ChevronLeft className="w-4 h-4" /> Back
               </button>
             )}
-            {step < 5 ? (
+            {step < 8 ? (
               <button
                 onClick={() => setStep(s => s + 1)}
                 disabled={!canNext()}
-                className="btn-grad flex-1 flex items-center justify-center gap-1.5 text-sm"
+                className="btn-grad flex-1 flex items-center justify-center gap-1.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Continue <ChevronRight className="w-4 h-4" />
               </button>
@@ -243,7 +310,7 @@ export default function Onboarding() {
               <button
                 onClick={handleFinish}
                 disabled={loading}
-                className="btn-grad flex-1 flex items-center justify-center gap-2 text-sm"
+                className="btn-grad flex-1 flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Start Discovering 🔥
