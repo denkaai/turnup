@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Camera, Edit2, Shield, Crown, LogOut, ChevronRight, CheckCircle, Star, Zap, MapPin, BookOpen, Save, Loader2 } from 'lucide-react'
+import { Camera, Edit2, Shield, Crown, LogOut, ChevronRight, CheckCircle, Star, Zap, MapPin, BookOpen, Save, Loader2, Upload } from 'lucide-react'
 import { useAuthStore } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -10,6 +10,7 @@ export default function Profile() {
   const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [photoUploading, setPhotoUploading] = useState(false)
   const [form, setForm] = useState({
     bio: profile?.bio || '',
     course: profile?.course || '',
@@ -23,6 +24,43 @@ export default function Profile() {
       ...f,
       interests: f.interests.includes(i) ? f.interests.filter(x => x !== i) : f.interests.length < 6 ? [...f.interests, i] : f.interests
     }))
+  }
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user || !profile) return
+
+    setPhotoUploading(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Math.random()}.${fileExt}`
+      const filePath = `${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ photos: [publicUrl, ...(profile.photos?.slice(1) || [])] })
+        .eq('id', user.id)
+
+      if (updateError) throw updateError
+
+      await fetchProfile(user.id)
+      toast.success('Photo updated!')
+    } catch (err: any) {
+      toast.error('Error uploading photo')
+      console.error(err)
+    } finally {
+      setPhotoUploading(false)
+    }
   }
 
   const save = async () => {
@@ -63,13 +101,17 @@ export default function Profile() {
             <img
               src={profile.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop'}
               alt={profile.name}
-              className="w-24 h-24 rounded-full object-cover border-2 border-purple-500/30"
+              className={`w-24 h-24 rounded-full object-cover border-2 border-purple-500/30 ${photoUploading ? 'opacity-50' : ''}`}
             />
-            {editing && (
-              <button className="absolute bottom-0 right-0 w-7 h-7 grad-bg rounded-full flex items-center justify-center">
-                <Camera className="w-3.5 h-3.5 text-white" />
-              </button>
+            {photoUploading && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
+              </div>
             )}
+            <label className="absolute bottom-0 right-0 w-8 h-8 grad-bg rounded-full flex items-center justify-center border-2 border-background cursor-pointer hover:scale-110 transition-all shadow-lg">
+              <Camera className="w-4 h-4 text-white" />
+              <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={photoUploading} />
+            </label>
           </div>
           <div className="mt-3">
             <div className="flex items-center justify-center gap-2 mb-1">
@@ -113,6 +155,28 @@ export default function Profile() {
             />
           ) : (
             <p className="text-gray-300 text-sm leading-relaxed">{profile.bio || 'No bio yet. Add one!'}</p>
+          )}
+        </div>
+
+        {/* Vibe & Goals */}
+        <div className="grid grid-cols-1 gap-2 mb-4">
+          {profile.vibe && (
+            <div className="card px-4 py-3 flex items-center justify-between border-purple-500/10">
+              <span className="text-xs text-gray-500">My Vibe</span>
+              <span className="text-sm text-purple-300 font-medium">{profile.vibe}</span>
+            </div>
+          )}
+          {profile.weekend_plan && (
+            <div className="card px-4 py-3 flex items-center justify-between border-blue-500/10">
+              <span className="text-xs text-gray-500">Weekend Plan</span>
+              <span className="text-sm text-blue-300 font-medium">{profile.weekend_plan}</span>
+            </div>
+          )}
+          {profile.relationship_goal && (
+            <div className="card px-4 py-3 flex items-center justify-between border-pink-500/10">
+              <span className="text-xs text-gray-500">Looking for</span>
+              <span className="text-sm text-pink-300 font-medium">{profile.relationship_goal}</span>
+            </div>
           )}
         </div>
 

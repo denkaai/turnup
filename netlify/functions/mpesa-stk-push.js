@@ -46,6 +46,13 @@ exports.handler = async (event) => {
       'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
       { headers: { Authorization: `Basic ${auth}` } }
     )
+
+    if (!tokenRes.ok) {
+      const errorText = await tokenRes.text()
+      console.error('M-Pesa Auth Error:', errorText)
+      return { statusCode: tokenRes.status, headers, body: JSON.stringify({ error: 'M-Pesa authentication failed' }) }
+    }
+
     const { access_token } = await tokenRes.json()
 
     // 2. Build STK push request
@@ -76,6 +83,12 @@ exports.handler = async (event) => {
       }
     )
 
+    if (!stkRes.ok) {
+      const errorText = await stkRes.text()
+      console.error('M-Pesa STK Error:', errorText)
+      return { statusCode: stkRes.status, headers, body: JSON.stringify({ error: 'M-Pesa STK request failed', details: errorText }) }
+    }
+
     const stkData = await stkRes.json()
 
     if (stkData.ResponseCode === '0') {
@@ -88,7 +101,7 @@ exports.handler = async (event) => {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: stkData.errorMessage || 'STK push failed' }),
+        body: JSON.stringify({ error: stkData.CustomerMessage || stkData.errorMessage || 'STK push failed' }),
       }
     }
   } catch (err) {

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, ChevronLeft, Loader2, Upload, CheckCircle } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Loader2, Upload, CheckCircle, Camera } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
@@ -23,6 +23,7 @@ export default function Onboarding() {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
   const [form, setForm] = useState({
     name: '', age: '', gender: '', campus: '',
@@ -33,6 +34,36 @@ export default function Onboarding() {
   })
 
   const update = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${Math.random()}.${fileExt}`
+      const filePath = `${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      update('photo_url', publicUrl)
+      toast.success('Photo uploaded!')
+    } catch (err: any) {
+      toast.error('Error uploading photo')
+      console.error(err)
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const toggleInterest = (i: string) => {
     setForm(f => ({
@@ -125,6 +156,24 @@ export default function Onboarding() {
 
           {step === 1 && (
             <div className="space-y-4">
+              <div className="flex flex-col items-center mb-4">
+                <label className="relative cursor-pointer group">
+                  <div className="w-24 h-24 rounded-full border-2 border-purple-500/30 overflow-hidden bg-white/5 flex items-center justify-center transition-all group-hover:border-purple-500/60">
+                    {uploading ? (
+                      <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+                    ) : form.photo_url ? (
+                      <img src={form.photo_url} className="w-full h-full object-cover" />
+                    ) : (
+                      <Camera className="w-8 h-8 text-gray-600" />
+                    )}
+                  </div>
+                  <div className="absolute bottom-0 right-0 p-1.5 rounded-full grad-bg text-white shadow-lg">
+                    <Upload className="w-3.5 h-3.5" />
+                  </div>
+                  <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={uploading} />
+                </label>
+                <p className="text-[10px] text-gray-500 mt-2 uppercase tracking-wider font-bold">Select Photo</p>
+              </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">Full Name</label>
                 <input className="input-dark" placeholder="Your name" value={form.name} onChange={e => update('name', e.target.value)} />
