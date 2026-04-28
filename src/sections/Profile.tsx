@@ -130,10 +130,8 @@ export default function Profile() {
 
         {/* Badges */}
         <div className="flex gap-2 justify-center mb-6">
-          {profile.verified ? (
+          {profile.verified && (
             <span className="verified-badge"><Shield className="w-3 h-3" /> Student Verified</span>
-          ) : (
-            <span className="px-3 py-1 rounded-full text-xs bg-yellow-500/10 border border-yellow-500/20 text-yellow-500">⚠ Verification Pending</span>
           )}
                     {profile.premium && (
             <span className="px-3 py-1 rounded-full text-xs bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1">
