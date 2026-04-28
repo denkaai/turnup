@@ -51,7 +51,7 @@ export default function Messages() {
   const audioChunks = useRef<Blob[]>([])
   const recordingTimer = useRef<NodeJS.Timeout | null>(null)
 
-  const EMOJIS = ['😊', '😂', '🔥', '❤️', '🙌', '😎', '😍', '✨', '👌', '🙏', '💯', '🤔', '😢', '💀', '👀', '🎉']
+  const EMOJIS = ['😊', '😂', '🔥', '❤️', '🙌', '😎', '😍', '✨', '👌', '🙏', '💯', '🤔', '😢', '💀', '👀', '🎉', '🤩', '🤣', '😅', '🙄', '😏', '😉', '😜', '🥳', '🥺', '😡', '😱', '🤯', '😴', '🤤', '🍻', '🍕', '🍔', '🚀', '🌈', '💎', '💡', '✅', '❌', '👋']
   const matches = DEMO_MATCHES
 
   useEffect(() => {
@@ -178,6 +178,16 @@ export default function Messages() {
     }
   }
 
+  const reactToMessage = (id: string, emoji: string) => {
+    setMessages(prev => prev.map(m => {
+      if (m.id === id) {
+        const reactions = m.reactions || []
+        return { ...m, reactions: reactions.includes(emoji) ? reactions.filter((r: string) => r !== emoji) : [...reactions, emoji] }
+      }
+      return m
+    }))
+  }
+
   const selectedMatch = matches.find(m => m.id === selected)
 
   return (
@@ -243,46 +253,70 @@ export default function Messages() {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
             {messages.map(msg => (
-              <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[75%] rounded-2xl text-sm leading-relaxed overflow-hidden ${
-                  msg.sender === 'me'
-                    ? 'grad-bg text-white rounded-br-sm'
-                    : 'bg-white/8 text-gray-200 rounded-bl-sm'
-                }`}>
-                  {msg.type === 'text' && <div className="px-4 py-2.5">{msg.content || msg.text}</div>}
-                  {msg.type === 'image' && (
-                    <div className="p-1">
-                      <img src={msg.content} className="max-w-full rounded-xl" alt="Sent photo" />
-                    </div>
-                  )}
-                  {msg.type === 'audio' && (
-                    <div className="px-4 py-3 flex items-center gap-3">
-                      <button className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                        <Play className="w-4 h-4 fill-current" />
-                      </button>
-                      <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                        <div className="w-1/3 h-full bg-white/40" />
+              <div key={msg.id} className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
+                <div className="relative group max-w-[85%]">
+                  <div className={`rounded-2xl text-sm leading-relaxed overflow-hidden shadow-sm ${
+                    msg.sender === 'me'
+                      ? 'grad-bg text-white rounded-br-sm'
+                      : 'bg-white/8 text-gray-200 rounded-bl-sm'
+                  }`}>
+                    {msg.type === 'text' && <div className="px-4 py-2.5">{msg.content || msg.text}</div>}
+                    {msg.type === 'image' && (
+                      <div className="p-1">
+                        <img src={msg.content} className="max-w-full rounded-xl" alt="Sent photo" />
                       </div>
-                      <span className="text-[10px] opacity-60">0:12</span>
-                    </div>
-                  )}
-                  {msg.type === 'location' && (
-                    <a href={msg.content} target="_blank" rel="noreferrer" className="block p-1 group">
-                      <div className="bg-white/5 rounded-xl p-3 flex items-center gap-3 hover:bg-white/10 transition-all">
-                        <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
-                          <MapPin className="w-5 h-5" />
+                    )}
+                    {msg.type === 'audio' && (
+                      <div className="px-4 py-3 flex items-center gap-3 min-w-[200px]">
+                        <button className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-all">
+                          <Play className="w-4 h-4 fill-current" />
+                        </button>
+                        <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                          <div className="w-1/3 h-full bg-white/40" />
                         </div>
-                        <div>
-                          <p className="font-bold text-xs">Shared Location</p>
-                          <p className="text-[10px] opacity-50">View on Google Maps</p>
-                        </div>
+                        <span className="text-[10px] opacity-60">0:12</span>
                       </div>
-                    </a>
-                  )}
-                  <div className={`flex items-center gap-1 px-4 pb-2 mt-[-4px] ${msg.sender === 'me' ? 'justify-end' : ''}`}>
-                    <span className="text-[10px] opacity-60">{msg.time}</span>
-                    {msg.sender === 'me' && (msg.read ? <CheckCheck className="w-3 h-3 opacity-70" /> : <Check className="w-3 h-3 opacity-50" />)}
+                    )}
+                    {msg.type === 'location' && (
+                      <a href={msg.content} target="_blank" rel="noreferrer" className="block p-1 group">
+                        <div className="bg-white/5 rounded-xl p-3 flex items-center gap-3 hover:bg-white/10 transition-all">
+                          <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
+                            <MapPin className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-xs">Shared Location</p>
+                            <p className="text-[10px] opacity-50">View on Google Maps</p>
+                          </div>
+                        </div>
+                      </a>
+                    )}
+                    <div className={`flex items-center gap-1 px-4 pb-2 mt-[-4px] ${msg.sender === 'me' ? 'justify-end' : ''}`}>
+                      <span className="text-[10px] opacity-60">{msg.time}</span>
+                      {msg.sender === 'me' && (msg.read ? <CheckCheck className="w-3 h-3 opacity-70" /> : <Check className="w-3 h-3 opacity-50" />)}
+                    </div>
                   </div>
+
+                  {/* Reaction Button */}
+                  <div className={`absolute top-0 ${msg.sender === 'me' ? '-left-8' : '-right-8'} opacity-0 group-hover:opacity-100 transition-opacity`}>
+                    <button 
+                      className="p-1.5 rounded-full bg-[#1a1a2e] border border-white/10 text-gray-400 hover:text-white shadow-xl"
+                      onClick={(e) => {
+                        const emoji = ['❤️', '😂', '😮', '😢', '🔥', '👍'][Math.floor(Math.random() * 6)]
+                        reactToMessage(msg.id, emoji)
+                      }}
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  {/* Reactions Display */}
+                  {msg.reactions && msg.reactions.length > 0 && (
+                    <div className={`absolute -bottom-2 ${msg.sender === 'me' ? 'right-2' : 'left-2'} flex gap-0.5 bg-[#1a1a2e] border border-white/10 px-1.5 py-0.5 rounded-full shadow-lg z-10`}>
+                      {msg.reactions.map((r: string, idx: number) => (
+                        <span key={idx} className="text-[10px]">{r}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
