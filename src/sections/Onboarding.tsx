@@ -74,7 +74,7 @@ export default function Onboarding() {
       if (error) throw error
       await fetchProfile(user.id)
       toast.success('Profile created! Welcome to TurnUp 🎉')
-      navigate('/discover')
+      window.location.href = '/discover'
     } catch (err: any) {
       toast.error(err.message || 'Failed to save profile')
     } finally {
