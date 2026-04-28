@@ -11,7 +11,7 @@ import Discover from '@/sections/Discover'
 import Messages from '@/sections/Messages'
 import Events from '@/sections/Events'
 import Profile from '@/sections/Profile'
-import Pricing from '@/sections/Pricing'
+
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile } = useAuthStore()
@@ -67,7 +67,7 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/pricing" element={<Pricing />} />
+
         <Route path="/discover" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
         <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />

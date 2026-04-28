@@ -11,7 +11,6 @@ const features = [
   { icon: Users, title: 'Squad Finder', desc: 'Find study groups or party crews based on shared interests and campus.', color: 'from-cyan-500 to-blue-500', bg: 'bg-cyan-500/10', border: 'border-cyan-500/20' },
   { icon: MapPin, title: 'Campus Mode', desc: 'Toggle between your campus only or explore the whole Thika Road community.', color: 'from-red-500 to-pink-500', bg: 'bg-red-500/10', border: 'border-red-500/20' },
   { icon: Lock, title: 'Safety First', desc: 'Block, report, emergency contacts, and 24/7 support. Your safety matters.', color: 'from-indigo-500 to-purple-500', bg: 'bg-indigo-500/10', border: 'border-indigo-500/20' },
-  { icon: Zap, title: 'M-Pesa Payments', desc: 'Upgrade to premium with M-Pesa. Boost your profile and unlock exclusive features.', color: 'from-yellow-500 to-orange-500', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
 ]
 
 const testimonials = [
@@ -166,9 +165,7 @@ export default function Landing() {
               <Link to="/auth?mode=signup" className="btn-grad flex items-center gap-2 justify-center text-base">
                 Join Free <ArrowRight className="w-4 h-4" />
               </Link>
-              <Link to="/pricing" className="px-6 py-3 rounded-xl border border-white/10 text-gray-300 hover:bg-white/5 transition-all text-base text-center">
-                View Pricing
-              </Link>
+              
             </div>
             <div className="flex items-center justify-center gap-4 mt-6">
               {['No credit card', 'Cancel anytime', 'Student verified'].map((t) => (

@@ -93,10 +93,10 @@ export default function Profile() {
           ) : (
             <span className="px-3 py-1 rounded-full text-xs bg-yellow-500/10 border border-yellow-500/20 text-yellow-500">⚠ Verification Pending</span>
           )}
-          {profile.premium ? (
-            <span className="px-3 py-1 rounded-full text-xs bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1"><Crown className="w-3 h-3" /> Premium</span>
-          ) : (
-            <Link to="/pricing" className="px-3 py-1 rounded-full text-xs bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:bg-purple-500/20 transition-all flex items-center gap-1"><Zap className="w-3 h-3" /> Go Premium</Link>
+                    {profile.premium && (
+            <span className="px-3 py-1 rounded-full text-xs bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1">
+              <Crown className="w-3 h-3" /> Premium
+            </span>
           )}
         </div>
 
@@ -153,9 +153,8 @@ export default function Profile() {
         <div className="card divide-y divide-white/5">
           {[
             { label: 'Account Settings', icon: Shield },
-            { label: 'Upgrade to Premium', icon: Crown, href: '/pricing' },
             { label: 'Privacy Settings', icon: Star },
-          ].map(({ label, icon: Icon, href }) => (
+          ].map(({ label, icon: Icon, href }: { label: string; icon: any; href?: string }) => (
             href ? (
               <Link key={label} to={href} className="flex items-center gap-3 px-4 py-3 hover:bg-white/3 transition-all">
                 <Icon className="w-4 h-4 text-gray-500" />

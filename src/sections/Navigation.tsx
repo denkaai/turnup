@@ -61,11 +61,7 @@ export default function Navigation() {
                 <Shield className="w-3 h-3" /> Verified
               </span>
             )}
-            {profile?.premium && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/10 border border-amber-500/25 text-amber-400">
-                <Crown className="w-3 h-3" /> Premium
-              </span>
-            )}
+
             <button onClick={handleSignOut} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all">
               <LogOut className="w-4 h-4" /> Sign out
             </button>
