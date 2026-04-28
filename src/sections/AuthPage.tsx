@@ -42,6 +42,14 @@ export default function AuthPage() {
     }
   }
 
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/discover' }
+    })
+    if (error) toast.error(error.message)
+  }
+
   return (
     <main className="min-h-screen pt-14 flex items-center justify-center px-4 relative">
       <div className="orb w-80 h-80 bg-purple-600/20 top-0 left-0 -translate-x-1/2" />
@@ -64,6 +72,23 @@ export default function AuthPage() {
         </div>
 
         <div className="card p-6">
+          <button
+            onClick={handleGoogleLogin}
+            className="w-full py-2.5 px-4 rounded-xl bg-white text-gray-900 font-bold flex items-center justify-center gap-3 hover:bg-gray-100 transition-all mb-6 shadow-xl"
+          >
+            <span className="flex items-center text-lg font-black">
+              <span className="text-[#4285F4]">G</span>
+            </span>
+            Continue with Google
+          </button>
+
+          <div className="relative flex items-center justify-center mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-white/5"></div>
+            </div>
+            <span className="relative px-3 bg-[#12121f] text-[10px] text-gray-700 uppercase tracking-widest font-bold">or</span>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1.5">Email</label>
