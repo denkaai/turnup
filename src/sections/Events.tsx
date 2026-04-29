@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Calendar, MapPin, Users, Clock, Tag, Search, CheckCircle } from 'lucide-react'
+import { Calendar, MapPin, Users, Clock, Tag, Search, CheckCircle, Flame } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 const EVENTS = [
@@ -14,6 +15,7 @@ const EVENTS = [
 const CATEGORIES = ['All', 'Party', 'Culture', 'Gaming', 'Outdoor', 'Academic', 'Social']
 
 export default function Events() {
+  const navigate = useNavigate()
   const [events, setEvents] = useState(EVENTS)
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
@@ -134,12 +136,21 @@ export default function Events() {
                   <div className="h-full grad-bg rounded-full" style={{ width: `${Math.round(selected.attendees/selected.max*100)}%` }} />
                 </div>
               </div>
-              <button
-                onClick={() => join(selected.id)}
-                className={`w-full py-3 rounded-xl text-sm font-semibold transition-all ${selected.joined ? 'bg-white/8 text-gray-400 hover:bg-red-500/15 hover:text-red-400' : 'btn-grad'}`}
-              >
-                {selected.joined ? 'Leave Event' : selected.price === 0 ? 'Join Free' : `Join — KSh ${selected.price}`}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => join(selected.id)}
+                  className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all ${selected.joined ? 'bg-white/8 text-gray-400 hover:bg-red-500/15 hover:text-red-400' : 'btn-grad'}`}
+                >
+                  {selected.joined ? 'Leave Event' : selected.price === 0 ? 'Join Free' : `Join — KSh ${selected.price}`}
+                </button>
+                <button
+                  onClick={() => navigate(`/squads?event=${encodeURIComponent(selected.title)}`)}
+                  className="px-4 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-all flex items-center justify-center"
+                  title="Find a squad for this event"
+                >
+                  <Flame className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
