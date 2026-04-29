@@ -170,12 +170,38 @@ export default function Messages() {
     if (!user) return
     setLoadingUsers(true)
     try {
-      let q = supabase.from('profiles').select('*').neq('id', user.id)
+      // 1. Get everyone I follow
+      const { data: following } = await supabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', user.id)
+      
+      const followingIds = following?.map(f => f.following_id) || []
+      if (followingIds.length === 0) {
+        setAllUsers([])
+        return
+      }
+
+      // 2. Get mutual follows (they follow me back)
+      const { data: mutual } = await supabase
+        .from('follows')
+        .select('follower_id')
+        .eq('following_id', user.id)
+        .in('follower_id', followingIds)
+      
+      const mutualIds = mutual?.map(m => m.follower_id) || []
+      if (mutualIds.length === 0) {
+        setAllUsers([])
+        return
+      }
+
+      // 3. Fetch profiles and apply search filter
+      let q = supabase.from('profiles').select('*').in('id', mutualIds)
       if (query) q = q.ilike('name', `%${query}%`)
       const { data } = await q.limit(20)
       if (data) setAllUsers(data)
     } catch (err) {
-      toast.error('Failed to load users')
+      toast.error('Failed to load connections')
     } finally {
       setLoadingUsers(false)
     }

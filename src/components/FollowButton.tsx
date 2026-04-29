@@ -23,7 +23,7 @@ export default function FollowButton({ targetId, className = '' }: FollowButtonP
   }, [user, targetId])
 
   const checkFollow = async () => {
-    if (!user || targetId.startsWith('d')) { // Skip for demo users
+    if (!user || !targetId) {
       setLoading(false)
       return
     }
@@ -41,7 +41,6 @@ export default function FollowButton({ targetId, className = '' }: FollowButtonP
   const toggleFollow = async (e: React.MouseEvent) => {
     e.stopPropagation()
     if (!user) return toast.error('Sign in to follow comrades!')
-    if (targetId.startsWith('d')) return toast.info('Demo user - follows not saved')
 
     try {
       if (following) {

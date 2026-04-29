@@ -14,6 +14,8 @@ export default function Profile() {
   const [saving, setSaving] = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
   const [expandedSection, setExpandedSection] = useState<'account' | 'privacy' | null>(null)
+  const [followerCount, setFollowerCount] = useState(0)
+  const [followingCount, setFollowingCount] = useState(0)
   
   const [form, setForm] = useState({
     name: profile?.name || '',
@@ -39,6 +41,22 @@ export default function Profile() {
       ...f,
       interests: f.interests.includes(i) ? f.interests.filter(x => x !== i) : f.interests.length < 6 ? [...f.interests, i] : f.interests
     }))
+  }
+
+  useEffect(() => {
+    if (user) {
+      fetchFollowCounts()
+    }
+  }, [user])
+
+  const fetchFollowCounts = async () => {
+    if (!user) return
+    const [followers, following] = await Promise.all([
+      supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', user.id),
+      supabase.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', user.id)
+    ])
+    setFollowerCount(followers.count || 0)
+    setFollowingCount(following.count || 0)
   }
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,12 +208,12 @@ export default function Profile() {
             </div>
             <div className="flex items-center justify-center gap-3 mt-4">
               <div className="flex items-center gap-1">
-                <span className="text-white font-black text-sm">24</span>
+                <span className="text-white font-black text-sm">{followerCount}</span>
                 <span className="text-gray-600 text-[9px] uppercase tracking-widest font-bold">followers</span>
               </div>
               <div className="w-1 h-1 rounded-full bg-gray-800" />
               <div className="flex items-center gap-1">
-                <span className="text-white font-black text-sm">18</span>
+                <span className="text-white font-black text-sm">{followingCount}</span>
                 <span className="text-gray-600 text-[9px] uppercase tracking-widest font-bold">following</span>
               </div>
             </div>
