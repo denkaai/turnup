@@ -179,12 +179,16 @@ export default function Landing() {
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-white/5 py-8 px-4 text-center text-gray-600 text-sm">
-        <p>© 2025 TurnUp · Built for Thika Road campus students · Nairobi, Kenya</p>
-        <div className="flex gap-4 justify-center mt-3">
-          {['Privacy', 'Terms', 'Safety', 'Contact'].map((l) => (
+      <footer className="border-t border-white/5 py-12 px-4 text-center text-gray-600 text-sm">
+        <p>© 2026 TurnUp · Built for Thika Road campus students · Nairobi, Kenya</p>
+        <p className="text-[12px] opacity-60 mt-1">
+          Developed & Designed by <span className="text-[#c026d3] font-bold">DEV.Den.kaai</span>&lt;/&gt;
+        </p>
+        <div className="flex gap-4 justify-center mt-6">
+          {['Privacy', 'Terms', 'Safety'].map((l) => (
             <a key={l} href="#" className="hover:text-gray-400 transition-colors">{l}</a>
           ))}
+          <a href="mailto:turnupcampus.ke@gmail.com" className="hover:text-gray-400 transition-colors">Contact</a>
         </div>
       </footer>
     </main>
