@@ -85,13 +85,12 @@ export default function Events() {
                   <div className="flex items-center gap-2 text-gray-400 text-xs font-medium"><MapPin className="w-3.5 h-3.5 text-purple-400" /> {e.location}</div>
                   <div className="flex items-center gap-2 text-gray-400 text-xs font-medium"><Users className="w-3.5 h-3.5 text-purple-400" /> {e.attendees}/{e.max} going</div>
                 </div>
-                <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                  <span className="text-amber-400 text-[10px] font-black uppercase tracking-widest">Free entry</span>
+                <div className="flex items-center justify-end pt-2 border-t border-white/5">
                   <button
                     onClick={ev => { ev.stopPropagation(); join(e.id) }}
                     className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg min-h-[44px] ${e.joined ? 'bg-white/10 text-gray-400' : 'grad-bg text-white shadow-purple-500/10'}`}
                   >
-                    {e.joined ? 'Joined' : 'Join Event'}
+                    {e.joined ? 'Joined' : 'Join'}
                   </button>
                 </div>
               </div>
