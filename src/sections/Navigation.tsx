@@ -35,8 +35,8 @@ export default function Navigation() {
           <span className="font-syne font-bold text-lg grad-text tracking-tighter">TURNUP</span>
         </Link>
 
-        {/* Desktop Nav Items */}
-        {user && (
+        {/* Desktop Nav Items - ONLY show if logged in */}
+        {user ? (
           <div className="hidden md:flex items-center gap-1">
             {navItems.map(({ path, label, icon: Icon }) => (
               <Link
@@ -53,30 +53,30 @@ export default function Navigation() {
               </Link>
             ))}
           </div>
-        )}
+        ) : null}
 
         <div className="flex items-center gap-3">
           {user ? (
-            <div className="hidden md:flex items-center gap-3">
+            <div className="flex items-center gap-3">
               {profile?.verified && (
-                <span className="verified-badge">
+                <span className="verified-badge hidden sm:flex">
                   <Shield className="w-3 h-3" /> Verified
                 </span>
               )}
               <button onClick={handleSignOut} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all min-h-[44px]">
-                <LogOut className="w-4 h-4" /> Sign out
+                <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Sign out</span>
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Link to="/auth" className="px-4 py-2 rounded-xl text-sm font-bold text-gray-300 hover:text-white hover:bg-white/5 transition-all min-h-[44px] flex items-center">Sign in</Link>
-              <Link to="/auth?mode=signup" className="btn-grad text-sm px-5 py-2 min-h-[44px] flex items-center font-bold">Join Free</Link>
+              <Link to="/auth" className="px-4 py-2 rounded-xl text-sm font-bold text-gray-400 hover:text-white transition-all min-h-[44px] flex items-center">Sign In</Link>
+              <Link to="/auth?mode=signup" className="btn-grad text-sm px-5 py-2 min-h-[44px] flex items-center font-bold shadow-lg shadow-purple-500/20">Join Free</Link>
             </div>
           )}
         </div>
       </nav>
 
-      {/* Bottom Tab Bar (Mobile Only - Logged In) */}
+      {/* Bottom Tab Bar (Mobile Only - ONLY show if logged in) */}
       {user && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/5 px-2 pb-safe-area shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
           <div className="flex items-center justify-around h-16">
