@@ -226,7 +226,7 @@ export default function Messages() {
               <button
                 key={m.id}
                 onClick={() => setSelected(m.id)}
-                className={`w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-all border-l-2 min-h-[70px] ${selected === m.id ? 'bg-purple-500/5 border-purple-500' : 'border-transparent hover:bg-white/[0.02]'}`}
+                className={`w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-all border-l-2 min-h-[70px] ${selected === m.id ? 'bg-purple-500/10 border-purple-500' : 'border-transparent hover:bg-white/[0.02]'}`}
               >
                 <div className="relative flex-shrink-0">
                   <img src={m.other.photo} alt={m.other.name} className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover ring-2 ring-white/5" />
@@ -234,7 +234,7 @@ export default function Messages() {
                     <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-[3px] border-[#0c0c18]" />
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 text-left">
                   <div className="flex items-center justify-between mb-0.5">
                     <p className="text-white text-sm font-bold truncate">{m.other.name}</p>
                     <span className="text-gray-600 text-[9px] uppercase font-black tracking-widest">{m.time}</span>
@@ -304,7 +304,7 @@ export default function Messages() {
                     <div className={`rounded-2xl text-xs sm:text-sm leading-relaxed overflow-hidden shadow-2xl ${
                       isMe
                         ? 'grad-bg text-white rounded-tr-sm'
-                        : 'bg-[#1a1a2e] text-gray-200 rounded-tl-sm border border-white/5'
+                        : 'bg-[#1e1e3a] text-gray-200 rounded-tl-sm border border-white/5'
                     }`}>
                       {msg.type === 'text' && <div className="px-4 sm:px-5 py-2.5 sm:py-3">{msg.content || msg.text}</div>}
                       {msg.type === 'image' && (
