@@ -20,6 +20,7 @@ interface ChatConversation {
 
 export default function Messages() {
   const { user } = useAuthStore()
+  const [selected, setSelected] = useState<string | null>(null)
   const [conversations, setConversations] = useState<ChatConversation[]>([])
   const [messages, setMessages] = useState<Message[]>([])
   const [newMsg, setNewMsg] = useState('')
@@ -40,7 +41,7 @@ export default function Messages() {
   const recordingTimer = useRef<NodeJS.Timeout | null>(null)
 
   const EMOJIS = ['😊', '😂', '🔥', '❤️', '🙌', '😎', '😍', '✨', '👌', '🙏', '💯', '🤔', '😢', '💀', '👀', '🎉', '🤩', '🤣', '😅', '🙄', '😏', '😉', '😜', '🥳', '🥺', '😡', '😱', '🤯', '😴', '🤤', '🍻', '🍕', '🍔', '🚀', '🌈', '💎', '💡', '✅', '❌', '👋']
-  const matches = DEMO_MATCHES.filter(m => m.other.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredConversations = conversations.filter(c => c.other.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
   useEffect(() => {
     loadConversations()
@@ -207,6 +208,48 @@ export default function Messages() {
     }
   }
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaRecorder.current = new MediaRecorder(stream)
+      audioChunks.current = []
+
+      mediaRecorder.current.ondataavailable = (e) => audioChunks.current.push(e.data)
+      mediaRecorder.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' })
+        const file = new File([audioBlob], 'voice-note.webm', { type: 'audio/webm' })
+        
+        const fileName = `${Math.random()}.webm`
+        const filePath = `${user?.id}/chat/${fileName}`
+        
+        const { error } = await supabase.storage
+          .from('chat-images')
+          .upload(filePath, file)
+
+        if (!error) {
+          const { data: { publicUrl } } = supabase.storage.from('chat-images').getPublicUrl(filePath)
+          send('audio', publicUrl)
+        }
+      }
+
+      mediaRecorder.current.start()
+      setIsRecording(true)
+      setRecordingTime(0)
+      recordingTimer.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
+    } catch (err) {
+      toast.error('Microphone access denied')
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorder.current && isRecording) {
+      mediaRecorder.current.stop()
+      setIsRecording(false)
+      if (recordingTimer.current) clearInterval(recordingTimer.current)
+      mediaRecorder.current.stream.getTracks().forEach(t => t.stop())
+    }
+  }
+
   const startNewChat = (u: Profile) => {
     const existing = conversations.find(c => c.other.id === u.id)
     if (!existing) {
@@ -227,7 +270,7 @@ export default function Messages() {
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <h1 className="font-syne font-bold text-xl sm:text-2xl text-white">Messages</h1>
             <button 
-              onClick={() => { setShowNewMsgModal(true); fetchMutualFollowers(); }}
+              onClick={() => { setShowNewMsgModal(true); fetchAllUsers(); }}
               className="w-10 h-10 sm:w-11 sm:h-11 grad-bg rounded-full flex items-center justify-center shadow-lg shadow-purple-500/20 hover:scale-105 transition-all min-h-[44px]"
             >
               <Pencil className="w-4 h-4 text-white" />
@@ -247,13 +290,13 @@ export default function Messages() {
         </div>
 
         <div className="flex-1 overflow-y-auto no-scrollbar">
-          {conversations.length === 0 ? (
+          {filteredConversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center opacity-40">
               <MessageCircle className="w-12 h-12 mb-3" />
               <p className="text-sm font-medium">No conversations found</p>
             </div>
           ) : (
-            conversations.map(c => (
+            filteredConversations.map(c => (
               <button
                 key={c.id}
                 onClick={() => setSelected(c.id)}
@@ -282,20 +325,20 @@ export default function Messages() {
       </div>
 
       {/* Chat area - Full screen on mobile when selected */}
-      {selected && selectedMatch ? (
+      {selected && selectedConv ? (
         <div className="flex-1 flex flex-col bg-[#090912] absolute inset-0 z-[60] md:relative md:z-0 md:inset-auto">
           <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 glass border-b border-white/5 z-10 min-h-[64px]">
             <button onClick={() => setSelected(null)} className="md:hidden p-2 -ml-2 text-gray-400 min-h-[44px] min-w-[44px] flex items-center justify-center">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="relative flex-shrink-0">
-              <img src={selectedConv.other.photos?.[0]} alt={selectedConv.other.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover" />
+              <img src={selectedConv?.other.photos?.[0]} alt={selectedConv?.other.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover" />
               <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#090912]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-bold text-sm leading-tight truncate">{selectedConv.other.name}</p>
+              <p className="text-white font-bold text-sm leading-tight truncate">{selectedConv?.other.name}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <p className="text-gray-500 text-[9px] font-bold uppercase tracking-widest truncate">{selectedConv.other.campus}</p>
+                <p className="text-gray-500 text-[9px] font-bold uppercase tracking-widest truncate">{selectedConv?.other.campus}</p>
                 <div className="flex items-center gap-1 text-green-500 text-[9px] font-black uppercase">
                   <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse" /> Online
                 </div>
@@ -309,7 +352,7 @@ export default function Messages() {
                 <Video className="w-4 h-4" />
               </button>
               <a 
-                href={`https://wa.me/${selectedConv.other.whatsapp_number || ''}`}
+                href={`https://wa.me/${selectedConv?.other.whatsapp_number || ''}`}
                 target="_blank"
                 className="p-2 sm:p-2.5 rounded-xl bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center"
               >
@@ -323,7 +366,7 @@ export default function Messages() {
               const isMe = msg.sender_id === user?.id
               return (
                 <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                  {!isMe && <img src={selectedConv.other.photos?.[0]} className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1" alt="" />}
+                  {!isMe && <img src={selectedConv?.other.photos?.[0]} className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1" alt="" />}
                   <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                     <div className="relative group max-w-[85%] sm:max-w-[75%]">
                       <div className={`rounded-2xl text-xs sm:text-sm leading-relaxed overflow-hidden shadow-2xl ${
