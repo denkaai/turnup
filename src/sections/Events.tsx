@@ -4,12 +4,12 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 const EVENTS = [
-  { id: 'e1', title: 'Thika Road Campus Bash', desc: 'The biggest party of the semester! All Thika Road campuses invited. Music, drinks, and good vibes.', date: 'Fri, 31 Jan 2025', time: '8:00 PM', location: 'Club Volume, Thika', campus: 'All Campuses', attendees: 156, max: 300, img: 'https://images.unsplash.com/photo-1571266028243-3716f02d2d2e?w=600&h=300&fit=crop', price: 500, organizer: 'TurnUp Events', category: 'Party', joined: false },
-  { id: 'e2', title: 'MKU Talent Night', desc: 'Showcase your talent! Singing, dancing, poetry, comedy — all welcome. Prizes for winners!', date: 'Sat, 1 Feb 2025', time: '6:00 PM', location: 'MKU Main Hall', campus: 'MKU', attendees: 89, max: 200, img: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&h=300&fit=crop', price: 200, organizer: 'MKU Student Assoc.', category: 'Culture', joined: false },
-  { id: 'e3', title: 'JKUAT Game Night', desc: 'FIFA tournament, board games, card games, and more! Pizza and drinks provided.', date: 'Sun, 2 Feb 2025', time: '5:00 PM', location: 'JKUAT Student Center', campus: 'JKUAT', attendees: 45, max: 100, img: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&h=300&fit=crop', price: 150, organizer: 'JKUAT Gaming Club', category: 'Gaming', joined: true },
-  { id: 'e4', title: 'Sunset Picnic & Games', desc: 'Relaxed afternoon at Uhuru Gardens. Bring your squad! Games, music, and snacks.', date: 'Sat, 8 Feb 2025', time: '3:00 PM', location: 'Uhuru Gardens, Nairobi', campus: 'All Campuses', attendees: 67, max: 150, img: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&h=300&fit=crop', price: 100, organizer: 'TurnUp Community', category: 'Outdoor', joined: false },
-  { id: 'e5', title: 'Campus Study Meetup', desc: 'Finals prep session! Bring your books and notes. Study together, eat together, pass together.', date: 'Wed, 5 Feb 2025', time: '2:00 PM', location: 'Zetech Library', campus: 'Zetech', attendees: 23, max: 50, img: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&h=300&fit=crop', price: 0, organizer: 'Zetech Study Group', category: 'Academic', joined: false },
-  { id: 'e6', title: 'Rooftop Sundowner', desc: 'Chill rooftop vibes with good music and friends. Watch the sunset over Thika town!', date: 'Fri, 14 Feb 2025', time: '4:00 PM', location: 'Thika Greens Hotel', campus: 'All Campuses', attendees: 82, max: 120, img: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&h=300&fit=crop', price: 300, organizer: 'TurnUp Events', category: 'Social', joined: false },
+  { id: 'e1', title: 'Thika Road Campus Bash', desc: 'The biggest party of the semester! All Thika Road campuses invited. Music, drinks, and good vibes.', date: 'Fri, 31 Jan 2026', time: '8:00 PM', location: 'Club Volume, Thika', campus: 'All Campuses', attendees: 156, max: 300, img: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800', price: 0, organizer: 'TurnUp Events', category: 'Party', joined: false, isThisWeekend: true },
+  { id: 'e2', title: 'MKU Talent Night', desc: 'Showcase your talent! Singing, dancing, poetry, comedy — all welcome. Prizes for winners!', date: 'Sat, 1 Feb 2026', time: '6:00 PM', location: 'MKU Main Hall', campus: 'MKU', attendees: 89, max: 200, img: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800', price: 0, organizer: 'MKU Student Assoc.', category: 'Culture', joined: false, isThisWeekend: true },
+  { id: 'e3', title: 'JKUAT Game Night', desc: 'FIFA tournament, board games, card games, and more! Pizza and drinks provided.', date: 'Sun, 2 Feb 2026', time: '5:00 PM', location: 'JKUAT Student Center', campus: 'JKUAT', attendees: 45, max: 100, img: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800', price: 0, organizer: 'JKUAT Gaming Club', category: 'Gaming', joined: true },
+  { id: 'e4', title: 'Sunset Picnic & Games', desc: 'Relaxed afternoon at Uhuru Gardens. Bring your squad! Games, music, and snacks.', date: 'Sat, 8 Feb 2026', time: '3:00 PM', location: 'Uhuru Gardens, Nairobi', campus: 'All Campuses', attendees: 67, max: 150, img: 'https://images.unsplash.com/photo-1528605248644-14dd04022da1?w=800', price: 0, organizer: 'TurnUp Community', category: 'Outdoor', joined: false },
+  { id: 'e5', title: 'Campus Study Meetup', desc: 'Finals prep session! Bring your books and notes. Study together, eat together, pass together.', date: 'Wed, 5 Feb 2026', time: '2:00 PM', location: 'Zetech Library', campus: 'Zetech', attendees: 23, max: 50, img: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800', price: 0, organizer: 'Zetech Study Group', category: 'Academic', joined: false },
+  { id: 'e6', title: 'Rooftop Sundowner', desc: 'Chill rooftop vibes with good music and friends. Watch the sunset over Thika town!', date: 'Fri, 14 Feb 2026', time: '4:00 PM', location: 'Thika Greens Hotel', campus: 'All Campuses', attendees: 82, max: 120, img: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800', price: 0, organizer: 'TurnUp Events', category: 'Social', joined: false },
 ]
 
 const CATEGORIES = ['All', 'Party', 'Culture', 'Gaming', 'Outdoor', 'Academic', 'Social']
@@ -71,6 +71,11 @@ export default function Events() {
                   {e.price === 0 && <span className="px-2 py-0.5 rounded-full bg-green-500/80 text-white text-xs">Free</span>}
                   {e.joined && <span className="px-2 py-0.5 rounded-full bg-purple-600/80 text-white text-xs flex items-center gap-1"><CheckCircle className="w-2.5 h-2.5" /> Joined</span>}
                 </div>
+                {e.isThisWeekend && (
+                  <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full grad-bg text-white text-[10px] font-bold shadow-lg animate-pulse">
+                    🔥 This Weekend
+                  </div>
+                )}
               </div>
               <div className="p-4">
                 <h3 className="text-white font-semibold text-sm mb-1 line-clamp-1">{e.title}</h3>
@@ -81,12 +86,12 @@ export default function Events() {
                   <div className="flex items-center gap-1.5 text-gray-500 text-xs"><Users className="w-3 h-3" /> {e.attendees}/{e.max} going</div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-amber-400 text-xs font-medium">{e.price === 0 ? 'Free entry' : `KSh ${e.price}`}</span>
+                  <span className="text-amber-400 text-xs font-bold uppercase tracking-widest">Free entry</span>
                   <button
                     onClick={ev => { ev.stopPropagation(); join(e.id) }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${e.joined ? 'bg-white/8 text-gray-400 hover:bg-red-500/15 hover:text-red-400' : 'grad-bg text-white hover:opacity-90'}`}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg ${e.joined ? 'bg-white/10 text-gray-400' : 'grad-bg text-white'}`}
                   >
-                    {e.joined ? 'Leave' : 'Join'}
+                    {e.joined ? 'Joined' : 'Join Event'}
                   </button>
                 </div>
               </div>
@@ -120,7 +125,7 @@ export default function Events() {
                   { icon: MapPin, text: selected.location },
                   { icon: Users, text: `${selected.attendees} of ${selected.max} attending` },
                   { icon: Tag, text: `By ${selected.organizer}` },
-                  { icon: Clock, text: selected.price === 0 ? 'Free entry' : `KSh ${selected.price} entry` },
+                  { icon: Clock, text: 'Free entry' },
                 ].map(({ icon: Icon, text }) => (
                   <div key={text} className="flex items-center gap-3 text-gray-400 text-sm">
                     <Icon className="w-4 h-4 text-purple-400 flex-shrink-0" /> {text}
@@ -139,9 +144,9 @@ export default function Events() {
               <div className="flex gap-2">
                 <button
                   onClick={() => join(selected.id)}
-                  className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all ${selected.joined ? 'bg-white/8 text-gray-400 hover:bg-red-500/15 hover:text-red-400' : 'btn-grad'}`}
+                  className={`flex-1 py-4 rounded-2xl text-sm font-bold transition-all shadow-xl ${selected.joined ? 'bg-white/10 text-gray-500' : 'btn-grad text-white'}`}
                 >
-                  {selected.joined ? 'Leave Event' : selected.price === 0 ? 'Join Free' : `Join — KSh ${selected.price}`}
+                  {selected.joined ? 'Joined Event' : 'Join Free'}
                 </button>
                 <button
                   onClick={() => navigate(`/squads?event=${encodeURIComponent(selected.title)}`)}
