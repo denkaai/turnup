@@ -28,8 +28,14 @@ const fileToBase64 = (file: File): Promise<string> => {
 }
 
 export default function Onboarding() {
-  const { user, fetchProfile } = useAuthStore()
+  const { user, profile, fetchProfile } = useAuthStore()
   const navigate = useNavigate()
+
+  // If profile already exists, redirect to discover
+  if (profile?.name) {
+    navigate('/discover')
+    return null
+  }
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)

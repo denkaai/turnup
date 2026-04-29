@@ -82,7 +82,22 @@ export default function Profile() {
     navigate('/')
   }
 
-  if (!profile) return null
+  if (!profile) {
+    return (
+      <main className="min-h-screen pt-20 flex flex-col items-center justify-center px-4 text-center">
+        <div className="w-20 h-20 rounded-3xl grad-bg flex items-center justify-center mb-6 animate-bounce">
+          <Zap className="w-10 h-10 text-white" />
+        </div>
+        <h2 className="font-syne font-bold text-2xl text-white mb-2">Profile Not Found</h2>
+        <p className="text-gray-500 max-w-xs mb-8">
+          It looks like you haven't finished setting up your profile yet. Let's get that sorted!
+        </p>
+        <Link to="/onboarding" className="btn-grad px-8 py-3 rounded-xl font-bold flex items-center gap-2">
+          Complete Setup <ChevronRight className="w-4 h-4" />
+        </Link>
+      </main>
+    )
+  }
 
   return (
     <main className="min-h-screen pt-14 px-4 py-8">

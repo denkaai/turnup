@@ -16,7 +16,8 @@ import Profile from '@/sections/Profile'
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile } = useAuthStore()
   if (!user) return <Navigate to="/auth" replace />
-  if (user && profile !== null && !profile?.name) return <Navigate to="/onboarding" replace />
+  // If user is logged in but profile hasn't been created yet or name is missing, go to onboarding
+  if (!profile || !profile.name) return <Navigate to="/onboarding" replace />
   return <>{children}</>
 }
 
