@@ -4,6 +4,8 @@ import { useAuthStore } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { useNavigate, Link } from 'react-router-dom'
+import FollowListModal from '@/components/FollowListModal'
+import FollowButton from '@/components/FollowButton'
 
 const UNIVERSITIES = ['KU', 'JKUAT', 'Zetech', 'MKU', 'PAC University', 'Gretsa', 'Murang\'a University']
 
@@ -16,6 +18,7 @@ export default function Profile() {
   const [expandedSection, setExpandedSection] = useState<'account' | 'privacy' | null>(null)
   const [followerCount, setFollowerCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
+  const [showListModal, setShowListModal] = useState<{ type: 'followers' | 'following' } | null>(null)
   
   const [form, setForm] = useState({
     name: profile?.name || '',
@@ -207,15 +210,21 @@ export default function Profile() {
               <BookOpen className="w-3 h-3 text-purple-400" /> {profile.course} · Year {profile.year}
             </div>
             <div className="flex items-center justify-center gap-3 mt-4">
-              <div className="flex items-center gap-1">
-                <span className="text-white font-black text-sm">{followerCount}</span>
-                <span className="text-gray-600 text-[9px] uppercase tracking-widest font-bold">followers</span>
-              </div>
+              <button 
+                onClick={() => setShowListModal({ type: 'followers' })}
+                className="flex items-center gap-1 group"
+              >
+                <span className="text-white font-black text-sm group-hover:text-purple-400 transition-colors">{followerCount}</span>
+                <span className="text-gray-600 text-[9px] uppercase tracking-widest font-bold group-hover:text-gray-400 transition-colors">followers</span>
+              </button>
               <div className="w-1 h-1 rounded-full bg-gray-800" />
-              <div className="flex items-center gap-1">
-                <span className="text-white font-black text-sm">{followingCount}</span>
-                <span className="text-gray-600 text-[9px] uppercase tracking-widest font-bold">following</span>
-              </div>
+              <button 
+                onClick={() => setShowListModal({ type: 'following' })}
+                className="flex items-center gap-1 group"
+              >
+                <span className="text-white font-black text-sm group-hover:text-purple-400 transition-colors">{followingCount}</span>
+                <span className="text-gray-600 text-[9px] uppercase tracking-widest font-bold group-hover:text-gray-400 transition-colors">following</span>
+              </button>
             </div>
           </div>
         </div>
@@ -381,6 +390,14 @@ export default function Profile() {
           <p className="text-gray-800 text-[9px] mt-1.5 font-bold uppercase tracking-widest opacity-50">Kenyatta University · Thika Road</p>
         </div>
       </div>
+
+      {showListModal && (
+        <FollowListModal 
+          userId={user.id} 
+          type={showListModal.type} 
+          onClose={() => setShowListModal(null)} 
+        />
+      )}
     </main>
   )
 }

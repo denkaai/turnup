@@ -4,6 +4,7 @@ import { Users, Plus, MapPin, Calendar, Flame, ChevronRight, Search, Filter, Loa
 import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
 import FollowButton from '@/components/FollowButton'
+import UserFollowStats from '@/components/UserFollowStats'
 
 interface Squad {
   id: string
@@ -357,7 +358,10 @@ export default function Squads() {
                         <h3 className="text-white font-bold text-sm group-hover:text-purple-400 transition-colors">{s.title}</h3>
                         <FollowButton targetId={s.leader.id} className="scale-75 origin-left" />
                       </div>
-                      <p className="text-gray-500 text-[10px] uppercase tracking-wider">Led by {s.leader.name}</p>
+                      <div className="flex flex-col">
+                        <p className="text-gray-500 text-[10px] uppercase tracking-wider">Led by {s.leader.name}</p>
+                        <UserFollowStats userId={s.leader.id} />
+                      </div>
                     </div>
                   </div>
                 <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-[10px] font-bold">{s.vibe}</span>

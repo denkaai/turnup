@@ -3,6 +3,7 @@ import { Calendar, MapPin, Users, Clock, Tag, Search, CheckCircle, Flame } from 
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import FollowButton from '@/components/FollowButton'
+import UserFollowStats from '@/components/UserFollowStats'
 
 const EVENTS = [
   { id: 'e1', title: 'Thika Road Campus Bash', desc: 'The biggest party of the semester! All Thika Road campuses invited. Music, drinks, and good vibes.', date: 'Fri, 31 Jan 2026', time: '8:00 PM', location: 'Club Volume, Thika', campus: 'All Campuses', attendees: 156, max: 300, img: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800', price: 0, organizer: 'TurnUp Events', category: 'Party', joined: false, isThisWeekend: true },
@@ -155,7 +156,10 @@ export default function Events() {
                           <img src={u.photo} className="w-8 h-8 rounded-full object-cover" alt={u.name} />
                           <div>
                             <p className="text-white text-xs font-bold">{u.name}</p>
-                            <p className="text-gray-500 text-[9px] uppercase tracking-tighter">{u.campus}</p>
+                            <div className="flex flex-col">
+                              <p className="text-gray-500 text-[9px] uppercase tracking-tighter">{u.campus}</p>
+                              <UserFollowStats userId={u.id} />
+                            </div>
                           </div>
                         </div>
                         <FollowButton targetId={u.id} />
