@@ -1,46 +1,27 @@
 import { useState, useEffect, useRef } from 'react'
-import { Send, ArrowLeft, Shield, Loader2, MessageCircle, CheckCheck, Check, Smile, Plus, Mic, Image, MapPin, Play, Square, Trash2, Video, Phone, Search, Pencil } from 'lucide-react'
+import { Send, ArrowLeft, Shield, Loader2, MessageCircle, CheckCheck, Check, Smile, Plus, Mic, Image, MapPin, Play, Square, Trash2, Video, Phone, Search, Pencil, Users, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
-import type { Match, Message } from '@/lib/supabase'
+import type { Profile, Message } from '@/lib/supabase'
 import FollowButton from '@/components/FollowButton'
 import { X as CloseIcon } from 'lucide-react'
+import Picker from '@emoji-mart/react'
+import data from '@emoji-mart/data'
 
-// Demo data for when Supabase isn't configured
-const DEMO_MATCHES = [
-  { id: 'm1', other: { name: 'Amina', campus: 'MKU', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop', whatsapp: '254712345678', online: true }, lastMsg: 'You going to the party Friday? 🔥', unread: 2, time: '2:15 PM' },
-  { id: 'm2', other: { name: 'Brian', campus: 'JKUAT', photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop', whatsapp: '254722334455', online: false }, lastMsg: 'Congrats on finishing exams!', unread: 0, time: '1:30 PM' },
-  { id: 'm3', other: { name: 'Esther', campus: 'KCA', photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&h=100&fit=crop', whatsapp: '254733445566', online: true }, lastMsg: "Let's plan something for the weekend!", unread: 1, time: 'Yesterday' },
-]
-
-const DEMO_MESSAGES: Record<string, any[]> = {
-  m1: [
-    { id: '1', text: 'Hey! 👋', sender: 'them', time: '10:30 AM', read: true },
-    { id: '2', text: 'Hi there! How are you?', sender: 'me', time: '10:32 AM', read: true },
-    { id: '3', text: "I'm good! Just finished my exams finally 😅", sender: 'them', time: '10:33 AM', read: true },
-    { id: '4', text: 'Congrats!! Which campus are you at again?', sender: 'me', time: '10:35 AM', read: true },
-    { id: '5', text: 'MKU! Third year Business. You?', sender: 'them', time: '10:36 AM', read: true },
-    { id: '6', text: 'JKUAT CS Year 4! Almost done 🚀', sender: 'me', time: '10:38 AM', read: true },
-    { id: '7', text: 'You going to the party Friday? 🔥', sender: 'them', time: '11:45 AM', read: false },
-    { id: '8', text: 'Heard its gonna be lit at Club Volume!', sender: 'them', time: '11:45 AM', read: false },
-  ],
-  m2: [
-    { id: '1', text: 'Hey! Saw you study CS too?', sender: 'me', time: 'Yesterday', read: true },
-    { id: '2', text: 'Yep! 4th year. What year are you?', sender: 'them', time: 'Yesterday', read: true },
-    { id: '3', text: 'Congrats on finishing exams!', sender: 'me', time: 'Yesterday', read: true },
-  ],
-  m3: [
-    { id: '1', text: 'Hi! Love your profile 😊', sender: 'them', time: '3h ago', read: true },
-    { id: '2', text: 'Thanks! You seem cool too 😄', sender: 'me', time: '3h ago', read: true },
-    { id: '3', text: "Let's plan something for the weekend!", sender: 'them', time: '3h ago', read: false },
-  ],
+// Types for internal UI state
+interface ChatConversation {
+  id: string
+  other: Profile
+  lastMsg?: string
+  unread?: number
+  time?: string
 }
 
 export default function Messages() {
   const { user } = useAuthStore()
-  const [selected, setSelected] = useState<string | null>(null)
-  const [messages, setMessages] = useState<any[]>([])
+  const [conversations, setConversations] = useState<ChatConversation[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [newMsg, setNewMsg] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [sending, setSending] = useState(false)
@@ -49,10 +30,11 @@ export default function Messages() {
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [showNewMsgModal, setShowNewMsgModal] = useState(false)
-  const [mutualFollowers, setMutualFollowers] = useState<any[]>([])
-  const [loadingFollowers, setLoadingFollowers] = useState(false)
+  const [allUsers, setAllUsers] = useState<Profile[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
   
   const bottomRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorder = useRef<MediaRecorder | null>(null)
   const audioChunks = useRef<Blob[]>([])
   const recordingTimer = useRef<NodeJS.Timeout | null>(null)
@@ -61,47 +43,91 @@ export default function Messages() {
   const matches = DEMO_MATCHES.filter(m => m.other.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
   useEffect(() => {
-    if (selected) {
-      setMessages(DEMO_MESSAGES[selected] || [])
+    loadConversations()
+  }, [user])
+
+  useEffect(() => {
+    if (selected && user) {
+      fetchMessages()
+      const channel = supabase
+        .channel(`chat:${user.id}:${selected}`)
+        .on('postgres_changes', { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'messages',
+          filter: `receiver_id=eq.${user.id}`
+        }, (payload) => {
+          const msg = payload.new as Message
+          if (msg.sender_id === selected) {
+            setMessages(prev => [...prev, msg])
+          }
+        })
+        .subscribe()
+
+      return () => { supabase.removeChannel(channel) }
     }
-  }, [selected])
+  }, [selected, user])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const send = async (type: string = 'text', content: string = '') => {
-    const messageContent = type === 'text' ? newMsg : content
-    if (!messageContent.trim() || !selected || sending) return
+  const loadConversations = async () => {
+    if (!user) return
+    try {
+      // In a real app, we'd have a conversations view or query last messages
+      // For now, let's fetch all profiles we've matched or followed
+      const { data: profiles } = await supabase.from('profiles').select('*').neq('id', user.id).limit(10)
+      if (profiles) {
+        setConversations(profiles.map(p => ({
+          id: p.id,
+          other: p,
+          lastMsg: 'Tap to chat',
+          time: 'Active'
+        })))
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const fetchMessages = async () => {
+    if (!user || !selected) return
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selected}),and(sender_id.eq.${selected},receiver_id.eq.${user.id})`)
+      .order('created_at', { ascending: true })
+
+    if (data) setMessages(data)
+  }
+
+  const send = async (type: 'text' | 'image' | 'audio' = 'text', content: string = '') => {
+    const text = type === 'text' ? newMsg : content
+    if (!text.trim() || !selected || !user || sending) return
     
     setSending(true)
-    const msg = { 
-      id: Date.now().toString(), 
+    const newMsgObj = { 
+      sender_id: user.id,
+      receiver_id: selected,
+      content: text,
       type,
-      content: messageContent, 
-      sender: 'me', 
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
-      read: false 
+      read: false
     }
-    setMessages(prev => [...prev, msg])
-    setNewMsg('')
-    setShowEmojis(false)
-    setShowAttachments(false)
 
-    // Simulate reply
-    setTimeout(() => {
-      const replies = ['Haha yes! 😂', 'Sounds good!', 'Okay sawa 👌', 'Kama kawaida 😄']
-      const reply = { 
-        id: (Date.now() + 1).toString(), 
-        type: 'text',
-        content: replies[Math.floor(Math.random() * replies.length)], 
-        sender: 'them', 
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
-        read: true 
+    try {
+      const { data, error } = await supabase.from('messages').insert(newMsgObj).select().single()
+      if (error) throw error
+      if (data) {
+        setMessages(prev => [...prev, data])
+        setNewMsg('')
+        setShowEmojis(false)
       }
-      setMessages(prev => [...prev, reply])
+    } catch (err) {
+      toast.error('Failed to send message')
+    } finally {
       setSending(false)
-    }, 1500)
+    }
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,114 +141,57 @@ export default function Messages() {
       const filePath = `${user.id}/chat/${fileName}`
 
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
+        .from('chat-images')
         .upload(filePath, file)
 
       if (uploadError) throw uploadError
 
       const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
+        .from('chat-images')
         .getPublicUrl(filePath)
 
       send('image', publicUrl)
     } catch (err) {
-      toast.error('Failed to send image')
+      toast.error('Failed to upload image')
     } finally {
       setSending(false)
     }
   }
 
-  const handleLocation = () => {
-    if (!navigator.geolocation) return toast.error('Geolocation not supported')
-    
-    navigator.geolocation.getCurrentPosition((pos) => {
-      const url = `https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`
-      send('location', url)
-    }, () => toast.error('Location access denied'))
+  const handleCall = (type: 'audio' | 'video') => {
+    toast(`${type === 'audio' ? 'Calling' : 'Video call'} feature coming soon 🔥`, {
+      className: 'bg-[#13131f] border-purple-500/50 text-white font-bold',
+      duration: 3000,
+      position: 'top-center'
+    })
   }
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      mediaRecorder.current = new MediaRecorder(stream)
-      audioChunks.current = []
-
-      mediaRecorder.current.ondataavailable = (e) => audioChunks.current.push(e.data)
-      mediaRecorder.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' })
-        const file = new File([audioBlob], 'voice-note.webm', { type: 'audio/webm' })
-        
-        // Upload audio
-        const fileName = `${Math.random()}.webm`
-        const filePath = `${user?.id}/chat/${fileName}`
-        
-        const { data, error } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, file)
-
-        if (!error) {
-          const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath)
-          send('audio', publicUrl)
-        }
-      }
-
-      mediaRecorder.current.start()
-      setIsRecording(true)
-      setRecordingTime(0)
-      recordingTimer.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
-    } catch (err) {
-      toast.error('Microphone access denied')
-    }
-  }
-
-  const stopRecording = () => {
-    if (mediaRecorder.current && isRecording) {
-      mediaRecorder.current.stop()
-      setIsRecording(false)
-      if (recordingTimer.current) clearInterval(recordingTimer.current)
-      mediaRecorder.current.stream.getTracks().forEach(t => t.stop())
-    }
-  }
-
-  const reactToMessage = (id: string, emoji: string) => {
-    setMessages(prev => prev.map(m => {
-      if (m.id === id) {
-        const reactions = m.reactions || []
-        return { ...m, reactions: reactions.includes(emoji) ? reactions.filter((r: string) => r !== emoji) : [...reactions, emoji] }
-      }
-      return m
-    }))
-  }
-
-  const fetchMutualFollowers = async () => {
+  const fetchAllUsers = async (query: string = '') => {
     if (!user) return
-    setLoadingFollowers(true)
+    setLoadingUsers(true)
     try {
-      // In a real app, we'd query Supabase:
-      // 1. Get everyone I follow
-      // 2. Get everyone who follows me
-      // 3. Find the intersection
-      
-      // For demo, we'll use some of the demo users
-      setMutualFollowers([
-        { id: 'd4', name: 'David', campus: 'Zetech', photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop' },
-        { id: 'd5', name: 'Esther', campus: 'KCA', photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&h=100&fit=crop' },
-      ])
+      let q = supabase.from('profiles').select('*').neq('id', user.id)
+      if (query) q = q.ilike('name', `%${query}%`)
+      const { data } = await q.limit(20)
+      if (data) setAllUsers(data)
     } catch (err) {
-      toast.error('Failed to load followers')
+      toast.error('Failed to load users')
     } finally {
-      setLoadingFollowers(false)
+      setLoadingUsers(false)
     }
   }
 
-  const startNewChat = (u: any) => {
-    // Check if chat exists, if not create/select it
+  const startNewChat = (u: Profile) => {
+    const existing = conversations.find(c => c.other.id === u.id)
+    if (!existing) {
+      setConversations(prev => [{ id: u.id, other: u, lastMsg: 'Tap to chat', time: 'Just now' }, ...prev])
+    }
     setSelected(u.id)
     setShowNewMsgModal(false)
     toast.success(`Chatting with ${u.name}! 🔥`)
   }
 
-  const selectedMatch = matches.find(m => m.id === selected)
+  const selectedConv = conversations.find(c => c.id === selected)
 
   return (
     <main className="h-screen pt-14 flex bg-[#090912] overflow-hidden">
@@ -252,34 +221,32 @@ export default function Messages() {
         </div>
 
         <div className="flex-1 overflow-y-auto no-scrollbar">
-          {matches.length === 0 ? (
+          {conversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center opacity-40">
               <MessageCircle className="w-12 h-12 mb-3" />
               <p className="text-sm font-medium">No conversations found</p>
             </div>
           ) : (
-            matches.map(m => (
+            conversations.map(c => (
               <button
-                key={m.id}
-                onClick={() => setSelected(m.id)}
-                className={`w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-all border-l-2 min-h-[70px] ${selected === m.id ? 'bg-purple-500/10 border-purple-500' : 'border-transparent hover:bg-white/[0.02]'}`}
+                key={c.id}
+                onClick={() => setSelected(c.id)}
+                className={`w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-all border-l-2 min-h-[70px] ${selected === c.id ? 'bg-purple-500/10 border-purple-500' : 'border-transparent hover:bg-white/[0.02]'}`}
               >
                 <div className="relative flex-shrink-0">
-                  <img src={m.other.photo} alt={m.other.name} className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover ring-2 ring-white/5" />
-                  {m.other.online && (
-                    <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-[3px] border-[#0c0c18]" />
-                  )}
+                  <img src={c.other.photos?.[0]} alt={c.other.name} className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover ring-2 ring-white/5" />
+                  <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-[3px] border-[#0c0c18]" />
                 </div>
                 <div className="flex-1 min-w-0 text-left">
                   <div className="flex items-center justify-between mb-0.5">
-                    <p className="text-white text-sm font-bold truncate">{m.other.name}</p>
-                    <span className="text-gray-600 text-[9px] uppercase font-black tracking-widest">{m.time}</span>
+                    <p className="text-white text-sm font-bold truncate">{c.other.name}</p>
+                    <span className="text-gray-600 text-[9px] uppercase font-black tracking-widest">{c.time}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <p className={`text-xs truncate max-w-[140px] sm:max-w-[180px] ${m.unread > 0 ? 'text-gray-200 font-bold' : 'text-gray-500'}`}>{m.lastMsg}</p>
-                    {m.unread > 0 && (
-                      <span className="w-4 h-4 sm:w-5 sm:h-5 grad-bg rounded-full text-white text-[9px] flex items-center justify-center font-black shadow-lg shadow-purple-500/20">{m.unread}</span>
-                    )}
+                    <p className={`text-xs truncate max-w-[140px] sm:max-w-[180px] text-gray-500`}>{c.lastMsg}</p>
+                    {c.unread ? (
+                      <span className="w-4 h-4 sm:w-5 sm:h-5 grad-bg rounded-full text-white text-[9px] flex items-center justify-center font-black shadow-lg shadow-purple-500/20">{c.unread}</span>
+                    ) : null}
                   </div>
                 </div>
               </button>
@@ -291,37 +258,32 @@ export default function Messages() {
       {/* Chat area - Full screen on mobile when selected */}
       {selected && selectedMatch ? (
         <div className="flex-1 flex flex-col bg-[#090912] absolute inset-0 z-[60] md:relative md:z-0 md:inset-auto">
-          {/* Header */}
           <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 glass border-b border-white/5 z-10 min-h-[64px]">
             <button onClick={() => setSelected(null)} className="md:hidden p-2 -ml-2 text-gray-400 min-h-[44px] min-w-[44px] flex items-center justify-center">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="relative flex-shrink-0">
-              <img src={selectedMatch.other.photo} alt={selectedMatch.other.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover" />
-              {selectedMatch.other.online && (
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#090912]" />
-              )}
+              <img src={selectedConv.other.photos?.[0]} alt={selectedConv.other.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover" />
+              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#090912]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-bold text-sm leading-tight truncate">{selectedMatch.other.name}</p>
+              <p className="text-white font-bold text-sm leading-tight truncate">{selectedConv.other.name}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <p className="text-gray-500 text-[9px] font-bold uppercase tracking-widest truncate">{selectedMatch.other.campus}</p>
-                {selectedMatch.other.online && (
-                  <div className="flex items-center gap-1 text-green-500 text-[9px] font-black uppercase">
-                    <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse" /> Online
-                  </div>
-                )}
+                <p className="text-gray-500 text-[9px] font-bold uppercase tracking-widest truncate">{selectedConv.other.campus}</p>
+                <div className="flex items-center gap-1 text-green-500 text-[9px] font-black uppercase">
+                  <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse" /> Online
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
-              <button className="p-2 sm:p-2.5 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center">
+              <button onClick={() => handleCall('audio')} className="p-2 sm:p-2.5 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center">
                 <Phone className="w-4 h-4" />
               </button>
-              <button className="p-2 sm:p-2.5 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center">
+              <button onClick={() => handleCall('video')} className="p-2 sm:p-2.5 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center">
                 <Video className="w-4 h-4" />
               </button>
               <a 
-                href={`https://wa.me/${selectedMatch.other.whatsapp || ''}`}
+                href={`https://wa.me/${selectedConv.other.whatsapp_number || ''}`}
                 target="_blank"
                 className="p-2 sm:p-2.5 rounded-xl bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center"
               >
@@ -330,39 +292,30 @@ export default function Messages() {
             </div>
           </div>
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 no-scrollbar bg-[#090912]">
             {messages.map((msg, idx) => {
-              const isMe = msg.sender === 'me'
+              const isMe = msg.sender_id === user?.id
               return (
-                <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                  <div className="relative group max-w-[85%] sm:max-w-[75%]">
-                    <div className={`rounded-2xl text-xs sm:text-sm leading-relaxed overflow-hidden shadow-2xl ${
-                      isMe
-                        ? 'grad-bg text-white rounded-tr-sm'
-                        : 'bg-[#1e1e3a] text-gray-200 rounded-tl-sm border border-white/5'
-                    }`}>
-                      {msg.type === 'text' && <div className="px-4 sm:px-5 py-2.5 sm:py-3">{msg.content || msg.text}</div>}
-                      {msg.type === 'image' && (
-                        <div className="p-1">
-                          <img src={msg.content} className="max-w-full rounded-xl" alt="Sent photo" />
-                        </div>
-                      )}
-                      {msg.type === 'audio' && (
-                        <div className="px-4 py-3 flex items-center gap-3 min-w-[180px] sm:min-w-[220px]">
-                          <button className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
-                            <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
-                          </button>
-                          <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                            <div className="w-1/3 h-full bg-purple-400" />
+                <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                  {!isMe && <img src={selectedConv.other.photos?.[0]} className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1" alt="" />}
+                  <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                    <div className="relative group max-w-[85%] sm:max-w-[75%]">
+                      <div className={`rounded-2xl text-xs sm:text-sm leading-relaxed overflow-hidden shadow-2xl ${
+                        isMe
+                          ? 'grad-bg text-white rounded-tr-sm'
+                          : 'bg-[#1e1e3a] text-gray-200 rounded-tl-sm border border-white/5'
+                      }`}>
+                        {msg.type === 'text' && <div className="px-4 sm:px-5 py-2.5 sm:py-3">{msg.content}</div>}
+                        {msg.type === 'image' && (
+                          <div className="p-1">
+                            <img src={msg.content} className="max-w-[200px] sm:max-w-[300px] rounded-xl cursor-pointer hover:opacity-90 transition-opacity" alt="Sent photo" onClick={() => window.open(msg.content, '_blank')} />
                           </div>
-                          <span className="text-[9px] font-bold opacity-60">0:12</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className={`flex items-center gap-2 mt-1.5 mx-1 ${isMe ? 'justify-end' : ''}`}>
-                      <p className="text-[9px] text-gray-600 font-bold uppercase">{msg.time}</p>
-                      {isMe && (msg.read ? <CheckCheck className="w-2.5 h-2.5 text-purple-400" /> : <Check className="w-2.5 h-2.5 text-gray-600" />)}
+                        )}
+                      </div>
+                      <div className={`flex items-center gap-2 mt-1.5 mx-1 ${isMe ? 'justify-end' : ''}`}>
+                        <p className="text-[9px] text-gray-600 font-bold uppercase">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        {isMe && (msg.read ? <CheckCheck className="w-2.5 h-2.5 text-purple-400" /> : <Check className="w-2.5 h-2.5 text-gray-600" />)}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -393,10 +346,12 @@ export default function Messages() {
                   <Smile className="w-5 h-5" />
                 </button>
                 <button 
+                  onClick={() => fileInputRef.current?.click()}
                   className="hidden sm:flex w-10 h-10 rounded-xl items-center justify-center text-gray-500 hover:text-white transition-all min-h-[40px]"
                 >
                   <Image className="w-5 h-5" />
                 </button>
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
               </div>
 
               <div className="flex-1 relative flex items-center">
@@ -434,12 +389,17 @@ export default function Messages() {
             </div>
             
             {showEmojis && (
-              <div className="absolute bottom-full mb-2 left-4 right-4 p-3 bg-[#1a1a2e] border border-white/10 rounded-3xl shadow-2xl z-20 grid grid-cols-8 gap-1 animate-slide-up">
-                {EMOJIS.slice(0, 32).map(e => (
-                  <button key={e} onClick={() => { setNewMsg(p => p + e); setShowEmojis(false); }} className="w-9 h-9 flex items-center justify-center hover:bg-white/5 rounded-lg text-lg transition-all">
-                    {e}
-                  </button>
-                ))}
+              <div className="absolute bottom-full mb-2 right-4 z-[100] shadow-2xl">
+                <Picker 
+                  data={data} 
+                  onEmojiSelect={(emoji: any) => {
+                    setNewMsg(prev => prev + emoji.native)
+                    setShowEmojis(false)
+                  }}
+                  theme="dark"
+                  skinTonePosition="none"
+                  previewPosition="none"
+                />
               </div>
             )}
           </div>
@@ -471,33 +431,44 @@ export default function Messages() {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="font-syne font-bold text-2xl text-white tracking-tight">New Message</h2>
-                <p className="text-gray-500 text-[10px] uppercase tracking-widest font-bold">Mutual Connections Only</p>
+                <p className="text-gray-500 text-[10px] uppercase tracking-widest font-bold">Search Comrades</p>
               </div>
               <button onClick={() => setShowNewMsgModal(false)} className="p-2 text-gray-500 hover:text-white transition-all">
                 <CloseIcon className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="space-y-4 max-h-[400px] overflow-y-auto no-scrollbar">
-              {loadingFollowers ? (
+            <div className="relative mb-6">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input 
+                type="text" 
+                placeholder="Search by name..." 
+                className="input-dark pl-10 text-sm min-h-[44px]"
+                onChange={(e) => fetchAllUsers(e.target.value)}
+                onFocus={() => allUsers.length === 0 && fetchAllUsers()}
+              />
+            </div>
+
+            <div className="space-y-4 max-h-[350px] overflow-y-auto no-scrollbar">
+              {loadingUsers ? (
                 <div className="flex flex-col items-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-purple-400 mb-2" />
-                  <p className="text-gray-600 text-xs font-bold uppercase tracking-widest">Finding your comrades...</p>
+                  <p className="text-gray-600 text-xs font-bold uppercase tracking-widest">Searching comrades...</p>
                 </div>
-              ) : mutualFollowers.length === 0 ? (
+              ) : allUsers.length === 0 ? (
                 <div className="text-center py-12 opacity-40">
                   <Users className="w-12 h-12 mx-auto mb-4" />
-                  <p className="text-sm font-medium text-white mb-1">No mutual followers yet</p>
-                  <p className="text-xs">Follow comrades on Discover to start chatting!</p>
+                  <p className="text-sm font-medium text-white mb-1">No comrades found</p>
+                  <p className="text-xs">Follow someone to start chatting!</p>
                 </div>
               ) : (
-                mutualFollowers.map(u => (
+                allUsers.map(u => (
                   <button
                     key={u.id}
                     onClick={() => startNewChat(u)}
                     className="w-full flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-left group"
                   >
-                    <img src={u.photo} className="w-12 h-12 rounded-xl object-cover" alt={u.name} />
+                    <img src={u.photos?.[0]} className="w-12 h-12 rounded-xl object-cover" alt={u.name} />
                     <div className="flex-1">
                       <p className="text-white font-bold text-sm group-hover:text-purple-400 transition-colors">{u.name}</p>
                       <p className="text-gray-500 text-[10px] uppercase tracking-wider">{u.campus}</p>

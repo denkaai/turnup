@@ -37,9 +37,10 @@ export type Match = {
 
 export type Message = {
   id: string
-  match_id: string
   sender_id: string
+  receiver_id: string
   content: string
+  type: 'text' | 'image' | 'audio'
   read: boolean
   created_at: string
 }
