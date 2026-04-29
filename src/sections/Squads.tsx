@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Users, Plus, MapPin, Calendar, Flame, ChevronRight, Search, Filter, Loader2, MessageSquare, CheckCircle, Send, Shield, Info, MoreVertical, Star, ArrowLeft, BarChart3, X, Zap } from 'lucide-react'
 import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
+import FollowButton from '@/components/FollowButton'
 
 interface Squad {
   id: string
@@ -344,18 +345,21 @@ export default function Squads() {
               {s.joined && <div className="absolute top-0 right-0 p-2 bg-purple-500/20 text-purple-400 rounded-bl-xl"><MessageSquare className="w-3.5 h-3.5" /></div>}
               
               <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <img src={s.leader.photo} className="w-10 h-10 rounded-full object-cover border-2 border-white/5" alt={s.leader.name} />
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#111128] flex items-center justify-center">
-                      <CheckCircle className="w-2.5 h-2.5 text-white" />
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <img src={s.leader.photo} className="w-10 h-10 rounded-full object-cover border-2 border-white/5" alt={s.leader.name} />
+                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#111128] flex items-center justify-center">
+                        <CheckCircle className="w-2.5 h-2.5 text-white" />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-white font-bold text-sm group-hover:text-purple-400 transition-colors">{s.title}</h3>
+                        <FollowButton targetId={s.leader.id} className="scale-75 origin-left" />
+                      </div>
+                      <p className="text-gray-500 text-[10px] uppercase tracking-wider">Led by {s.leader.name}</p>
                     </div>
                   </div>
-                  <div>
-                    <h3 className="text-white font-bold text-sm group-hover:text-purple-400 transition-colors">{s.title}</h3>
-                    <p className="text-gray-500 text-[10px] uppercase tracking-wider">Led by {s.leader.name}</p>
-                  </div>
-                </div>
                 <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-[10px] font-bold">{s.vibe}</span>
               </div>
 

@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
 import type { Match, Message } from '@/lib/supabase'
+import FollowButton from '@/components/FollowButton'
+import { X as CloseIcon } from 'lucide-react'
 
 // Demo data for when Supabase isn't configured
 const DEMO_MATCHES = [
@@ -46,6 +48,9 @@ export default function Messages() {
   const [showAttachments, setShowAttachments] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
+  const [showNewMsgModal, setShowNewMsgModal] = useState(false)
+  const [mutualFollowers, setMutualFollowers] = useState<any[]>([])
+  const [loadingFollowers, setLoadingFollowers] = useState(false)
   
   const bottomRef = useRef<HTMLDivElement>(null)
   const mediaRecorder = useRef<MediaRecorder | null>(null)
@@ -189,6 +194,34 @@ export default function Messages() {
     }))
   }
 
+  const fetchMutualFollowers = async () => {
+    if (!user) return
+    setLoadingFollowers(true)
+    try {
+      // In a real app, we'd query Supabase:
+      // 1. Get everyone I follow
+      // 2. Get everyone who follows me
+      // 3. Find the intersection
+      
+      // For demo, we'll use some of the demo users
+      setMutualFollowers([
+        { id: 'd4', name: 'David', campus: 'Zetech', photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop' },
+        { id: 'd5', name: 'Esther', campus: 'KCA', photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&h=100&fit=crop' },
+      ])
+    } catch (err) {
+      toast.error('Failed to load followers')
+    } finally {
+      setLoadingFollowers(false)
+    }
+  }
+
+  const startNewChat = (u: any) => {
+    // Check if chat exists, if not create/select it
+    setSelected(u.id)
+    setShowNewMsgModal(false)
+    toast.success(`Chatting with ${u.name}! 🔥`)
+  }
+
   const selectedMatch = matches.find(m => m.id === selected)
 
   return (
@@ -198,7 +231,10 @@ export default function Messages() {
         <div className="p-4 sm:p-6 pb-2">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <h1 className="font-syne font-bold text-xl sm:text-2xl text-white">Messages</h1>
-            <button className="w-10 h-10 sm:w-11 sm:h-11 grad-bg rounded-full flex items-center justify-center shadow-lg shadow-purple-500/20 hover:scale-105 transition-all min-h-[44px]">
+            <button 
+              onClick={() => { setShowNewMsgModal(true); fetchMutualFollowers(); }}
+              className="w-10 h-10 sm:w-11 sm:h-11 grad-bg rounded-full flex items-center justify-center shadow-lg shadow-purple-500/20 hover:scale-105 transition-all min-h-[44px]"
+            >
               <Pencil className="w-4 h-4 text-white" />
             </button>
           </div>
@@ -409,13 +445,68 @@ export default function Messages() {
           </div>
         </div>
       ) : (
-        <div className="hidden md:flex flex-1 items-center justify-center bg-[#090912]">
+        <div className="hidden md:flex flex-1 items-center justify-center bg-[#090912] relative">
+          <div className="absolute top-8 left-1/2 -translate-x-1/2 w-full max-w-sm px-6">
+            <div className="p-4 rounded-2xl bg-purple-500/5 border border-purple-500/10 text-center animate-bounce-slow">
+              <p className="text-purple-400 text-[10px] font-black uppercase tracking-[0.2em]">🔥 Pro Tip</p>
+              <p className="text-gray-400 text-xs mt-1 font-medium">Follow comrades on Discover or Events to start chatting</p>
+            </div>
+          </div>
+
           <div className="text-center animate-fade-in">
             <div className="w-24 h-24 grad-bg rounded-[32px] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-purple-500/20 rotate-6">
               <MessageCircle className="w-12 h-12 text-white" />
             </div>
             <h2 className="font-syne font-black text-3xl text-white mb-2">TurnUp Messages</h2>
             <p className="text-gray-600 text-sm max-w-xs mx-auto font-medium">Select a chat to start vibing 🔥<br/>Campus life is better together.</p>
+          </div>
+        </div>
+      )}
+
+      {/* New Message Modal */}
+      {showNewMsgModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="card w-full max-w-md p-6 sm:p-8 animate-fade-in relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 grad-bg" />
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="font-syne font-bold text-2xl text-white tracking-tight">New Message</h2>
+                <p className="text-gray-500 text-[10px] uppercase tracking-widest font-bold">Mutual Connections Only</p>
+              </div>
+              <button onClick={() => setShowNewMsgModal(false)} className="p-2 text-gray-500 hover:text-white transition-all">
+                <CloseIcon className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4 max-h-[400px] overflow-y-auto no-scrollbar">
+              {loadingFollowers ? (
+                <div className="flex flex-col items-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-400 mb-2" />
+                  <p className="text-gray-600 text-xs font-bold uppercase tracking-widest">Finding your comrades...</p>
+                </div>
+              ) : mutualFollowers.length === 0 ? (
+                <div className="text-center py-12 opacity-40">
+                  <Users className="w-12 h-12 mx-auto mb-4" />
+                  <p className="text-sm font-medium text-white mb-1">No mutual followers yet</p>
+                  <p className="text-xs">Follow comrades on Discover to start chatting!</p>
+                </div>
+              ) : (
+                mutualFollowers.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => startNewChat(u)}
+                    className="w-full flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-left group"
+                  >
+                    <img src={u.photo} className="w-12 h-12 rounded-xl object-cover" alt={u.name} />
+                    <div className="flex-1">
+                      <p className="text-white font-bold text-sm group-hover:text-purple-400 transition-colors">{u.name}</p>
+                      <p className="text-gray-500 text-[10px] uppercase tracking-wider">{u.campus}</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-700 group-hover:text-purple-500" />
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

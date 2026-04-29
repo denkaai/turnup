@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
 import type { Profile } from '@/lib/supabase'
+import FollowButton from '@/components/FollowButton'
 
 const DEMO_USERS: Profile[] = [
   { id: 'd1', name: 'Amina', age: 21, campus: 'Mount Kenya University (MKU)', course: 'Business Administration', year: 3, bio: 'Weekend vibes only 🎉 Love dancing & good food. Looking for my squad!', photos: ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=500&fit=crop'], interests: ['Dancing', 'Food', 'Movies', 'Parties'], verified: true, premium: false, online: true, gender: 'female', looking_for: 'everyone', vibe: '🎉 Party Animal', weekend_plan: 'Clubbing 🥂', relationship_goal: 'Just vibing 😎', premium_until: null, created_at: new Date().toISOString() } as any,
@@ -162,7 +163,7 @@ export default function Discover() {
                     <div className="flex items-center gap-2 mb-1">
                       <h2 className="text-white font-syne font-bold text-xl sm:text-2xl truncate">{displayUser.name}, {displayUser.age}</h2>
                       {displayUser.verified && <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />}
-                      {displayUser.premium && <Crown className="w-4 h-4 text-amber-400 flex-shrink-0" />}
+                      <FollowButton targetId={displayUser.id} className="ml-2" />
                     </div>
                     <div className="flex items-center gap-1.5 text-gray-300 text-[10px] sm:text-xs font-medium mb-1">
                       <MapPin className="w-3 h-3 text-purple-400" /> {displayUser.campus}

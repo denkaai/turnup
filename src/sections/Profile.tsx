@@ -188,6 +188,17 @@ export default function Profile() {
             <div className="flex items-center justify-center gap-1.5 text-gray-600 text-[10px] font-bold uppercase tracking-wider mt-1">
               <BookOpen className="w-3 h-3 text-purple-400" /> {profile.course} · Year {profile.year}
             </div>
+            <div className="flex items-center justify-center gap-3 mt-4">
+              <div className="flex items-center gap-1">
+                <span className="text-white font-black text-sm">24</span>
+                <span className="text-gray-600 text-[9px] uppercase tracking-widest font-bold">followers</span>
+              </div>
+              <div className="w-1 h-1 rounded-full bg-gray-800" />
+              <div className="flex items-center gap-1">
+                <span className="text-white font-black text-sm">18</span>
+                <span className="text-gray-600 text-[9px] uppercase tracking-widest font-bold">following</span>
+              </div>
+            </div>
           </div>
         </div>
 

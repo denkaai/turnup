@@ -61,3 +61,10 @@ export type Event = {
 }
 
 export type SwipeAction = 'like' | 'pass' | 'superlike'
+
+export type Follow = {
+  id: string
+  follower_id: string
+  following_id: string
+  created_at: string
+}
