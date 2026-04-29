@@ -11,6 +11,7 @@ import Discover from '@/sections/Discover'
 import Messages from '@/sections/Messages'
 import Events from '@/sections/Events'
 import Profile from '@/sections/Profile'
+import Squads from '@/sections/Squads'
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -70,6 +71,7 @@ export default function App() {
         <Route path="/onboarding" element={<Onboarding />} />
 
         <Route path="/discover" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
+        <Route path="/squads" element={<ProtectedRoute><Squads /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
         <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />

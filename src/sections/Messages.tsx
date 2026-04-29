@@ -7,9 +7,9 @@ import type { Match, Message } from '@/lib/supabase'
 
 // Demo data for when Supabase isn't configured
 const DEMO_MATCHES = [
-  { id: 'm1', other: { name: 'Amina', campus: 'MKU', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&h=80&fit=crop' }, lastMsg: 'You going to the party Friday? 🔥', unread: 2, time: '2m ago' },
-  { id: 'm2', other: { name: 'Brian', campus: 'JKUAT', photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=80&h=80&fit=crop' }, lastMsg: 'Congrats on finishing exams!', unread: 0, time: '1h ago' },
-  { id: 'm3', other: { name: 'Esther', campus: 'KCA', photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=80&h=80&fit=crop' }, lastMsg: "Let's plan something for the weekend!", unread: 1, time: '3h ago' },
+  { id: 'm1', other: { name: 'Amina', campus: 'MKU', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&h=80&fit=crop', whatsapp: '254712345678' }, lastMsg: 'You going to the party Friday? 🔥', unread: 2, time: '2m ago' },
+  { id: 'm2', other: { name: 'Brian', campus: 'JKUAT', photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=80&h=80&fit=crop', whatsapp: '254722334455' }, lastMsg: 'Congrats on finishing exams!', unread: 0, time: '1h ago' },
+  { id: 'm3', other: { name: 'Esther', campus: 'KCA', photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=80&h=80&fit=crop', whatsapp: '254733445566' }, lastMsg: "Let's plan something for the weekend!", unread: 1, time: '3h ago' },
 ]
 
 const DEMO_MESSAGES: Record<string, any[]> = {
@@ -243,10 +243,23 @@ export default function Messages() {
             <img src={selectedMatch.other.photo} alt={selectedMatch.other.name} className="w-9 h-9 rounded-full object-cover" />
             <div>
               <p className="text-white font-medium text-sm">{selectedMatch.other.name}</p>
-              <p className="text-gray-600 text-xs">{selectedMatch.other.campus}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-gray-600 text-[10px]">{selectedMatch.other.campus}</p>
+                <div className="flex items-center gap-1 text-green-500 text-[10px]">
+                  <Shield className="w-2.5 h-2.5" /> Verified
+                </div>
+              </div>
             </div>
-            <div className="ml-auto flex items-center gap-1 text-green-500 text-xs">
-              <Shield className="w-3 h-3" /> Verified
+            <div className="ml-auto flex items-center gap-2">
+              <a 
+                href={`https://wa.me/${selectedMatch.other.whatsapp || '254700000000'}`} 
+                target="_blank" 
+                rel="noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-all text-xs font-bold"
+              >
+                <MessageCircle className="w-3.5 h-3.5 fill-current" />
+                WhatsApp
+              </a>
             </div>
           </div>
 

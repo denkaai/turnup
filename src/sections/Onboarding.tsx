@@ -47,7 +47,8 @@ export default function Onboarding() {
     course: '', year: '1', bio: '',
     looking_for: 'everyone', interests: [] as string[],
     vibe: '', weekend_plan: '', relationship_goal: '',
-    photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=500&fit=crop'
+    photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=500&fit=crop',
+    whatsapp_number: ''
   })
 
   const update = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
@@ -165,6 +166,7 @@ export default function Onboarding() {
         vibe: form.vibe,
         weekend_plan: form.weekend_plan,
         relationship_goal: form.relationship_goal,
+        whatsapp_number: form.whatsapp_number,
         photos: [form.photo_url],
         verified: !!idVerified,
         premium: false,
@@ -252,6 +254,10 @@ export default function Onboarding() {
                     <button key={g} onClick={() => update('gender', g.toLowerCase())} className={`py-2.5 rounded-xl text-sm transition-all ${form.gender === g.toLowerCase() ? 'grad-bg text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>{g}</button>
                   ))}
                 </div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1.5">WhatsApp Number</label>
+                <input className="input-dark" placeholder="e.g. 0712345678" value={form.whatsapp_number} onChange={e => update('whatsapp_number', e.target.value)} />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1.5">Looking for</label>

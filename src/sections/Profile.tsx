@@ -15,6 +15,7 @@ export default function Profile() {
     bio: profile?.bio || '',
     course: profile?.course || '',
     interests: profile?.interests || [],
+    whatsapp_number: profile?.whatsapp_number || '',
   })
 
   const INTERESTS = ['Music', 'Dancing', 'Coding', 'Gaming', 'Movies', 'Sports', 'Travel', 'Photography', 'Food', 'Fashion', 'Art', 'Reading', 'Hiking', 'Coffee', 'Parties', 'Studying', 'Cars', 'Netflix', 'Gym', 'Finance']
@@ -66,7 +67,12 @@ export default function Profile() {
   const save = async () => {
     if (!user) return
     setSaving(true)
-    const { error } = await supabase.from('profiles').update({ bio: form.bio, course: form.course, interests: form.interests }).eq('id', user.id)
+    const { error } = await supabase.from('profiles').update({ 
+      bio: form.bio, 
+      course: form.course, 
+      interests: form.interests,
+      whatsapp_number: form.whatsapp_number
+    }).eq('id', user.id)
     if (error) toast.error('Failed to save')
     else {
       await fetchProfile(user.id)
@@ -168,6 +174,22 @@ export default function Profile() {
             />
           ) : (
             <p className="text-gray-300 text-sm leading-relaxed">{profile.bio || 'No bio yet. Add one!'}</p>
+          )}
+        </div>
+
+        {/* WhatsApp */}
+        <div className="card p-4 mb-4">
+          <h3 className="text-xs text-gray-500 mb-2">WhatsApp Number</h3>
+          {editing ? (
+            <input
+              type="text"
+              className="input-dark text-sm w-full"
+              placeholder="e.g. 0712345678"
+              value={form.whatsapp_number}
+              onChange={e => setForm(f => ({ ...f, whatsapp_number: e.target.value }))}
+            />
+          ) : (
+            <p className="text-gray-300 text-sm">{profile.whatsapp_number || 'Not added yet'}</p>
           )}
         </div>
 

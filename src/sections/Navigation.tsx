@@ -13,6 +13,7 @@ export default function Navigation() {
 
   const navItems = [
     { path: '/discover', label: 'Discover', icon: Search },
+    { path: '/squads', label: 'Squads', icon: Flame },
     { path: '/messages', label: 'Messages', icon: MessageCircle },
     { path: '/events', label: 'Events', icon: Calendar },
     { path: '/profile', label: 'Profile', icon: User },

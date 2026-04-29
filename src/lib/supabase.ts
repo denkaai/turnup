@@ -23,6 +23,7 @@ export type Profile = {
   vibe?: string
   weekend_plan?: string
   relationship_goal?: string
+  whatsapp_number?: string
   created_at: string
 }
 
