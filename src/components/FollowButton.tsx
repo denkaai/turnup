@@ -52,35 +52,52 @@ export default function FollowButton({ targetId, className = '', hideIfSelf = tr
   }
 
   const follow = async () => {
-    if (!user || !targetId) return
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    if (!currentUser || !targetId) return
+    
     try {
       setFollowing(true) // Instant update
       const { error } = await supabase
         .from('follows')
-        .insert({ follower_id: user.id, following_id: targetId })
-      if (error) throw error
+        .insert({ follower_id: currentUser.id, following_id: targetId })
+      
+      if (error) {
+        console.error('Follow INSERT Error:', error)
+        setFollowing(false)
+        toast.error('Failed to follow')
+      }
     } catch (err) {
+      console.error('Follow Exception:', err)
       setFollowing(false)
-      toast.error('Failed to follow')
+      toast.error('An error occurred')
     }
   }
 
   const unfollow = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!user || !targetId) return
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    if (!currentUser || !targetId) return
+
     try {
       setFollowing(false) // Instant update
       setConfirming(false)
       const { error } = await supabase
         .from('follows')
         .delete()
-        .eq('follower_id', user.id)
+        .eq('follower_id', currentUser.id)
         .eq('following_id', targetId)
-      if (error) throw error
-      toast.info('Unfollowed comrade')
+      
+      if (error) {
+        console.error('Follow DELETE Error:', error)
+        setFollowing(true)
+        toast.error('Failed to unfollow')
+      } else {
+        toast.info('Unfollowed comrade')
+      }
     } catch (err) {
+      console.error('Unfollow Exception:', err)
       setFollowing(true)
-      toast.error('Failed to unfollow')
+      toast.error('An error occurred')
     }
   }
 

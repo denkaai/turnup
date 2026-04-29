@@ -12,14 +12,31 @@ export default function UserFollowStats({ userId, className = '' }: UserFollowSt
   const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
-    if (userId) fetchCount()
+    if (!userId) return
+    fetchCount()
+
+    const channel = supabase
+      .channel(`follows:${userId}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'follows',
+        filter: `following_id=eq.${userId}`
+      }, () => {
+        fetchCount()
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
   }, [userId])
 
   const fetchCount = async () => {
-    const { count } = await supabase
+    const { count, error } = await supabase
       .from('follows')
       .select('id', { count: 'exact', head: true })
       .eq('following_id', userId)
+    
+    if (error) console.error('Error fetching count:', error)
     setCount(count || 0)
   }
 
