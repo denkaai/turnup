@@ -49,6 +49,20 @@ export default function Profile() {
   useEffect(() => {
     if (user) {
       fetchFollowCounts()
+      
+      const channel = supabase
+        .channel(`profile-stats:${user.id}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'follows',
+          filter: `or(follower_id.eq.${user.id},following_id.eq.${user.id})`
+        }, () => {
+          fetchFollowCounts()
+        })
+        .subscribe()
+
+      return () => { supabase.removeChannel(channel) }
     }
   }, [user])
 
@@ -58,6 +72,10 @@ export default function Profile() {
       supabase.from('follows').select('id', { count: 'exact', head: true }).eq('following_id', user.id),
       supabase.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', user.id)
     ])
+    
+    if (followers.error) console.error('Error fetching followers count:', followers.error.message)
+    if (following.error) console.error('Error fetching following count:', following.error.message)
+    
     setFollowerCount(followers.count || 0)
     setFollowingCount(following.count || 0)
   }

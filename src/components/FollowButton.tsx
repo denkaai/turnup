@@ -25,17 +25,19 @@ export default function FollowButton({ targetId, className = '', hideIfSelf = tr
   }, [user, targetId])
 
   const checkFollow = async () => {
-    if (!user || !targetId) {
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    if (!currentUser || !targetId) {
       setLoading(false)
       return
     }
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('follows')
       .select('id')
-      .eq('follower_id', user.id)
+      .eq('follower_id', currentUser.id)
       .eq('following_id', targetId)
-      .maybeSingle()
+      .maybeSingle() // Using maybeSingle to handle 0 rows gracefully without error
     
+    if (error) console.error('Follow Check Error:', error.message)
     setFollowing(!!data)
     setLoading(false)
   }
@@ -115,9 +117,9 @@ export default function FollowButton({ targetId, className = '', hideIfSelf = tr
         } ${className}`}
       >
         {following ? (
-          <>Following <Check className="w-3 h-3" /></>
+          <>Following ✓ <Check className="w-3 h-3" /></>
         ) : (
-          <>Follow <Plus className="w-3 h-3" /></>
+          <>Follow + <Plus className="w-3 h-3" /></>
         )}
       </button>
 
