@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Send, ArrowLeft, Shield, Loader2, MessageCircle, CheckCheck, Check, Smile, Plus, Mic, Image, MapPin, Play, Square, Trash2 } from 'lucide-react'
+import { Send, ArrowLeft, Shield, Loader2, MessageCircle, CheckCheck, Check, Smile, Plus, Mic, Image, MapPin, Play, Square, Trash2, Video, Phone, Search, Pencil } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
@@ -7,9 +7,9 @@ import type { Match, Message } from '@/lib/supabase'
 
 // Demo data for when Supabase isn't configured
 const DEMO_MATCHES = [
-  { id: 'm1', other: { name: 'Amina', campus: 'MKU', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&h=80&fit=crop', whatsapp: '254712345678' }, lastMsg: 'You going to the party Friday? 🔥', unread: 2, time: '2m ago' },
-  { id: 'm2', other: { name: 'Brian', campus: 'JKUAT', photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=80&h=80&fit=crop', whatsapp: '254722334455' }, lastMsg: 'Congrats on finishing exams!', unread: 0, time: '1h ago' },
-  { id: 'm3', other: { name: 'Esther', campus: 'KCA', photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=80&h=80&fit=crop', whatsapp: '254733445566' }, lastMsg: "Let's plan something for the weekend!", unread: 1, time: '3h ago' },
+  { id: 'm1', other: { name: 'Amina', campus: 'MKU', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop', whatsapp: '254712345678', online: true }, lastMsg: 'You going to the party Friday? 🔥', unread: 2, time: '2:15 PM' },
+  { id: 'm2', other: { name: 'Brian', campus: 'JKUAT', photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop', whatsapp: '254722334455', online: false }, lastMsg: 'Congrats on finishing exams!', unread: 0, time: '1:30 PM' },
+  { id: 'm3', other: { name: 'Esther', campus: 'KCA', photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100&h=100&fit=crop', whatsapp: '254733445566', online: true }, lastMsg: "Let's plan something for the weekend!", unread: 1, time: 'Yesterday' },
 ]
 
 const DEMO_MESSAGES: Record<string, any[]> = {
@@ -40,6 +40,7 @@ export default function Messages() {
   const [selected, setSelected] = useState<string | null>(null)
   const [messages, setMessages] = useState<any[]>([])
   const [newMsg, setNewMsg] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [sending, setSending] = useState(false)
   const [showEmojis, setShowEmojis] = useState(false)
   const [showAttachments, setShowAttachments] = useState(false)
@@ -52,7 +53,7 @@ export default function Messages() {
   const recordingTimer = useRef<NodeJS.Timeout | null>(null)
 
   const EMOJIS = ['😊', '😂', '🔥', '❤️', '🙌', '😎', '😍', '✨', '👌', '🙏', '💯', '🤔', '😢', '💀', '👀', '🎉', '🤩', '🤣', '😅', '🙄', '😏', '😉', '😜', '🥳', '🥺', '😡', '😱', '🤯', '😴', '🤤', '🍻', '🍕', '🍔', '🚀', '🌈', '💎', '💡', '✅', '❌', '👋']
-  const matches = DEMO_MATCHES
+  const matches = DEMO_MATCHES.filter(m => m.other.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
   useEffect(() => {
     if (selected) {
@@ -191,40 +192,63 @@ export default function Messages() {
   const selectedMatch = matches.find(m => m.id === selected)
 
   return (
-    <main className="h-screen pt-14 flex">
+    <main className="h-screen pt-14 flex bg-[#090912]">
       {/* Sidebar */}
-      <div className={`${selected ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-80 border-r border-white/5 bg-[#0c0c18]`}>
-        <div className="p-4 border-b border-white/5">
-          <h1 className="font-syne font-bold text-lg text-white">Messages</h1>
-          <p className="text-gray-600 text-xs">{matches.length} conversations</p>
+      <div className={`${selected ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-[380px] border-r border-white/5 bg-[#0c0c18]`}>
+        <div className="p-6 pb-2">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="font-syne font-bold text-2xl text-white">Messages</h1>
+            <button className="w-10 h-10 grad-bg rounded-full flex items-center justify-center shadow-lg shadow-purple-500/20 hover:scale-105 transition-all">
+              <Pencil className="w-4 h-4 text-white" />
+            </button>
+          </div>
+          
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input 
+              type="text" 
+              placeholder="Search conversations..." 
+              className="input-dark pl-10 text-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto">
+
+        <div className="flex-1 overflow-y-auto no-scrollbar">
           {matches.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-              <MessageCircle className="w-10 h-10 text-gray-700 mb-3" />
-              <p className="text-gray-500 text-sm">No matches yet</p>
-              <p className="text-gray-700 text-xs mt-1">Start swiping to find people!</p>
+            <div className="flex flex-col items-center justify-center h-full p-8 text-center opacity-40">
+              <MessageCircle className="w-12 h-12 mb-3" />
+              <p className="text-sm font-medium">No conversations found</p>
             </div>
           ) : (
             matches.map(m => (
               <button
                 key={m.id}
                 onClick={() => setSelected(m.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/5 transition-all ${selected === m.id ? 'bg-purple-500/10 border-r-2 border-purple-500' : ''}`}
+                className={`w-full flex items-center gap-4 px-6 py-4 transition-all border-l-2 ${selected === m.id ? 'bg-purple-500/5 border-purple-500' : 'border-transparent hover:bg-white/[0.02]'}`}
               >
                 <div className="relative flex-shrink-0">
-                  <img src={m.other.photo} alt={m.other.name} className="w-11 h-11 rounded-full object-cover" />
-                  {m.unread > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 grad-bg rounded-full text-white text-[9px] flex items-center justify-center font-bold">{m.unread}</span>
+                  <img src={m.other.photo} alt={m.other.name} className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white/5" />
+                  {m.other.online && (
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-[3px] border-[#0c0c18]" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-white text-sm font-medium truncate">{m.other.name}</p>
-                    <span className="text-gray-700 text-xs flex-shrink-0 ml-1">{m.time}</span>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-white text-sm font-bold truncate">{m.other.name}</p>
+                    <span className="text-gray-600 text-[10px] uppercase font-black tracking-widest">{m.time}</span>
                   </div>
-                  <p className={`text-xs truncate ${m.unread > 0 ? 'text-gray-300 font-medium' : 'text-gray-600'}`}>{m.lastMsg}</p>
-                  <p className="text-gray-700 text-[10px]">{m.other.campus}</p>
+                  <div className="flex items-center justify-between">
+                    <p className={`text-xs truncate max-w-[180px] ${m.unread > 0 ? 'text-gray-200 font-bold' : 'text-gray-500'}`}>{m.lastMsg}</p>
+                    {m.unread > 0 && (
+                      <span className="w-5 h-5 grad-bg rounded-full text-white text-[9px] flex items-center justify-center font-black shadow-lg shadow-purple-500/20">{m.unread}</span>
+                    )}
+                  </div>
+                  <div className="mt-1 flex items-center gap-1 opacity-50">
+                    <MapPin className="w-2.5 h-2.5" />
+                    <span className="text-[9px] font-bold uppercase tracking-tighter">{m.other.campus}</span>
+                  </div>
                 </div>
               </button>
             ))
@@ -234,112 +258,91 @@ export default function Messages() {
 
       {/* Chat area */}
       {selected && selectedMatch ? (
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col bg-[#090912]">
           {/* Header */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-[#0c0c18]">
-            <button onClick={() => setSelected(null)} className="md:hidden p-1 text-gray-400">
+          <div className="flex items-center gap-4 px-6 py-4 glass border-b border-white/5 z-10">
+            <button onClick={() => setSelected(null)} className="md:hidden p-2 -ml-2 text-gray-400">
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <img src={selectedMatch.other.photo} alt={selectedMatch.other.name} className="w-9 h-9 rounded-full object-cover" />
-            <div>
-              <p className="text-white font-medium text-sm">{selectedMatch.other.name}</p>
-              <div className="flex items-center gap-2">
-                <p className="text-gray-600 text-[10px]">{selectedMatch.other.campus}</p>
-                <div className="flex items-center gap-1 text-green-500 text-[10px]">
-                  <Shield className="w-2.5 h-2.5" /> Verified
-                </div>
+            <div className="relative">
+              <img src={selectedMatch.other.photo} alt={selectedMatch.other.name} className="w-10 h-10 rounded-xl object-cover" />
+              {selectedMatch.other.online && (
+                <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-[3px] border-[#090912]" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-bold text-sm leading-tight">{selectedMatch.other.name}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">{selectedMatch.other.campus}</p>
+                {selectedMatch.other.online && (
+                  <div className="flex items-center gap-1 text-green-500 text-[10px] font-black uppercase">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Online
+                  </div>
+                )}
               </div>
             </div>
-            <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <button className="p-2.5 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                <Phone className="w-4 h-4" />
+              </button>
+              <button className="p-2.5 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                <Video className="w-4 h-4" />
+              </button>
               <a 
-                href={`https://wa.me/${selectedMatch.other.whatsapp || '254700000000'}`} 
-                target="_blank" 
-                rel="noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366]/20 transition-all text-xs font-bold"
+                href={`https://wa.me/${selectedMatch.other.whatsapp || ''}`}
+                target="_blank"
+                className="p-2.5 rounded-xl bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-all"
               >
-                <MessageCircle className="w-3.5 h-3.5 fill-current" />
-                WhatsApp
+                <MessageCircle className="w-4 h-4 fill-current" />
               </a>
             </div>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-            {messages.map(msg => (
-              <div key={msg.id} className={`flex flex-col ${msg.sender === 'me' ? 'items-end' : 'items-start'}`}>
-                <div className="relative group max-w-[85%]">
-                  <div className={`rounded-2xl text-sm leading-relaxed overflow-hidden shadow-sm ${
-                    msg.sender === 'me'
-                      ? 'grad-bg text-white rounded-br-sm'
-                      : 'bg-white/8 text-gray-200 rounded-bl-sm'
-                  }`}>
-                    {msg.type === 'text' && <div className="px-4 py-2.5">{msg.content || msg.text}</div>}
-                    {msg.type === 'image' && (
-                      <div className="p-1">
-                        <img src={msg.content} className="max-w-full rounded-xl" alt="Sent photo" />
-                      </div>
-                    )}
-                    {msg.type === 'audio' && (
-                      <div className="px-4 py-3 flex items-center gap-3 min-w-[200px]">
-                        <button className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-all">
-                          <Play className="w-4 h-4 fill-current" />
-                        </button>
-                        <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
-                          <div className="w-1/3 h-full bg-white/40" />
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 no-scrollbar bg-[#090912]">
+            {messages.map((msg, idx) => {
+              const isMe = msg.sender === 'me'
+              return (
+                <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                  <div className="relative group max-w-[75%]">
+                    <div className={`rounded-2xl text-sm leading-relaxed overflow-hidden shadow-2xl ${
+                      isMe
+                        ? 'grad-bg text-white rounded-tr-sm'
+                        : 'bg-[#1a1a2e] text-gray-200 rounded-tl-sm border border-white/5'
+                    }`}>
+                      {msg.type === 'text' && <div className="px-5 py-3">{msg.content || msg.text}</div>}
+                      {msg.type === 'image' && (
+                        <div className="p-1.5">
+                          <img src={msg.content} className="max-w-full rounded-xl" alt="Sent photo" />
                         </div>
-                        <span className="text-[10px] opacity-60">0:12</span>
-                      </div>
-                    )}
-                    {msg.type === 'location' && (
-                      <a href={msg.content} target="_blank" rel="noreferrer" className="block p-1 group">
-                        <div className="bg-white/5 rounded-xl p-3 flex items-center gap-3 hover:bg-white/10 transition-all">
-                          <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400">
-                            <MapPin className="w-5 h-5" />
+                      )}
+                      {msg.type === 'audio' && (
+                        <div className="px-5 py-4 flex items-center gap-4 min-w-[220px]">
+                          <button className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
+                            <Play className="w-5 h-5 fill-current" />
+                          </button>
+                          <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div className="w-1/3 h-full bg-purple-400" />
                           </div>
-                          <div>
-                            <p className="font-bold text-xs">Shared Location</p>
-                            <p className="text-[10px] opacity-50">View on Google Maps</p>
-                          </div>
+                          <span className="text-[10px] font-bold opacity-60">0:12</span>
                         </div>
-                      </a>
-                    )}
-                    <div className={`flex items-center gap-1 px-4 pb-2 mt-[-4px] ${msg.sender === 'me' ? 'justify-end' : ''}`}>
-                      <span className="text-[10px] opacity-60">{msg.time}</span>
-                      {msg.sender === 'me' && (msg.read ? <CheckCheck className="w-3 h-3 opacity-70" /> : <Check className="w-3 h-3 opacity-50" />)}
+                      )}
+                    </div>
+                    <div className={`flex items-center gap-2 mt-1.5 mx-1 ${isMe ? 'justify-end' : ''}`}>
+                      <p className="text-[10px] text-gray-600 font-bold uppercase">{msg.time}</p>
+                      {isMe && (msg.read ? <CheckCheck className="w-3 h-3 text-purple-400" /> : <Check className="w-3 h-3 text-gray-600" />)}
                     </div>
                   </div>
-
-                  {/* Reaction Button */}
-                  <div className={`absolute top-0 ${msg.sender === 'me' ? '-left-8' : '-right-8'} opacity-0 group-hover:opacity-100 transition-opacity`}>
-                    <button 
-                      className="p-1.5 rounded-full bg-[#1a1a2e] border border-white/10 text-gray-400 hover:text-white shadow-xl"
-                      onClick={(e) => {
-                        const emoji = ['❤️', '😂', '😮', '😢', '🔥', '👍'][Math.floor(Math.random() * 6)]
-                        reactToMessage(msg.id, emoji)
-                      }}
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  {/* Reactions Display */}
-                  {msg.reactions && msg.reactions.length > 0 && (
-                    <div className={`absolute -bottom-2 ${msg.sender === 'me' ? 'right-2' : 'left-2'} flex gap-0.5 bg-[#1a1a2e] border border-white/10 px-1.5 py-0.5 rounded-full shadow-lg z-10`}>
-                      {msg.reactions.map((r: string, idx: number) => (
-                        <span key={idx} className="text-[10px]">{r}</span>
-                      ))}
-                    </div>
-                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
             {sending && (
               <div className="flex justify-start">
-                <div className="bg-white/8 px-4 py-2.5 rounded-2xl rounded-bl-sm">
-                  <div className="flex gap-1 items-center h-4">
-                    <div className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="bg-[#1a1a2e] px-5 py-3 rounded-2xl rounded-tl-sm border border-white/5">
+                  <div className="flex gap-1.5 items-center h-4">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
@@ -347,101 +350,82 @@ export default function Messages() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Safety tip */}
-          <div className="px-4 py-2 bg-blue-500/5 border-t border-blue-500/10 flex items-center gap-2">
-            <Shield className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
-            <p className="text-blue-400/70 text-xs">Never share personal financial info. Meet in public places first.</p>
-          </div>
+          {/* Input Area */}
+          <div className="p-6 pt-2 bg-[#090912]">
+            {/* Safety Reminder */}
+            <div className="flex items-center gap-2 mb-4 px-4 py-2 bg-blue-500/5 rounded-xl border border-blue-500/10">
+              <Shield className="w-3.5 h-3.5 text-blue-400" />
+              <p className="text-[10px] text-blue-400/70 font-bold uppercase tracking-tight">Stay safe! Meet in public and verify student IDs.</p>
+            </div>
 
-          {/* Input */}
-          <div className="px-4 py-3 border-t border-white/5 relative">
+            <div className="flex gap-3 items-center">
+              <div className="flex items-center gap-1 bg-[#121225] rounded-2xl p-1 border border-white/5">
+                <button 
+                  onClick={() => setShowEmojis(!showEmojis)}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${showEmojis ? 'bg-purple-500/10 text-purple-400' : 'text-gray-500 hover:text-white'}`}
+                >
+                  <Smile className="w-5 h-5" />
+                </button>
+                <button 
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-500 hover:text-white transition-all"
+                >
+                  <Image className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 relative flex items-center">
+                <input
+                  className="input-dark w-full text-sm py-4 px-6 rounded-2xl border-none bg-[#121225] focus:ring-2 focus:ring-purple-500/50"
+                  placeholder={isRecording ? 'Recording voice note...' : 'Type your message...'}
+                  value={newMsg}
+                  onChange={e => setNewMsg(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && send()}
+                  disabled={isRecording}
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                {newMsg.trim() ? (
+                  <button
+                    onClick={() => send()}
+                    disabled={sending}
+                    className="w-12 h-12 grad-bg rounded-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl shadow-purple-500/20"
+                  >
+                    <Send className="w-5 h-5 text-white" />
+                  </button>
+                ) : (
+                  <button
+                    onMouseDown={startRecording}
+                    onMouseUp={stopRecording}
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                      isRecording ? 'grad-bg animate-pulse' : 'bg-[#121225] text-gray-500 hover:text-white'
+                    }`}
+                  >
+                    <Mic className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+            </div>
+            
             {showEmojis && (
-              <div className="absolute bottom-full mb-2 left-4 p-2 bg-[#1a1a2e] border border-white/10 rounded-2xl shadow-2xl z-20 grid grid-cols-8 gap-1 animate-slide-up">
+              <div className="absolute bottom-full mb-4 left-6 right-6 p-4 bg-[#1a1a2e] border border-white/10 rounded-[32px] shadow-2xl z-20 grid grid-cols-10 gap-2 animate-slide-up">
                 {EMOJIS.map(e => (
-                  <button key={e} onClick={() => setNewMsg(p => p + e)} className="w-8 h-8 flex items-center justify-center hover:bg-white/5 rounded-lg text-lg">
+                  <button key={e} onClick={() => { setNewMsg(p => p + e); setShowEmojis(false); }} className="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded-xl text-xl transition-all">
                     {e}
                   </button>
                 ))}
               </div>
             )}
-
-            {showAttachments && (
-              <div className="absolute bottom-full mb-2 left-4 p-1 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl z-20 flex flex-col gap-1 animate-slide-up">
-                <label className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 rounded-lg transition-all cursor-pointer">
-                  <Image className="w-4 h-4 text-purple-400" />
-                  <span className="text-sm text-gray-300">Photo</span>
-                  <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} />
-                </label>
-                <button onClick={handleLocation} className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 rounded-lg transition-all text-left">
-                  <MapPin className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm text-gray-300">Location</span>
-                </button>
-              </div>
-            )}
-
-            <div className="flex gap-2 items-center">
-              <button 
-                onClick={() => { setShowAttachments(!showAttachments); setShowEmojis(false); }}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${showAttachments ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}
-              >
-                <Plus className={`w-5 h-5 transition-transform ${showAttachments ? 'rotate-45' : ''}`} />
-              </button>
-              
-              <button 
-                onClick={() => { setShowEmojis(!showEmojis); setShowAttachments(false); }}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${showEmojis ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'}`}
-              >
-                <Smile className="w-5 h-5" />
-              </button>
-
-              <div className="flex-1 relative flex items-center">
-                <input
-                  className="input-dark w-full text-sm py-2.5 pr-10"
-                  placeholder={isRecording ? 'Recording voice note...' : 'Type a message...'}
-                  value={newMsg}
-                  onChange={e => setNewMsg(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send('text')}
-                  disabled={isRecording}
-                />
-              </div>
-
-              {newMsg.trim() ? (
-                <button
-                  onClick={() => send('text')}
-                  disabled={sending}
-                  className="w-10 h-10 grad-bg rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg"
-                >
-                  <Send className="w-4 h-4 text-white" />
-                </button>
-              ) : (
-                <button
-                  onMouseDown={startRecording}
-                  onMouseUp={stopRecording}
-                  onTouchStart={startRecording}
-                  onTouchEnd={stopRecording}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                    isRecording ? 'grad-bg animate-pulse' : 'bg-white/5 text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  {isRecording ? <Square className="w-4 h-4 text-white" /> : <Mic className="w-5 h-5" />}
-                </button>
-              )}
-            </div>
-            {isRecording && (
-              <div className="mt-2 flex items-center gap-2 justify-center">
-                <div className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                <span className="text-[10px] text-red-500 font-bold uppercase tracking-widest">
-                  Recording {Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, '0')}
-                </span>
-              </div>
-            )}
           </div>
         </div>
       ) : (
-        <div className="hidden md:flex flex-1 items-center justify-center">
-          <div className="text-center">
-            <MessageCircle className="w-12 h-12 text-gray-700 mx-auto mb-3" />
-            <p className="text-gray-500">Select a conversation</p>
+        <div className="hidden md:flex flex-1 items-center justify-center bg-[#090912]">
+          <div className="text-center animate-fade-in">
+            <div className="w-24 h-24 grad-bg rounded-[32px] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-purple-500/20 rotate-6">
+              <MessageCircle className="w-12 h-12 text-white" />
+            </div>
+            <h2 className="font-syne font-black text-3xl text-white mb-2">TurnUp Messages</h2>
+            <p className="text-gray-600 text-sm max-w-xs mx-auto font-medium">Select a chat to start vibing 🔥<br/>Campus life is better together.</p>
           </div>
         </div>
       )}
