@@ -143,181 +143,191 @@ export default function Profile() {
   )
 
   return (
-    <main className="min-h-screen pt-14 px-4 py-8">
-      <div className="max-w-sm mx-auto">
+    <main className="min-h-screen pt-14 px-4 py-8 pb-24 md:pb-12">
+      <div className="max-w-sm mx-auto w-full">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="font-syne font-bold text-xl text-white">Profile</h1>
-          <button onClick={() => setEditing(!editing)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 text-gray-400 hover:bg-white/10 transition-all text-sm">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="font-syne font-bold text-xl sm:text-2xl text-white tracking-tight">Profile</h1>
+            <p className="text-gray-600 text-[10px] uppercase font-black tracking-widest">Your Campus Identity</p>
+          </div>
+          <button onClick={() => setEditing(!editing)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 transition-all text-xs font-bold min-h-[44px]">
             <Edit2 className="w-3.5 h-3.5" /> {editing ? 'Cancel' : 'Edit'}
           </button>
         </div>
 
         {/* Avatar */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-8">
           <div className="relative inline-block">
-            <img
-              src={profile.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop'}
-              alt={profile.name}
-              className={`w-24 h-24 rounded-full object-cover border-2 border-purple-500/30 ${photoUploading ? 'opacity-50' : ''}`}
-            />
+            <div className="p-1 rounded-full grad-bg shadow-2xl shadow-purple-500/20">
+              <img
+                src={profile.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop'}
+                alt={profile.name}
+                className={`w-28 h-28 rounded-full object-cover border-4 border-[#090912] ${photoUploading ? 'opacity-50' : ''}`}
+              />
+            </div>
             {photoUploading && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
               </div>
             )}
-            <label className="absolute bottom-0 right-0 w-8 h-8 grad-bg rounded-full flex items-center justify-center border-2 border-[#090912] cursor-pointer hover:scale-110 transition-all shadow-lg">
+            <label className="absolute bottom-1 right-1 w-10 h-10 grad-bg rounded-full flex items-center justify-center border-4 border-[#090912] cursor-pointer hover:scale-110 transition-all shadow-xl">
               <Camera className="w-4 h-4 text-white" />
               <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={photoUploading} />
             </label>
           </div>
-          <div className="mt-3">
-            <div className="flex items-center justify-center gap-2 mb-1">
-              <h2 className="font-syne font-bold text-xl text-white">{profile.name}, {profile.age}</h2>
+          <div className="mt-4">
+            <div className="flex items-center justify-center gap-2 mb-1.5">
+              <h2 className="font-syne font-bold text-xl sm:text-2xl text-white tracking-tight">{profile.name}, {profile.age}</h2>
               {profile.verified && <CheckCircle className="w-4 h-4 text-green-400" />}
               {profile.premium && <Crown className="w-4 h-4 text-amber-400" />}
             </div>
-            <div className="flex items-center justify-center gap-1 text-gray-500 text-xs">
-              <MapPin className="w-3 h-3" /> {profile.campus}
+            <div className="flex items-center justify-center gap-1.5 text-gray-500 text-[10px] font-bold uppercase tracking-wider">
+              <MapPin className="w-3 h-3 text-purple-400" /> {profile.campus}
             </div>
-            <div className="flex items-center justify-center gap-1 text-gray-600 text-xs mt-0.5">
-              <BookOpen className="w-3 h-3" /> {profile.course} · Year {profile.year}
+            <div className="flex items-center justify-center gap-1.5 text-gray-600 text-[10px] font-bold uppercase tracking-wider mt-1">
+              <BookOpen className="w-3 h-3 text-purple-400" /> {profile.course} · Year {profile.year}
             </div>
           </div>
         </div>
 
         {/* Badges */}
-        <div className="flex gap-2 justify-center mb-6">
+        <div className="flex gap-2 justify-center mb-8">
           {profile.verified && (
-            <span className="verified-badge"><Shield className="w-3 h-3" /> Student Verified</span>
+            <span className="verified-badge px-4 py-1.5"><Shield className="w-3 h-3" /> Student Verified</span>
           )}
           {profile.premium && (
-            <span className="px-3 py-1 rounded-full text-xs bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1">
+            <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1.5">
               <Crown className="w-3 h-3" /> Premium
             </span>
           )}
         </div>
 
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          {[{ label: 'Matches', value: '12' }, { label: 'Events', value: '3' }, { label: 'Vibes', value: '5' }].map(s => (
+            <div key={s.label} className="card p-4 text-center hover:scale-105 transition-all cursor-default border-white/5 bg-white/[0.02]">
+              <p className="font-syne font-black text-xl grad-text leading-none mb-1.5">{s.value}</p>
+              <p className="text-gray-600 text-[8px] sm:text-[9px] uppercase font-black tracking-[0.15em]">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
         {/* Bio */}
-        <div className="card p-4 mb-4">
-          <h3 className="text-xs text-gray-500 mb-2 font-black uppercase tracking-widest">Bio</h3>
+        <div className="card p-5 mb-4 border-white/5 bg-white/[0.02]">
+          <h3 className="text-[9px] text-gray-500 mb-2.5 font-black uppercase tracking-[0.2em]">About Me</h3>
           {editing ? (
             <textarea
-              className="input-dark resize-none text-sm w-full"
+              className="input-dark resize-none text-sm w-full min-h-[100px]"
               rows={3}
               value={form.bio}
               maxLength={200}
               onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}
+              placeholder="Tell the campus your vibe..."
             />
           ) : (
-            <p className="text-gray-300 text-sm leading-relaxed">{profile.bio || 'No bio yet. Add one!'}</p>
+            <p className="text-gray-300 text-sm leading-relaxed font-medium">{profile.bio || 'No bio yet. Add one!'}</p>
           )}
         </div>
 
         {/* Interests */}
-        <div className="card p-4 mb-4">
-          <h3 className="text-xs text-gray-500 mb-3 font-black uppercase tracking-widest">Interests</h3>
+        <div className="card p-5 mb-4 border-white/5 bg-white/[0.02]">
+          <h3 className="text-[9px] text-gray-500 mb-4 font-black uppercase tracking-[0.2em]">Interests</h3>
           <div className="flex flex-wrap gap-2">
             {editing ? (
               INTERESTS.map(i => (
-                <button key={i} onClick={() => toggleInterest(i)} className={`px-2.5 py-1 rounded-full text-xs transition-all ${form.interests.includes(i) ? 'grad-bg text-white' : 'bg-white/5 text-gray-500 hover:text-gray-300'}`}>{i}</button>
+                <button key={i} onClick={() => toggleInterest(i)} className={`px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all min-h-[32px] ${form.interests.includes(i) ? 'grad-bg text-white' : 'bg-white/5 text-gray-500 hover:text-gray-300'}`}>{i}</button>
               ))
             ) : (
               (profile.interests || []).map(i => (
-                <span key={i} className="px-2.5 py-1 rounded-full bg-purple-500/12 border border-purple-500/20 text-purple-300 text-xs">{i}</span>
+                <span key={i} className="px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-bold uppercase tracking-wider">{i}</span>
               ))
             )}
           </div>
         </div>
 
         {editing && (
-          <button onClick={save} disabled={saving} className="btn-grad w-full flex items-center justify-center gap-2 text-sm mb-6 py-3 font-bold">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save Profile
+          <button onClick={save} disabled={saving} className="btn-grad w-full flex items-center justify-center gap-2 mb-8 py-4 font-black uppercase tracking-widest shadow-2xl shadow-purple-500/20 active:scale-[0.98]">
+            {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+            Update Profile
           </button>
         )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          {[{ label: 'Matches', value: '12' }, { label: 'Events', value: '3' }, { label: 'Superliked', value: '5' }].map(s => (
-            <div key={s.label} className="card p-3 text-center hover:scale-105 hover:shadow-lg hover:shadow-purple-500/10 transition-all cursor-default">
-              <p className="font-syne font-bold text-lg grad-text">{s.value}</p>
-              <p className="text-gray-600 text-[10px] uppercase font-black tracking-widest">{s.label}</p>
-            </div>
-          ))}
-        </div>
-
         {/* Settings sections */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           {/* Account Settings */}
-          <div className="card overflow-hidden">
+          <div className="card overflow-hidden border-white/5 bg-white/[0.02]">
             <button 
               onClick={() => setExpandedSection(expandedSection === 'account' ? null : 'account')}
-              className="w-full flex items-center gap-3 px-4 py-4 hover:bg-white/3 transition-all text-left"
+              className="w-full flex items-center gap-4 px-5 py-5 hover:bg-white/3 transition-all text-left min-h-[64px]"
             >
-              <User className="w-4 h-4 text-purple-400" />
-              <span className="text-gray-300 text-sm font-bold flex-1">Account Settings</span>
+              <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                <User className="w-4 h-4 text-purple-400" />
+              </div>
+              <span className="text-gray-200 text-sm font-black uppercase tracking-wider flex-1">Account Settings</span>
               <ChevronRight className={`w-4 h-4 text-gray-700 transition-transform ${expandedSection === 'account' ? 'rotate-90' : ''}`} />
             </button>
             
             {expandedSection === 'account' && (
-              <div className="px-4 pb-6 pt-2 space-y-4 border-t border-white/5 animate-fade-in">
+              <div className="px-5 pb-8 pt-2 space-y-5 border-t border-white/5 animate-fade-in">
                 <div>
-                  <label className="text-[10px] text-gray-500 uppercase font-black mb-1.5 block tracking-widest">Display Name</label>
-                  <input className="input-dark" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+                  <label className="text-[9px] text-gray-500 uppercase font-black mb-2 block tracking-widest">Display Name</label>
+                  <input className="input-dark min-h-[48px]" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
                 </div>
                 <div>
-                  <label className="text-[10px] text-gray-500 uppercase font-black mb-1.5 block tracking-widest">University</label>
+                  <label className="text-[9px] text-gray-500 uppercase font-black mb-2 block tracking-widest">University</label>
                   <select 
-                    className="input-dark appearance-none" 
+                    className="input-dark appearance-none min-h-[48px]" 
                     value={form.campus} 
                     onChange={e => setForm({...form, campus: e.target.value})}
                   >
                     {UNIVERSITIES.map(u => <option key={u} value={u}>{u}</option>)}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] text-gray-500 uppercase font-black mb-1.5 block tracking-widest">Course</label>
-                    <input className="input-dark" value={form.course} onChange={e => setForm({...form, course: e.target.value})} />
+                    <label className="text-[9px] text-gray-500 uppercase font-black mb-2 block tracking-widest">Course</label>
+                    <input className="input-dark min-h-[48px]" value={form.course} onChange={e => setForm({...form, course: e.target.value})} />
                   </div>
                   <div>
-                    <label className="text-[10px] text-gray-500 uppercase font-black mb-1.5 block tracking-widest">Year</label>
-                    <input type="number" className="input-dark" value={form.year} onChange={e => setForm({...form, year: parseInt(e.target.value)})} />
+                    <label className="text-[9px] text-gray-500 uppercase font-black mb-2 block tracking-widest">Year</label>
+                    <input type="number" className="input-dark min-h-[48px]" value={form.year} onChange={e => setForm({...form, year: parseInt(e.target.value)})} />
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] text-gray-500 uppercase font-black mb-1.5 block tracking-widest">WhatsApp Number</label>
-                  <input className="input-dark" placeholder="e.g. 0712..." value={form.whatsapp_number} onChange={e => setForm({...form, whatsapp_number: e.target.value})} />
+                  <label className="text-[9px] text-gray-500 uppercase font-black mb-2 block tracking-widest">WhatsApp Number</label>
+                  <input className="input-dark min-h-[48px]" placeholder="e.g. 0712345678" value={form.whatsapp_number} onChange={e => setForm({...form, whatsapp_number: e.target.value})} />
                 </div>
-                <button onClick={save} disabled={saving} className="btn-grad w-full py-3 rounded-xl text-xs font-bold shadow-lg shadow-purple-500/10">
-                  {saving ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : 'Save Account Changes'}
+                <button onClick={save} disabled={saving} className="btn-grad w-full py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-purple-500/10 active:scale-[0.98]">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Save Changes'}
                 </button>
               </div>
             )}
           </div>
 
           {/* Privacy Settings */}
-          <div className="card overflow-hidden">
+          <div className="card overflow-hidden border-white/5 bg-white/[0.02]">
             <button 
               onClick={() => setExpandedSection(expandedSection === 'privacy' ? null : 'privacy')}
-              className="w-full flex items-center gap-3 px-4 py-4 hover:bg-white/3 transition-all text-left"
+              className="w-full flex items-center gap-4 px-5 py-5 hover:bg-white/3 transition-all text-left min-h-[64px]"
             >
-              <Lock className="w-4 h-4 text-blue-400" />
-              <span className="text-gray-300 text-sm font-bold flex-1">Privacy Settings</span>
+              <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <Lock className="w-4 h-4 text-blue-400" />
+              </div>
+              <span className="text-gray-200 text-sm font-black uppercase tracking-wider flex-1">Privacy & Safety</span>
               <ChevronRight className={`w-4 h-4 text-gray-700 transition-transform ${expandedSection === 'privacy' ? 'rotate-90' : ''}`} />
             </button>
 
             {expandedSection === 'privacy' && (
-              <div className="px-4 pb-6 pt-2 divide-y divide-white/5 animate-fade-in">
+              <div className="px-5 pb-6 pt-2 divide-y divide-white/5 animate-fade-in">
                 {[
                   { key: 'showUni', label: 'Show university on profile' },
-                  { key: 'showWhatsAppMatches', label: 'Show WhatsApp to matches only' },
-                  { key: 'allowDiscovery', label: 'Allow discovery in swiping' },
+                  { key: 'showWhatsAppMatches', label: 'WhatsApp to matches only' },
+                  { key: 'allowDiscovery', label: 'Show me in Discovery' },
                   { key: 'showOnline', label: 'Show my online status' }
                 ].map(({ key, label }) => (
                   <div key={key} className="flex items-center justify-between py-4">
-                    <span className="text-xs text-gray-400 font-medium">{label}</span>
+                    <span className="text-xs text-gray-400 font-bold uppercase tracking-tight">{label}</span>
                     <Toggle 
                       active={privacy[key as keyof typeof privacy]} 
                       onToggle={() => setPrivacy(p => ({ ...p, [key]: !p[key as keyof typeof privacy] }))} 
@@ -329,15 +339,17 @@ export default function Profile() {
           </div>
 
           {/* Logout */}
-          <button onClick={handleSignOut} className="card w-full flex items-center gap-3 px-4 py-4 hover:bg-red-500/5 transition-all text-left group">
-            <LogOut className="w-4 h-4 text-red-500/70 group-hover:text-red-500" />
-            <span className="text-red-400/80 group-hover:text-red-500 text-sm font-bold flex-1">Sign Out</span>
+          <button onClick={handleSignOut} className="card w-full flex items-center gap-4 px-5 py-5 hover:bg-red-500/5 transition-all text-left group border-white/5 bg-white/[0.02] min-h-[64px]">
+            <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center group-hover:bg-red-500/20 transition-all">
+              <LogOut className="w-4 h-4 text-red-500/70 group-hover:text-red-500" />
+            </div>
+            <span className="text-red-400/80 group-hover:text-red-500 text-sm font-black uppercase tracking-wider flex-1">Sign Out</span>
           </button>
         </div>
 
-        <div className="text-center mt-10">
-          <p className="text-gray-700 text-[10px] font-black uppercase tracking-[0.2em]">TurnUp v2.0</p>
-          <p className="text-gray-800 text-[9px] mt-1 italic">Made for the next generation of students</p>
+        <div className="text-center mt-12 pb-8">
+          <p className="text-gray-700 text-[10px] font-black uppercase tracking-[0.3em]">TurnUp v2.0</p>
+          <p className="text-gray-800 text-[9px] mt-1.5 font-bold uppercase tracking-widest opacity-50">Kenyatta University · Thika Road</p>
         </div>
       </div>
     </main>

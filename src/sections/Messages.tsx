@@ -192,13 +192,13 @@ export default function Messages() {
   const selectedMatch = matches.find(m => m.id === selected)
 
   return (
-    <main className="h-screen pt-14 flex bg-[#090912]">
-      {/* Sidebar */}
-      <div className={`${selected ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-[380px] border-r border-white/5 bg-[#0c0c18]`}>
-        <div className="p-6 pb-2">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="font-syne font-bold text-2xl text-white">Messages</h1>
-            <button className="w-10 h-10 grad-bg rounded-full flex items-center justify-center shadow-lg shadow-purple-500/20 hover:scale-105 transition-all">
+    <main className="h-screen pt-14 flex bg-[#090912] overflow-hidden">
+      {/* Sidebar - Hidden on mobile when chat is selected */}
+      <div className={`${selected ? 'hidden' : 'flex'} md:flex flex-col w-full md:w-[380px] border-r border-white/5 bg-[#0c0c18] pb-16 md:pb-0`}>
+        <div className="p-4 sm:p-6 pb-2">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h1 className="font-syne font-bold text-xl sm:text-2xl text-white">Messages</h1>
+            <button className="w-10 h-10 sm:w-11 sm:h-11 grad-bg rounded-full flex items-center justify-center shadow-lg shadow-purple-500/20 hover:scale-105 transition-all min-h-[44px]">
               <Pencil className="w-4 h-4 text-white" />
             </button>
           </div>
@@ -208,7 +208,7 @@ export default function Messages() {
             <input 
               type="text" 
               placeholder="Search conversations..." 
-              className="input-dark pl-10 text-sm"
+              className="input-dark pl-10 text-sm min-h-[44px]"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -226,28 +226,24 @@ export default function Messages() {
               <button
                 key={m.id}
                 onClick={() => setSelected(m.id)}
-                className={`w-full flex items-center gap-4 px-6 py-4 transition-all border-l-2 ${selected === m.id ? 'bg-purple-500/5 border-purple-500' : 'border-transparent hover:bg-white/[0.02]'}`}
+                className={`w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-all border-l-2 min-h-[70px] ${selected === m.id ? 'bg-purple-500/5 border-purple-500' : 'border-transparent hover:bg-white/[0.02]'}`}
               >
                 <div className="relative flex-shrink-0">
-                  <img src={m.other.photo} alt={m.other.name} className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white/5" />
+                  <img src={m.other.photo} alt={m.other.name} className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover ring-2 ring-white/5" />
                   {m.other.online && (
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-[3px] border-[#0c0c18]" />
+                    <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-[3px] border-[#0c0c18]" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-0.5">
                     <p className="text-white text-sm font-bold truncate">{m.other.name}</p>
-                    <span className="text-gray-600 text-[10px] uppercase font-black tracking-widest">{m.time}</span>
+                    <span className="text-gray-600 text-[9px] uppercase font-black tracking-widest">{m.time}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <p className={`text-xs truncate max-w-[180px] ${m.unread > 0 ? 'text-gray-200 font-bold' : 'text-gray-500'}`}>{m.lastMsg}</p>
+                    <p className={`text-xs truncate max-w-[140px] sm:max-w-[180px] ${m.unread > 0 ? 'text-gray-200 font-bold' : 'text-gray-500'}`}>{m.lastMsg}</p>
                     {m.unread > 0 && (
-                      <span className="w-5 h-5 grad-bg rounded-full text-white text-[9px] flex items-center justify-center font-black shadow-lg shadow-purple-500/20">{m.unread}</span>
+                      <span className="w-4 h-4 sm:w-5 sm:h-5 grad-bg rounded-full text-white text-[9px] flex items-center justify-center font-black shadow-lg shadow-purple-500/20">{m.unread}</span>
                     )}
-                  </div>
-                  <div className="mt-1 flex items-center gap-1 opacity-50">
-                    <MapPin className="w-2.5 h-2.5" />
-                    <span className="text-[9px] font-bold uppercase tracking-tighter">{m.other.campus}</span>
                   </div>
                 </div>
               </button>
@@ -256,42 +252,42 @@ export default function Messages() {
         </div>
       </div>
 
-      {/* Chat area */}
+      {/* Chat area - Full screen on mobile when selected */}
       {selected && selectedMatch ? (
-        <div className="flex-1 flex flex-col bg-[#090912]">
+        <div className="flex-1 flex flex-col bg-[#090912] absolute inset-0 z-[60] md:relative md:z-0 md:inset-auto">
           {/* Header */}
-          <div className="flex items-center gap-4 px-6 py-4 glass border-b border-white/5 z-10">
-            <button onClick={() => setSelected(null)} className="md:hidden p-2 -ml-2 text-gray-400">
+          <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 glass border-b border-white/5 z-10 min-h-[64px]">
+            <button onClick={() => setSelected(null)} className="md:hidden p-2 -ml-2 text-gray-400 min-h-[44px] min-w-[44px] flex items-center justify-center">
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="relative">
-              <img src={selectedMatch.other.photo} alt={selectedMatch.other.name} className="w-10 h-10 rounded-xl object-cover" />
+            <div className="relative flex-shrink-0">
+              <img src={selectedMatch.other.photo} alt={selectedMatch.other.name} className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover" />
               {selectedMatch.other.online && (
-                <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-[3px] border-[#090912]" />
+                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-[#090912]" />
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-bold text-sm leading-tight">{selectedMatch.other.name}</p>
-              <div className="flex items-center gap-2 mt-0.5">
-                <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">{selectedMatch.other.campus}</p>
+              <p className="text-white font-bold text-sm leading-tight truncate">{selectedMatch.other.name}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <p className="text-gray-500 text-[9px] font-bold uppercase tracking-widest truncate">{selectedMatch.other.campus}</p>
                 {selectedMatch.other.online && (
-                  <div className="flex items-center gap-1 text-green-500 text-[10px] font-black uppercase">
-                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" /> Online
+                  <div className="flex items-center gap-1 text-green-500 text-[9px] font-black uppercase">
+                    <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse" /> Online
                   </div>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button className="p-2.5 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <button className="p-2 sm:p-2.5 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center">
                 <Phone className="w-4 h-4" />
               </button>
-              <button className="p-2.5 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+              <button className="p-2 sm:p-2.5 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center">
                 <Video className="w-4 h-4" />
               </button>
               <a 
                 href={`https://wa.me/${selectedMatch.other.whatsapp || ''}`}
                 target="_blank"
-                className="p-2.5 rounded-xl bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-all"
+                className="p-2 sm:p-2.5 rounded-xl bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center"
               >
                 <MessageCircle className="w-4 h-4 fill-current" />
               </a>
@@ -299,38 +295,38 @@ export default function Messages() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 no-scrollbar bg-[#090912]">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 no-scrollbar bg-[#090912]">
             {messages.map((msg, idx) => {
               const isMe = msg.sender === 'me'
               return (
                 <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                  <div className="relative group max-w-[75%]">
-                    <div className={`rounded-2xl text-sm leading-relaxed overflow-hidden shadow-2xl ${
+                  <div className="relative group max-w-[85%] sm:max-w-[75%]">
+                    <div className={`rounded-2xl text-xs sm:text-sm leading-relaxed overflow-hidden shadow-2xl ${
                       isMe
                         ? 'grad-bg text-white rounded-tr-sm'
                         : 'bg-[#1a1a2e] text-gray-200 rounded-tl-sm border border-white/5'
                     }`}>
-                      {msg.type === 'text' && <div className="px-5 py-3">{msg.content || msg.text}</div>}
+                      {msg.type === 'text' && <div className="px-4 sm:px-5 py-2.5 sm:py-3">{msg.content || msg.text}</div>}
                       {msg.type === 'image' && (
-                        <div className="p-1.5">
+                        <div className="p-1">
                           <img src={msg.content} className="max-w-full rounded-xl" alt="Sent photo" />
                         </div>
                       )}
                       {msg.type === 'audio' && (
-                        <div className="px-5 py-4 flex items-center gap-4 min-w-[220px]">
-                          <button className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
-                            <Play className="w-5 h-5 fill-current" />
+                        <div className="px-4 py-3 flex items-center gap-3 min-w-[180px] sm:min-w-[220px]">
+                          <button className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-all">
+                            <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
                           </button>
-                          <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                          <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
                             <div className="w-1/3 h-full bg-purple-400" />
                           </div>
-                          <span className="text-[10px] font-bold opacity-60">0:12</span>
+                          <span className="text-[9px] font-bold opacity-60">0:12</span>
                         </div>
                       )}
                     </div>
                     <div className={`flex items-center gap-2 mt-1.5 mx-1 ${isMe ? 'justify-end' : ''}`}>
-                      <p className="text-[10px] text-gray-600 font-bold uppercase">{msg.time}</p>
-                      {isMe && (msg.read ? <CheckCheck className="w-3 h-3 text-purple-400" /> : <Check className="w-3 h-3 text-gray-600" />)}
+                      <p className="text-[9px] text-gray-600 font-bold uppercase">{msg.time}</p>
+                      {isMe && (msg.read ? <CheckCheck className="w-2.5 h-2.5 text-purple-400" /> : <Check className="w-2.5 h-2.5 text-gray-600" />)}
                     </div>
                   </div>
                 </div>
@@ -338,11 +334,11 @@ export default function Messages() {
             })}
             {sending && (
               <div className="flex justify-start">
-                <div className="bg-[#1a1a2e] px-5 py-3 rounded-2xl rounded-tl-sm border border-white/5">
-                  <div className="flex gap-1.5 items-center h-4">
-                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="bg-[#1a1a2e] px-4 py-2.5 rounded-2xl rounded-tl-sm border border-white/5">
+                  <div className="flex gap-1 items-center h-3">
+                    <div className="w-1 h-1 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1 h-1 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1 h-1 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
@@ -351,23 +347,17 @@ export default function Messages() {
           </div>
 
           {/* Input Area */}
-          <div className="p-6 pt-2 bg-[#090912]">
-            {/* Safety Reminder */}
-            <div className="flex items-center gap-2 mb-4 px-4 py-2 bg-blue-500/5 rounded-xl border border-blue-500/10">
-              <Shield className="w-3.5 h-3.5 text-blue-400" />
-              <p className="text-[10px] text-blue-400/70 font-bold uppercase tracking-tight">Stay safe! Meet in public and verify student IDs.</p>
-            </div>
-
-            <div className="flex gap-3 items-center">
+          <div className="p-4 sm:p-6 pt-2 bg-[#090912] pb-8 md:pb-6">
+            <div className="flex gap-2 sm:gap-3 items-center">
               <div className="flex items-center gap-1 bg-[#121225] rounded-2xl p-1 border border-white/5">
                 <button 
                   onClick={() => setShowEmojis(!showEmojis)}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${showEmojis ? 'bg-purple-500/10 text-purple-400' : 'text-gray-500 hover:text-white'}`}
+                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all min-h-[40px] ${showEmojis ? 'bg-purple-500/10 text-purple-400' : 'text-gray-500 hover:text-white'}`}
                 >
                   <Smile className="w-5 h-5" />
                 </button>
                 <button 
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-500 hover:text-white transition-all"
+                  className="hidden sm:flex w-10 h-10 rounded-xl items-center justify-center text-gray-500 hover:text-white transition-all min-h-[40px]"
                 >
                   <Image className="w-5 h-5" />
                 </button>
@@ -375,8 +365,8 @@ export default function Messages() {
 
               <div className="flex-1 relative flex items-center">
                 <input
-                  className="input-dark w-full text-sm py-4 px-6 rounded-2xl border-none bg-[#121225] focus:ring-2 focus:ring-purple-500/50"
-                  placeholder={isRecording ? 'Recording voice note...' : 'Type your message...'}
+                  className="input-dark w-full text-xs sm:text-sm py-3 sm:py-4 px-4 sm:px-6 rounded-2xl border-none bg-[#121225] focus:ring-2 focus:ring-purple-500/50 min-h-[44px]"
+                  placeholder={isRecording ? 'Recording...' : 'Type message...'}
                   value={newMsg}
                   onChange={e => setNewMsg(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && send()}
@@ -389,7 +379,7 @@ export default function Messages() {
                   <button
                     onClick={() => send()}
                     disabled={sending}
-                    className="w-12 h-12 grad-bg rounded-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl shadow-purple-500/20"
+                    className="w-11 h-11 sm:w-12 sm:h-12 grad-bg rounded-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl shadow-purple-500/20 min-h-[44px] min-w-[44px]"
                   >
                     <Send className="w-5 h-5 text-white" />
                   </button>
@@ -397,8 +387,8 @@ export default function Messages() {
                   <button
                     onMouseDown={startRecording}
                     onMouseUp={stopRecording}
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
-                      isRecording ? 'grad-bg animate-pulse' : 'bg-[#121225] text-gray-500 hover:text-white'
+                    className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all min-h-[44px] min-w-[44px] ${
+                      isRecording ? 'grad-bg animate-pulse text-white' : 'bg-[#121225] text-gray-500 hover:text-white'
                     }`}
                   >
                     <Mic className="w-5 h-5" />
@@ -408,9 +398,9 @@ export default function Messages() {
             </div>
             
             {showEmojis && (
-              <div className="absolute bottom-full mb-4 left-6 right-6 p-4 bg-[#1a1a2e] border border-white/10 rounded-[32px] shadow-2xl z-20 grid grid-cols-10 gap-2 animate-slide-up">
-                {EMOJIS.map(e => (
-                  <button key={e} onClick={() => { setNewMsg(p => p + e); setShowEmojis(false); }} className="w-10 h-10 flex items-center justify-center hover:bg-white/5 rounded-xl text-xl transition-all">
+              <div className="absolute bottom-full mb-2 left-4 right-4 p-3 bg-[#1a1a2e] border border-white/10 rounded-3xl shadow-2xl z-20 grid grid-cols-8 gap-1 animate-slide-up">
+                {EMOJIS.slice(0, 32).map(e => (
+                  <button key={e} onClick={() => { setNewMsg(p => p + e); setShowEmojis(false); }} className="w-9 h-9 flex items-center justify-center hover:bg-white/5 rounded-lg text-lg transition-all">
                     {e}
                   </button>
                 ))}

@@ -61,35 +61,35 @@ export default function Events() {
         </div>
 
         {/* Events grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20 md:pb-0">
           {filtered.map(e => (
             <div key={e.id} className="card overflow-hidden hover:border-purple-500/20 transition-all cursor-pointer group" onClick={() => setSelected(e)}>
-              <div className="relative h-36 overflow-hidden">
+              <div className="relative h-40 overflow-hidden">
                 <img src={e.img} alt={e.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 <div className="absolute top-2 left-2 flex gap-1.5">
-                  <span className="px-2 py-0.5 rounded-full bg-black/60 text-white text-xs">{e.category}</span>
-                  {e.price === 0 && <span className="px-2 py-0.5 rounded-full bg-green-500/80 text-white text-xs">Free</span>}
-                  {e.joined && <span className="px-2 py-0.5 rounded-full bg-purple-600/80 text-white text-xs flex items-center gap-1"><CheckCircle className="w-2.5 h-2.5" /> Joined</span>}
+                  <span className="px-2 py-0.5 rounded-full bg-black/60 text-white text-[10px] font-bold uppercase tracking-wider">{e.category}</span>
+                  {e.price === 0 && <span className="px-2 py-0.5 rounded-full bg-green-500/80 text-white text-[10px] font-bold uppercase">Free</span>}
+                  {e.joined && <span className="px-2 py-0.5 rounded-full bg-purple-600/80 text-white text-[10px] font-bold flex items-center gap-1"><CheckCircle className="w-2.5 h-2.5" /> Joined</span>}
                 </div>
                 {e.isThisWeekend && (
-                  <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full grad-bg text-white text-[10px] font-bold shadow-lg animate-pulse">
+                  <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full grad-bg text-white text-[9px] font-black uppercase tracking-widest shadow-lg animate-pulse">
                     🔥 This Weekend
                   </div>
                 )}
               </div>
-              <div className="p-4">
-                <h3 className="text-white font-semibold text-sm mb-1 line-clamp-1">{e.title}</h3>
-                <p className="text-gray-500 text-xs line-clamp-2 mb-3">{e.desc}</p>
-                <div className="space-y-1 mb-3">
-                  <div className="flex items-center gap-1.5 text-gray-500 text-xs"><Calendar className="w-3 h-3" /> {e.date} · {e.time}</div>
-                  <div className="flex items-center gap-1.5 text-gray-500 text-xs"><MapPin className="w-3 h-3" /> {e.location}</div>
-                  <div className="flex items-center gap-1.5 text-gray-500 text-xs"><Users className="w-3 h-3" /> {e.attendees}/{e.max} going</div>
+              <div className="p-4 sm:p-5">
+                <h3 className="text-white font-syne font-bold text-base mb-1 line-clamp-1">{e.title}</h3>
+                <p className="text-gray-500 text-xs line-clamp-2 mb-4 leading-relaxed">{e.desc}</p>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-gray-400 text-xs font-medium"><Calendar className="w-3.5 h-3.5 text-purple-400" /> {e.date} · {e.time}</div>
+                  <div className="flex items-center gap-2 text-gray-400 text-xs font-medium"><MapPin className="w-3.5 h-3.5 text-purple-400" /> {e.location}</div>
+                  <div className="flex items-center gap-2 text-gray-400 text-xs font-medium"><Users className="w-3.5 h-3.5 text-purple-400" /> {e.attendees}/{e.max} going</div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-amber-400 text-xs font-bold uppercase tracking-widest">Free entry</span>
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                  <span className="text-amber-400 text-[10px] font-black uppercase tracking-widest">Free entry</span>
                   <button
                     onClick={ev => { ev.stopPropagation(); join(e.id) }}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-lg ${e.joined ? 'bg-white/10 text-gray-400' : 'grad-bg text-white'}`}
+                    className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg min-h-[44px] ${e.joined ? 'bg-white/10 text-gray-400' : 'grad-bg text-white shadow-purple-500/10'}`}
                   >
                     {e.joined ? 'Joined' : 'Join Event'}
                   </button>

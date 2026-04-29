@@ -106,22 +106,22 @@ export default function Discover() {
   )
 
   return (
-    <main className="min-h-screen pt-14 px-4 py-8">
-      <div className="max-w-sm mx-auto">
+    <main className="min-h-screen pt-14 px-4 py-8 pb-24 md:pb-8">
+      <div className="max-w-sm mx-auto w-full">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="font-syne font-bold text-xl text-white">Discover</h1>
-            <p className="text-gray-600 text-xs">Find your people</p>
+            <h1 className="font-syne font-bold text-xl sm:text-2xl text-white tracking-tight">Discover</h1>
+            <p className="text-gray-600 text-[10px] sm:text-xs uppercase font-black tracking-widest">Find your people</p>
           </div>
-          <button onClick={() => setShowFilter(!showFilter)} className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-all">
+          <button onClick={() => setShowFilter(!showFilter)} className="p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center">
             <Filter className="w-4 h-4 text-gray-400" />
           </button>
         </div>
 
         {showFilter && (
-          <div className="card p-4 mb-4">
-            <p className="text-xs text-gray-500 mb-2">Filter by campus</p>
-            <select className="input-dark text-sm" value={campusFilter} onChange={e => setCampusFilter(e.target.value)}>
+          <div className="card p-4 mb-4 animate-fade-in">
+            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2">Filter by campus</p>
+            <select className="input-dark text-sm min-h-[44px]" value={campusFilter} onChange={e => setCampusFilter(e.target.value)}>
               <option value="">All campuses</option>
               {['MKU', 'JKUAT', 'Kenyatta University', 'Zetech', 'KCA', 'KMTC', 'Thika Tech'].map(c => (
                 <option key={c} value={c}>{c}</option>
@@ -133,7 +133,7 @@ export default function Discover() {
         {displayUser ? (
           <div className={`relative transition-all duration-300 ${swipeDir === 'left' ? '-translate-x-full opacity-0 rotate-[-6deg]' : swipeDir === 'right' ? 'translate-x-full opacity-0 rotate-[6deg]' : swipeDir === 'up' ? '-translate-y-full opacity-0' : ''}`}>
             {/* Card */}
-            <div className="relative rounded-3xl overflow-hidden aspect-[3/4] mb-4">
+            <div className="relative rounded-[32px] overflow-hidden aspect-[4/5] sm:aspect-[3/4] mb-6 shadow-2xl border border-white/5">
               <img
                 src={displayUser.photos?.[photoIdx] || displayUser.photos?.[0]}
                 alt={displayUser.name}
@@ -142,70 +142,63 @@ export default function Discover() {
 
               {/* Photo nav */}
               {(displayUser.photos?.length || 0) > 1 && (
-                <div className="absolute top-3 left-0 right-0 flex gap-1 px-3">
+                <div className="absolute top-3 left-0 right-0 flex gap-1 px-4">
                   {displayUser.photos?.map((_, i) => (
-                    <div key={i} className={`flex-1 h-0.5 rounded-full ${i === photoIdx ? 'bg-white' : 'bg-white/30'}`} />
+                    <div key={i} className={`flex-1 h-0.5 rounded-full transition-all ${i === photoIdx ? 'bg-white' : 'bg-white/30'}`} />
                   ))}
                 </div>
               )}
               {photoIdx > 0 && (
-                <button onClick={() => setPhotoIdx(i => i - 1)} className="absolute left-2 top-1/2 -translate-y-1/2 p-1">
-                  <ChevronLeft className="w-6 h-6 text-white drop-shadow" />
-                </button>
+                <button onClick={() => setPhotoIdx(i => i - 1)} className="absolute left-0 top-0 bottom-20 w-1/3 z-10" />
               )}
               {photoIdx < (displayUser.photos?.length || 1) - 1 && (
-                <button onClick={() => setPhotoIdx(i => i + 1)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1">
-                  <ChevronRight className="w-6 h-6 text-white drop-shadow" />
-                </button>
+                <button onClick={() => setPhotoIdx(i => i + 1)} className="absolute right-0 top-0 bottom-20 w-1/3 z-10" />
               )}
 
               {/* Gradient overlay */}
-              <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-5 flex flex-col justify-end">
+              <div className="absolute bottom-0 left-0 right-0 h-2/3 bg-gradient-to-t from-black via-black/40 to-transparent p-5 sm:p-6 flex flex-col justify-end">
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h2 className="text-white font-syne font-bold text-xl">{displayUser.name}, {displayUser.age}</h2>
-                      {displayUser.verified && <CheckCircle className="w-4 h-4 text-green-400" />}
-                      {displayUser.premium && <Crown className="w-4 h-4 text-amber-400" />}
+                      <h2 className="text-white font-syne font-bold text-xl sm:text-2xl truncate">{displayUser.name}, {displayUser.age}</h2>
+                      {displayUser.verified && <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />}
+                      {displayUser.premium && <Crown className="w-4 h-4 text-amber-400 flex-shrink-0" />}
                     </div>
-                    <div className="flex items-center gap-1 text-gray-300 text-xs mb-1">
-                      <MapPin className="w-3 h-3" /> {displayUser.campus}
+                    <div className="flex items-center gap-1.5 text-gray-300 text-[10px] sm:text-xs font-medium mb-1">
+                      <MapPin className="w-3 h-3 text-purple-400" /> {displayUser.campus}
                     </div>
-                    <div className="flex items-center gap-1 text-gray-400 text-xs">
-                      <BookOpen className="w-3 h-3" /> {displayUser.course} · Year {displayUser.year}
+                    <div className="flex items-center gap-1.5 text-gray-400 text-[10px] sm:text-xs font-medium">
+                      <BookOpen className="w-3 h-3 text-purple-400" /> {displayUser.course} · Year {displayUser.year}
                     </div>
                   </div>
-                  <div className={`w-2.5 h-2.5 rounded-full mt-1 ${(displayUser as any).online ? 'bg-green-400' : 'bg-gray-600'}`} />
+                  <div className={`w-3 h-3 rounded-full mt-2 border-2 border-black flex-shrink-0 ${(displayUser as any).online ? 'bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]' : 'bg-gray-600'}`} />
                 </div>
-                <p className="text-gray-300 text-xs mt-2 leading-relaxed line-clamp-2">{displayUser.bio}</p>
-                <div className="flex flex-wrap gap-1.5 mt-3">
+                <p className="text-gray-300 text-[11px] sm:text-xs mt-3 leading-relaxed line-clamp-2">{displayUser.bio}</p>
+                <div className="flex flex-wrap gap-1.5 mt-4">
                   {displayUser.vibe && (
-                    <span className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-200 text-xs">{displayUser.vibe}</span>
+                    <span className="px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-200 text-[10px] font-bold uppercase tracking-wider">{displayUser.vibe}</span>
                   )}
                   {displayUser.relationship_goal && (
-                    <span className="px-2 py-0.5 rounded-full bg-pink-500/20 border border-pink-500/30 text-pink-200 text-xs">{displayUser.relationship_goal}</span>
+                    <span className="px-2.5 py-1 rounded-lg bg-pink-500/20 border border-pink-500/30 text-pink-200 text-[10px] font-bold uppercase tracking-wider">{displayUser.relationship_goal}</span>
                   )}
-                  {displayUser.interests?.slice(0, 4).map(i => (
-                    <span key={i} className="px-2 py-0.5 rounded-full bg-white/10 text-white/70 text-xs">{i}</span>
-                  ))}
                 </div>
               </div>
             </div>
 
             {/* Action buttons */}
-            <div className="flex items-center justify-center gap-4">
-              <button onClick={() => swipe('pass')} className="w-14 h-14 rounded-full bg-white/8 border border-white/10 flex items-center justify-center hover:bg-red-500/20 hover:border-red-500/30 transition-all group">
-                <X className="w-6 h-6 text-gray-400 group-hover:text-red-400" />
+            <div className="flex items-center justify-center gap-5">
+              <button onClick={() => swipe('pass')} className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/20 hover:border-red-500/30 transition-all group shadow-xl active:scale-90 min-h-[56px] min-w-[56px]">
+                <X className="w-6 h-6 sm:w-7 sm:h-7 text-gray-400 group-hover:text-red-400" />
               </button>
-              <button onClick={() => swipe('superlike')} className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center hover:bg-amber-500/25 transition-all group">
-                <Star className="w-5 h-5 text-amber-500 group-hover:text-amber-300" />
+              <button onClick={() => swipe('superlike')} className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center hover:bg-amber-500/25 transition-all group shadow-xl active:scale-90 min-h-[48px] min-w-[48px]">
+                <Star className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 group-hover:text-amber-300 fill-current" />
               </button>
-              <button onClick={() => swipe('like')} className="w-14 h-14 rounded-full bg-pink-500/10 border border-pink-500/20 flex items-center justify-center hover:bg-pink-500/25 transition-all group">
-                <Heart className="w-6 h-6 text-pink-400 group-hover:text-pink-300" />
+              <button onClick={() => swipe('like')} className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-pink-500/10 border border-pink-500/20 flex items-center justify-center hover:bg-pink-500/25 transition-all group shadow-xl active:scale-90 min-h-[56px] min-w-[56px]">
+                <Heart className="w-6 h-6 sm:w-7 sm:h-7 text-pink-400 group-hover:text-pink-300 fill-current" />
               </button>
             </div>
 
-            <p className="text-center text-xs text-gray-700 mt-3">{index + 1} of {filteredUsers.length} profiles</p>
+            <p className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-700 mt-6">{index + 1} / {filteredUsers.length} students</p>
           </div>
         ) : (
           <div className="text-center py-20">

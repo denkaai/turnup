@@ -17,11 +17,16 @@
 
   * {
     border-color: var(--border);
+    max-width: 100%;
   }
 
   body {
-    @apply bg-[#080810] text-white antialiased;
+    @apply bg-[#080810] text-white antialiased overflow-x-hidden;
     font-family: 'DM Sans', sans-serif;
+  }
+
+  .pb-safe-area {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   ::-webkit-scrollbar {

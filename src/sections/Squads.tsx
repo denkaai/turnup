@@ -126,42 +126,42 @@ export default function Squads() {
 
   if (selectedSquad) {
     return (
-      <main className="h-screen pt-14 flex flex-col bg-[#090912]">
+      <main className="h-screen pt-14 flex flex-col bg-[#090912] overflow-hidden">
         {/* Chat Header */}
-        <div className="flex items-center gap-3 px-4 py-3 glass border-b border-white/5">
-          <button onClick={() => setSelectedSquad(null)} className="p-1 text-gray-400 hover:text-white">
+        <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-3 glass border-b border-white/5 z-10 min-h-[60px]">
+          <button onClick={() => setSelectedSquad(null)} className="p-2 -ml-1 text-gray-400 hover:text-white min-h-[44px] min-w-[44px] flex items-center justify-center">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex-1 min-w-0">
             <h2 className="text-white font-bold text-sm truncate">{selectedSquad.title}</h2>
-            <p className="text-gray-500 text-[10px] uppercase tracking-wider">{selectedSquad.members} members · {selectedSquad.campus}</p>
+            <p className="text-gray-500 text-[9px] uppercase tracking-wider">{selectedSquad.members} members · {selectedSquad.campus}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowPollCreator(true)} className="p-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all" title="Create Poll">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button onClick={() => setShowPollCreator(true)} className="p-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center" title="Create Poll">
               <BarChart3 className="w-4 h-4" />
             </button>
-            <button onClick={broadcast} className="p-2 rounded-xl bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-all shadow-lg" title="Broadcast to Squad">
+            <button onClick={broadcast} className="p-2 rounded-xl bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition-all shadow-lg min-h-[40px] min-w-[40px] flex items-center justify-center" title="Broadcast to Squad">
               <Flame className="w-4 h-4" />
             </button>
-            <button className="p-2 text-gray-500 hover:text-white">
-              <Info className="w-5 h-5" />
+            <button className="p-2 text-gray-500 hover:text-white min-h-[40px] min-w-[40px] flex items-center justify-center">
+              <Info className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar bg-[#090912]">
           <div className="text-center py-4">
-            <span className="px-3 py-1 rounded-full bg-white/5 text-gray-600 text-[10px] uppercase tracking-widest font-bold">Squad Created</span>
+            <span className="px-3 py-1 rounded-full bg-white/5 text-gray-600 text-[9px] uppercase tracking-widest font-black">Squad Created</span>
           </div>
           {messages.map(m => (
             <div key={m.id} className={`flex flex-col ${m.isMe ? 'items-end' : 'items-start'} ${m.isBroadcast || m.isPoll ? 'items-center !my-6' : ''}`}>
               {m.isPoll ? (
                 <div className="w-full max-w-[280px] p-5 rounded-[24px] bg-[#1a1a2e] border border-white/10 shadow-2xl animate-fade-in">
-                  <div className="flex items-center gap-2 text-blue-400 font-black text-[10px] uppercase tracking-widest mb-3">
+                  <div className="flex items-center gap-2 text-blue-400 font-black text-[9px] uppercase tracking-widest mb-3">
                     <BarChart3 className="w-3 h-3" /> Squad Poll
                   </div>
-                  <h3 className="text-white font-bold text-sm mb-4">{m.question}</h3>
+                  <h3 className="text-white font-bold text-sm mb-4 leading-tight">{m.question}</h3>
                   <div className="space-y-2">
                     {m.options.map((opt: any, idx: number) => {
                       const totalVotes = m.options.reduce((acc: number, o: any) => acc + o.votes, 0)
@@ -177,7 +177,7 @@ export default function Squads() {
                             return msg
                           }))
                           toast.success('Vote counted!')
-                        }} className="relative w-full p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-left overflow-hidden group">
+                        }} className="relative w-full p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-left overflow-hidden group min-h-[44px]">
                           <div className="absolute inset-y-0 left-0 bg-blue-500/10 transition-all duration-500" style={{ width: `${percent}%` }} />
                           <div className="relative flex justify-between items-center text-xs font-medium">
                             <span className="text-gray-300">{opt.text}</span>
@@ -190,15 +190,15 @@ export default function Squads() {
                 </div>
               ) : m.isBroadcast ? (
                 <div className="max-w-[90%] p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-center shadow-xl shadow-amber-500/5 animate-pulse">
-                  <div className="flex items-center justify-center gap-2 text-amber-500 font-bold text-xs mb-1 uppercase tracking-tighter">
+                  <div className="flex items-center justify-center gap-2 text-amber-500 font-bold text-[10px] mb-1 uppercase tracking-tighter">
                     <Flame className="w-3 h-3" /> Broadcast
                   </div>
                   <p className="text-amber-200 text-sm font-medium">{m.text}</p>
                 </div>
               ) : (
-                <div className={`max-w-[80%] ${m.isMe ? 'items-end' : 'items-start'}`}>
-                  {!m.isMe && <p className="text-[10px] text-gray-500 mb-1 ml-2 font-bold">{m.sender} {m.isLeader && <span className="text-purple-400">· Leader</span>}</p>}
-                  <div className={`px-4 py-2.5 rounded-2xl text-sm ${m.isMe ? 'grad-bg text-white rounded-tr-sm' : 'bg-white/5 text-gray-300 rounded-tl-sm border border-white/5'}`}>
+                <div className={`max-w-[85%] sm:max-w-[80%] ${m.isMe ? 'items-end' : 'items-start'}`}>
+                  {!m.isMe && <p className="text-[9px] text-gray-500 mb-1 ml-2 font-bold uppercase tracking-tight">{m.sender} {m.isLeader && <span className="text-purple-400">· Leader</span>}</p>}
+                  <div className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm ${m.isMe ? 'grad-bg text-white rounded-tr-sm' : 'bg-white/5 text-gray-300 rounded-tl-sm border border-white/5'}`}>
                     {m.text}
                   </div>
                   <p className="text-[9px] text-gray-600 mt-1 mx-2">{m.time}</p>
@@ -250,28 +250,28 @@ export default function Squads() {
         )}
 
         {/* Vibe Check / Quick Actions */}
-        <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar border-t border-white/5">
+        <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar border-t border-white/5 bg-[#090912]">
           {['On my way 🏃', 'I have arrived! ✅', 'Running late 😅', 'Where you at? 📍'].map(action => (
-            <button key={action} onClick={() => { setMsg(action); }} className="px-3 py-1.5 rounded-full bg-white/5 text-gray-500 text-[10px] font-bold whitespace-nowrap hover:text-white hover:bg-white/10 transition-all">
+            <button key={action} onClick={() => { setMsg(action); }} className="px-3 py-2 rounded-full bg-white/5 text-gray-500 text-[9px] font-black uppercase tracking-widest whitespace-nowrap hover:text-white hover:bg-white/10 transition-all min-h-[32px]">
               {action}
             </button>
           ))}
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-white/5 bg-[#0c0c18]">
+        <div className="p-4 border-t border-white/5 bg-[#0c0c18] pb-8 md:pb-4">
           <div className="flex gap-2 items-center">
-            <button className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-gray-500 hover:text-gray-300">
+            <button className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-gray-500 hover:text-gray-300 min-h-[44px] min-w-[44px]">
               <Plus className="w-5 h-5" />
             </button>
             <input 
-              className="input-dark flex-1 text-sm py-2.5" 
-              placeholder="Message your squad..." 
+              className="input-dark flex-1 text-sm py-2.5 min-h-[44px]" 
+              placeholder="Message squad..." 
               value={msg}
               onChange={e => setMsg(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendMsg()}
             />
-            <button onClick={sendMsg} className="w-10 h-10 grad-bg rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/20 active:scale-95 transition-all">
+            <button onClick={sendMsg} className="w-10 h-10 grad-bg rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/20 active:scale-95 transition-all min-h-[44px] min-w-[44px]">
               <Send className="w-4 h-4 text-white" />
             </button>
           </div>
@@ -281,22 +281,22 @@ export default function Squads() {
   }
 
   return (
-    <main className="min-h-screen pt-14 px-4 py-8">
+    <main className="min-h-screen pt-14 px-4 py-8 pb-24 md:pb-8">
       <div className="max-w-2xl mx-auto">
         {/* Vibe Meter */}
-        <div className="card p-3 mb-8 bg-purple-500/5 border-purple-500/10 flex items-center justify-between animate-pulse">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl grad-bg flex items-center justify-center">
+        <div className="card p-3 mb-6 bg-purple-500/5 border-purple-500/10 flex items-center justify-between animate-pulse">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-10 h-10 rounded-xl grad-bg flex items-center justify-center flex-shrink-0">
               <Zap className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="text-white font-syne font-bold text-sm tracking-tight">{vibeMeter} Students Active</p>
-              <p className="text-purple-400 text-[10px] font-bold uppercase tracking-widest">Live Weekend Vibe</p>
+              <p className="text-white font-syne font-bold text-xs sm:text-sm tracking-tight">{vibeMeter} Students Active</p>
+              <p className="text-purple-400 text-[8px] sm:text-[10px] font-black uppercase tracking-widest">Weekend Vibe</p>
             </div>
           </div>
-          <div className="flex -space-x-2">
+          <div className="flex -space-x-1.5 sm:-space-x-2">
             {[1,2,3,4].map(i => (
-              <div key={i} className="w-6 h-6 rounded-full border-2 border-[#111128] bg-gray-800 overflow-hidden">
+              <div key={i} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-[#111128] bg-gray-800 overflow-hidden flex-shrink-0">
                 <img src={`https://i.pravatar.cc/100?u=${i}`} className="w-full h-full object-cover" />
               </div>
             ))}
@@ -306,12 +306,12 @@ export default function Squads() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="font-syne font-bold text-2xl text-white">Weekend Squads</h1>
-            <p className="text-gray-500 text-sm">Find your people, plan the vibe</p>
+            <h1 className="font-syne font-bold text-xl sm:text-2xl text-white">Squads</h1>
+            <p className="text-gray-500 text-[10px] sm:text-xs uppercase font-black tracking-widest">Find your people</p>
           </div>
           <button 
             onClick={() => setShowCreate(true)}
-            className="w-12 h-12 grad-bg rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/20 hover:scale-105 transition-all"
+            className="w-11 h-11 sm:w-12 sm:h-12 grad-bg rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/20 hover:scale-105 transition-all min-h-[44px] min-w-[44px]"
           >
             <Plus className="w-6 h-6 text-white" />
           </button>
@@ -319,10 +319,10 @@ export default function Squads() {
 
         {/* Tabs */}
         <div className="bg-white/5 p-1 rounded-2xl flex mb-6">
-          <button onClick={() => setActiveTab('discover')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'discover' ? 'bg-white/10 text-white shadow-lg' : 'text-gray-500 hover:text-gray-400'}`}>
-            Discover Squads
+          <button onClick={() => setActiveTab('discover')} className={`flex-1 py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'discover' ? 'bg-white/10 text-white shadow-lg' : 'text-gray-500 hover:text-gray-400'}`}>
+            Discover
           </button>
-          <button onClick={() => setActiveTab('mine')} className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'mine' ? 'bg-white/10 text-white shadow-lg' : 'text-gray-500 hover:text-gray-400'}`}>
+          <button onClick={() => setActiveTab('mine')} className={`flex-1 py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'mine' ? 'bg-white/10 text-white shadow-lg' : 'text-gray-500 hover:text-gray-400'}`}>
             My Squads
           </button>
         </div>
@@ -330,9 +330,9 @@ export default function Squads() {
         {/* Filters (only for discover) */}
         {activeTab === 'discover' && (
           <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
-            <button onClick={() => setCampusFilter('')} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${!campusFilter ? 'grad-bg text-white' : 'bg-white/5 text-gray-500'}`}>All Campus</button>
+            <button onClick={() => setCampusFilter('')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${!campusFilter ? 'grad-bg text-white' : 'bg-white/5 text-gray-500'}`}>All Campus</button>
             {['MKU', 'JKUAT', 'KU', 'Zetech', 'KCA'].map(c => (
-              <button key={c} onClick={() => setCampusFilter(c)} className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${campusFilter === c ? 'grad-bg text-white' : 'bg-white/5 text-gray-500'}`}>{c}</button>
+              <button key={c} onClick={() => setCampusFilter(c)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${campusFilter === c ? 'grad-bg text-white' : 'bg-white/5 text-gray-500'}`}>{c}</button>
             ))}
           </div>
         )}
