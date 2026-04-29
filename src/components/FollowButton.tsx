@@ -64,12 +64,12 @@ export default function FollowButton({ targetId, className = '', hideIfSelf = tr
         .insert({ follower_id: currentUser.id, following_id: targetId })
       
       if (error) {
-        console.error('Follow INSERT Error:', error)
+        console.error('FOLLOW_INSERT_ERROR:', error) // Exact log as requested
         setFollowing(false)
-        toast.error('Failed to follow')
+        toast.error('Failed to follow: ' + error.message)
       }
     } catch (err) {
-      console.error('Follow Exception:', err)
+      console.error('FOLLOW_EXCEPTION:', err)
       setFollowing(false)
       toast.error('An error occurred')
     }
@@ -90,14 +90,14 @@ export default function FollowButton({ targetId, className = '', hideIfSelf = tr
         .eq('following_id', targetId)
       
       if (error) {
-        console.error('Follow DELETE Error:', error)
+        console.error('FOLLOW_DELETE_ERROR:', error)
         setFollowing(true)
-        toast.error('Failed to unfollow')
+        toast.error('Failed to unfollow: ' + error.message)
       } else {
         toast.info('Unfollowed comrade')
       }
     } catch (err) {
-      console.error('Unfollow Exception:', err)
+      console.error('FOLLOW_UNFOLLOW_EXCEPTION:', err)
       setFollowing(true)
       toast.error('An error occurred')
     }

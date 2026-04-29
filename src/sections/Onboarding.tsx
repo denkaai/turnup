@@ -6,10 +6,7 @@ import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
 
 const CAMPUSES = [
-  'Mount Kenya University (MKU)', 'JKUAT', 'Kenyatta University', 'Zetech University',
-  'KCA University', 'KMTC Thika', 'Thika Technical Training Institute',
-  'Imperial Medical Training College', 'Gresta University',
-  'Thika School of Medical & Health Sciences', 'Jordan College'
+  'KU', 'JKUAT', 'Zetech', 'MKU', 'PAC University', 'Gretsa', 'Murang\'a University', 'KCA University'
 ]
 
 const INTERESTS = [
@@ -184,7 +181,7 @@ export default function Onboarding() {
     }
   }
 
-  const steps = ['About You', 'Campus Info', 'Your Bio', 'Interests', 'Verify Identity', 'Your Vibe', 'Weekend Plans', 'Looking for', 'Ready!']
+  const steps = ['About You', 'Campus Info', 'Your Bio', 'Interests', 'Verify Identity', 'Introvert Mode', 'Weekend Plans', 'Looking for', 'Ready!']
 
   return (
     <main className="min-h-screen pt-14 flex items-center justify-center px-4 py-12">
@@ -213,7 +210,7 @@ export default function Onboarding() {
             {step === 3 && 'Write a bio that shows your vibe'}
             {step === 4 && 'Pick up to 6 interests'}
             {step === 5 && "We need to verify you're a student"}
-            {step === 6 && 'What defines your campus energy?'}
+            {step === 6 && 'How social do you want to be today?'}
             {step === 7 && 'Friday night arrives. What are you doing?'}
             {step === 8 && 'What are you hoping to find on TurnUp?'}
             {step === 9 && "You're all set to turn up!"}
@@ -365,18 +362,23 @@ export default function Onboarding() {
 
           {step === 6 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                {['🎉 Party Animal', '📚 Study Buddy', '🏋️ Gym Rat', '🎵 Music Head', '🍔 Foodie', '🎮 Gamer'].map(v => (
+              <div className="grid grid-cols-1 gap-3">
+                {[
+                  { id: 'Party Animal', desc: 'I live for the noise and crowds' },
+                  { id: 'Social Butterfly', desc: 'Love meeting new people anywhere' },
+                  { id: 'Lowkey Vibes', desc: 'Prefer small circles and quiet chill' }
+                ].map(v => (
                   <button
-                    key={v}
-                    onClick={() => update('vibe', v)}
-                    className={`py-4 px-3 rounded-xl text-sm transition-all border ${
-                      form.vibe === v 
-                        ? 'border-purple-500 grad-bg text-white' 
+                    key={v.id}
+                    onClick={() => update('vibe', v.id)}
+                    className={`py-5 px-6 rounded-2xl text-left transition-all border ${
+                      form.vibe === v.id 
+                        ? 'border-purple-500 grad-bg text-white shadow-lg shadow-purple-500/20' 
                         : 'border-white/5 bg-white/5 text-gray-400 hover:bg-white/10'
                     }`}
                   >
-                    {v}
+                    <p className="font-bold text-sm mb-1">{v.id}</p>
+                    <p className="text-[10px] opacity-60 font-medium uppercase tracking-widest">{v.desc}</p>
                   </button>
                 ))}
               </div>
