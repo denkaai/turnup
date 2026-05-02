@@ -38,6 +38,8 @@ export default function Onboarding() {
   const [uploading, setUploading] = useState(false)
   const [idUploading, setIdUploading] = useState(false)
   const [idVerified, setIdVerified] = useState<boolean | null>(null)
+  const [idPreview, setIdPreview] = useState<string | null>(null)
+  const [idFile, setIdFile] = useState<File | null>(null)
 
   const [form, setForm] = useState({
     name: '', age: '', gender: '', campus: '',
@@ -80,9 +82,35 @@ export default function Onboarding() {
     }
   }
 
-  const handleIDUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleIDSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (!file || !user) return
+    if (!file) return
+
+    // Client-side validation
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic']
+    const isHeicExt = file.name.toLowerCase().endsWith('.heic')
+    if (!validTypes.includes(file.type) && !isHeicExt) {
+      toast.error('Wrong format. Please upload JPG, PNG, WEBP, or HEIC.')
+      return
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File is too large. Maximum size is 10MB.')
+      return
+    }
+
+    if (file.size < 50 * 1024) {
+      toast.error('Image is too small or blurry. Please upload a clear photo.')
+      return
+    }
+
+    setIdFile(file)
+    setIdPreview(URL.createObjectURL(file))
+    setIdVerified(null) // reset verification status on new file
+  }
+
+  const handleIDSubmit = async () => {
+    if (!idFile || !user) return
 
     setIdUploading(true)
     try {
@@ -90,12 +118,12 @@ export default function Onboarding() {
       const filePath = `${user.id}-studentid.jpg`
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true })
+        .upload(filePath, idFile, { upsert: true })
 
       if (uploadError) throw uploadError
 
       // 2. Call verification API
-      const base64 = await fileToBase64(file)
+      const base64 = await fileToBase64(idFile)
       const response = await fetch('/api/verify-student-id', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -106,7 +134,10 @@ export default function Onboarding() {
         })
       })
 
-      if (!response.ok) throw new Error('Verification failed')
+      if (!response.ok) {
+        const errData = await response.json().catch(() => null)
+        throw new Error(errData?.reason || errData?.error || 'Verification failed')
+      }
       
       const result = await response.json()
       setIdVerified(result.verified)
@@ -114,10 +145,11 @@ export default function Onboarding() {
       if (result.verified) {
         toast.success('Identity verified! 🎉')
       } else {
-        toast.info('ID uploaded. Under review.')
+        toast.error(result.reason || result.error || 'Verification failed. Please ensure your name and campus are clearly visible.')
       }
     } catch (err: any) {
-      toast.error('ID verification error')
+      toast.error(err.message || 'ID verification error')
+      setIdVerified(false)
       console.error(err)
     } finally {
       setIdUploading(false)
@@ -332,13 +364,31 @@ export default function Onboarding() {
           {step === 5 && (
             <div className="space-y-4">
               <label className="block w-full cursor-pointer">
-                <div className="border-2 border-dashed border-white/10 rounded-2xl p-8 flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-all">
-                  {idUploading ? (
-                    <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
-                  ) : idVerified === true ? (
-                    <div className="flex flex-col items-center text-green-400">
-                      <CheckCircle className="w-8 h-8 mb-2" />
-                      <span className="text-sm font-bold">Verified Successfully</span>
+                <div className="border-2 border-dashed border-white/10 rounded-2xl p-8 flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-all overflow-hidden relative min-h-[200px]">
+                  {idPreview ? (
+                    <div className="absolute inset-0 w-full h-full">
+                      <img src={idPreview} className={`w-full h-full object-cover transition-all ${idUploading ? 'opacity-50 blur-sm' : ''} ${idVerified === false ? 'opacity-50' : ''}`} />
+                      {idUploading && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+                        </div>
+                      )}
+                      {idVerified === true && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                          <div className="flex flex-col items-center text-green-400">
+                            <CheckCircle className="w-10 h-10 mb-2" />
+                            <span className="text-sm font-bold">Verified Successfully</span>
+                          </div>
+                        </div>
+                      )}
+                      {idVerified === false && !idUploading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                          <div className="flex flex-col items-center text-amber-500">
+                            <Upload className="w-8 h-8 mb-2" />
+                            <span className="text-sm font-bold text-center px-4">Verification Failed. Tap to Retry.</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <>
@@ -348,8 +398,24 @@ export default function Onboarding() {
                     </>
                   )}
                 </div>
-                <input type="file" className="hidden" accept="image/*" onChange={handleIDUpload} disabled={idUploading || idVerified === true} />
+                <input type="file" className="hidden" accept="image/jpeg, image/png, image/webp, image/heic, .jpg, .jpeg, .png, .webp, .heic" onChange={handleIDSelect} disabled={idUploading || idVerified === true} />
               </label>
+
+              {idPreview && idVerified === null && !idUploading && (
+                <button
+                  onClick={handleIDSubmit}
+                  className="w-full btn-grad py-3 rounded-xl text-sm font-bold shadow-lg shadow-purple-500/20"
+                >
+                  Confirm & Verify ID
+                </button>
+              )}
+
+              <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                <p className="text-xs text-purple-300">
+                  Ensure your name and campus are clearly visible. Avoid glare or shadows.
+                </p>
+              </div>
+
               {idVerified === false && (
                 <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
                   <p className="text-xs text-amber-500">
