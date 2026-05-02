@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Heart, X, Star, MapPin, BookOpen, Filter, CheckCircle, Crown, ChevronLeft, ChevronRight, Loader2, Share2, Copy } from 'lucide-react'
+import { Heart, X, Star, MapPin, BookOpen, Filter, CheckCircle, Crown, ChevronLeft, ChevronRight, Loader2, Share2, Copy, Music, Flame } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
@@ -17,7 +17,47 @@ const DEMO_USERS: Profile[] = [
 ]
 
 const DiscoverCard = ({ userProfile }: { userProfile: Profile }) => {
+  const { user } = useAuthStore()
   const [photoIdx, setPhotoIdx] = useState(0)
+  const [vibeCount, setVibeCount] = useState(userProfile.vibe_count || 0)
+  const [sendingVibe, setSendingVibe] = useState(false)
+  const [vibeSent, setVibeSent] = useState(false)
+
+  const handleSendVibe = async () => {
+    if (!user) {
+      toast.error('Sign in to send vibes!')
+      return
+    }
+
+    const today = new Date().toISOString().split('T')[0]
+    const vibeKey = `vibe_${user.id}_${userProfile.id}_${today}`
+
+    if (localStorage.getItem(vibeKey)) {
+      toast.info('You already sent a vibe to this person today!')
+      return
+    }
+
+    setSendingVibe(true)
+    try {
+      const newCount = vibeCount + 1
+      const { error } = await supabase.from('profiles').update({ vibe_count: newCount }).eq('id', userProfile.id)
+      
+      if (error) console.warn('Supabase update failed, falling back to local', error)
+      
+      setVibeCount(newCount)
+      setVibeSent(true)
+      localStorage.setItem(vibeKey, 'true')
+      setTimeout(() => setVibeSent(false), 2000)
+    } catch (err) {
+      console.warn(err)
+      setVibeCount(v => v + 1)
+      setVibeSent(true)
+      localStorage.setItem(vibeKey, 'true')
+      setTimeout(() => setVibeSent(false), 2000)
+    } finally {
+      setSendingVibe(false)
+    }
+  }
 
   return (
     <div className="relative rounded-[32px] overflow-hidden aspect-[4/5] sm:aspect-[3/4] shadow-2xl border border-white/5 bg-[#13131f]">
@@ -49,9 +89,23 @@ const DiscoverCard = ({ userProfile }: { userProfile: Profile }) => {
             <div className="flex items-center gap-2 mb-1">
               <h2 className="text-white font-syne font-bold text-xl sm:text-2xl truncate">{userProfile.name}, {userProfile.age}</h2>
               {userProfile.verified && <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />}
-              <FollowButton targetId={userProfile.id} className="ml-2" />
+            </div>
+            <div className="flex items-center gap-2 mb-2">
+              <FollowButton targetId={userProfile.id} />
+              <button
+                onClick={handleSendVibe}
+                disabled={sendingVibe || (user && localStorage.getItem(`vibe_${user.id}_${userProfile.id}_${new Date().toISOString().split('T')[0]}`) !== null)}
+                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1 border border-orange-500/50 text-orange-400 hover:bg-orange-500/10 ${vibeSent ? 'animate-bounce bg-orange-500/20' : ''} ${user && localStorage.getItem(`vibe_${user.id}_${userProfile.id}_${new Date().toISOString().split('T')[0]}`) ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {sendingVibe ? <Loader2 className="w-3 h-3 animate-spin" /> : vibeSent ? '🔥 Sent!' : '🔥 Send Vibe'}
+              </button>
             </div>
             <div className="flex flex-col gap-0.5 mb-1">
+              {vibeCount > 0 && (
+                <div className="flex items-center gap-1.5 text-orange-400 text-[10px] sm:text-xs font-bold mb-1">
+                  <Flame className="w-3 h-3" /> {vibeCount} vibes
+                </div>
+              )}
               <div className="flex items-center gap-1.5 text-gray-300 text-[10px] sm:text-xs font-medium">
                 <MapPin className="w-3 h-3 text-purple-400" /> {userProfile.campus}
               </div>
@@ -64,6 +118,14 @@ const DiscoverCard = ({ userProfile }: { userProfile: Profile }) => {
           <div className={`w-3 h-3 rounded-full mt-2 border-2 border-black flex-shrink-0 ${(userProfile as any).online ? 'bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]' : 'bg-gray-600'}`} />
         </div>
         <p className="text-gray-300 text-[11px] sm:text-xs mt-3 leading-relaxed line-clamp-3 pointer-events-auto">{userProfile.bio}</p>
+        
+        {userProfile.now_playing && (
+          <div className="mt-3 flex items-start gap-2 bg-purple-500/10 border border-purple-500/20 p-2.5 rounded-xl pointer-events-auto w-fit max-w-full">
+            <Music className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5 animate-pulse" />
+            <p className="text-purple-200 text-[10px] sm:text-xs font-medium leading-snug truncate">{userProfile.now_playing}</p>
+          </div>
+        )}
+
         <div className="flex flex-wrap gap-1.5 mt-4 pointer-events-auto">
           {userProfile.vibe && (
             <span className="px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-200 text-[10px] font-bold uppercase tracking-wider">{userProfile.vibe}</span>
@@ -86,8 +148,10 @@ export default function Discover() {
   const [loading, setLoading] = useState(true)
   const [campusFilter, setCampusFilter] = useState('')
   const [showFilter, setShowFilter] = useState(false)
+  const [activeFilter, setActiveFilter] = useState<'All' | 'Same University' | 'Same Course' | 'Online Now'>('All')
   
   const [showKadiBanner, setShowKadiBanner] = useState(() => !localStorage.getItem('kadi_banner_dismissed') && !localStorage.getItem('kadi_registered_locally') && !profile?.is_registered_voter)
+  const [kadiCollapsed, setKadiCollapsed] = useState(false)
   const [showSharePrompt, setShowSharePrompt] = useState(false)
   const [registeringKadi, setRegisteringKadi] = useState(false)
 
@@ -154,7 +218,19 @@ export default function Discover() {
     }
   }
 
-  const filteredUsers = campusFilter ? users.filter(u => u.campus?.includes(campusFilter)) : users
+  let filteredUsers = users
+
+  if (activeFilter === 'Same University' && profile?.campus) {
+    filteredUsers = users.filter(u => u.campus === profile.campus)
+  } else if (activeFilter === 'Same Course' && profile?.course) {
+    filteredUsers = users.filter(u => u.course === profile.course)
+  } else if (activeFilter === 'Online Now') {
+    filteredUsers = users.filter(u => (u as any).online)
+  }
+
+  if (campusFilter) {
+    filteredUsers = filteredUsers.filter(u => u.campus?.includes(campusFilter))
+  }
 
   if (loading) return (
     <main className="min-h-screen pt-20 flex items-center justify-center">
@@ -176,70 +252,98 @@ export default function Discover() {
         </div>
 
         {showKadiBanner && (
-          <div className="card mb-6 overflow-hidden animate-fade-in relative border-white/10 bg-gradient-to-br from-white/5 to-[#080810]">
-            <div className="absolute top-0 left-0 right-0 h-1.5 flex">
-              <div className="flex-1 bg-[#000000]" />
-              <div className="flex-1 bg-[#BB0000]" />
-              <div className="flex-1 bg-[#006600]" />
+          kadiCollapsed ? (
+            <div className="flex justify-center mb-6">
+              <button onClick={() => setKadiCollapsed(false)} className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center gap-2 shadow-lg">
+                🇰🇪 Jisajili 2027
+              </button>
             </div>
-            <button onClick={dismissKadiBanner} className="absolute top-3 right-3 p-1.5 rounded-full bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all z-10">
-              <X className="w-4 h-4" />
-            </button>
-            <div className="p-5 pt-6">
-              <div className="inline-block px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-black uppercase tracking-widest text-white mb-4">
-                🇰🇪 2027 GENERAL ELECTION
+          ) : (
+            <div className="card mb-6 overflow-hidden animate-fade-in relative border-white/10 bg-gradient-to-br from-white/5 to-[#080810]">
+              <div className="absolute top-0 left-0 right-0 h-1.5 flex">
+                <div className="flex-1 bg-[#000000]" />
+                <div className="flex-1 bg-[#BB0000]" />
+                <div className="flex-1 bg-[#006600]" />
               </div>
-              <h2 className="font-syne font-bold text-xl sm:text-2xl text-white tracking-tight mb-5">Uko na KADI? Kura yako = nguvu yako.</h2>
-              
-              <div className="space-y-3 mb-6">
-                <div className="pl-4 border-l-4 border-[#006600] py-1">
-                  <p className="text-gray-300 text-sm font-medium italic">"Gen Z moja. Kura moja. Kenya moja. Pata KADI yako." 🇰🇪</p>
+              <button onClick={() => setKadiCollapsed(true)} className="absolute top-3 right-10 p-1.5 rounded-full bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all z-10" title="Collapse">
+                <ChevronLeft className="w-4 h-4 -rotate-90" />
+              </button>
+              <button onClick={dismissKadiBanner} className="absolute top-3 right-3 p-1.5 rounded-full bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all z-10" title="Dismiss">
+                <X className="w-4 h-4" />
+              </button>
+              <div className="p-5 pt-6">
+                <div className="inline-block px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-black uppercase tracking-widest text-white mb-4">
+                  🇰🇪 2027 GENERAL ELECTION
                 </div>
-                <div className="pl-4 border-l-4 border-[#BB0000] py-1">
-                  <p className="text-gray-300 text-sm font-medium italic">"KADI = sauti yako. Bila KADI, unasema nini?" 🎤</p>
+                <h2 className="font-syne font-bold text-xl sm:text-2xl text-white tracking-tight mb-5">Uko na KADI? Kura yako = nguvu yako.</h2>
+                
+                <div className="space-y-3 mb-6">
+                  <div className="pl-4 border-l-4 border-[#006600] py-1">
+                    <p className="text-gray-300 text-sm font-medium italic">"Gen Z moja. Kura moja. Kenya moja. Pata KADI yako." 🇰🇪</p>
+                  </div>
+                  <div className="pl-4 border-l-4 border-[#BB0000] py-1">
+                    <p className="text-gray-300 text-sm font-medium italic">"KADI = sauti yako. Bila KADI, unasema nini?" 🎤</p>
+                  </div>
                 </div>
+
+                <div className="space-y-4 mb-6 text-sm text-gray-400">
+                  <div className="flex gap-3">
+                    <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">1</div>
+                    <p>Nenda Huduma Centre karibu nawe — beba original ID yako ya kitaifa</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">2</div>
+                    <p>Jisajili kama mpiga kura — inachukua dakika 10 tu</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">3</div>
+                    <p>Pata KADI yako — wewe ni sehemu ya mabadiliko ya 2027</p>
+                  </div>
+                </div>
+
+                {!showSharePrompt ? (
+                  <div className="flex flex-col gap-3">
+                    <button onClick={handleRegisterKadi} disabled={registeringKadi} className="w-full py-3.5 rounded-xl bg-[#BB0000] hover:bg-[#990000] text-white font-black uppercase tracking-widest text-xs transition-all shadow-[0_0_20px_rgba(187,0,0,0.3)] flex items-center justify-center gap-2">
+                      {registeringKadi ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Ndio, nimejisajili
+                    </button>
+                    <a href="https://www.huduma.go.ke" target="_blank" rel="noreferrer" className="w-full py-3.5 rounded-xl border-2 border-white/10 hover:bg-white/5 text-white font-bold text-xs text-center transition-all flex items-center justify-center gap-2">
+                      Pata Huduma Centre karibu nawe <ChevronRight className="w-4 h-4" />
+                    </a>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-[#006600]/10 border border-[#006600]/30 text-center animate-fade-in">
+                    <h3 className="text-white font-bold text-lg mb-2">Asante! 🇰🇪</h3>
+                    <p className="text-sm text-gray-300 mb-4">Waambie marafiki wako! Share your KADI badge.</p>
+                    <button onClick={copyShareLink} className="w-full py-3 rounded-xl bg-[#006600] hover:bg-[#005500] text-white font-bold text-xs flex items-center justify-center gap-2 transition-all">
+                      <Copy className="w-4 h-4" /> Copy Link
+                    </button>
+                  </div>
+                )}
+
+                <p className="text-[10px] text-gray-500 mt-6 text-center italic">
+                  TurnUp haishughulikii siasa. Tunaamini kila Mkenya ana haki ya kupiga kura. 🇰🇪
+                </p>
               </div>
-
-              <div className="space-y-4 mb-6 text-sm text-gray-400">
-                <div className="flex gap-3">
-                  <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">1</div>
-                  <p>Nenda Huduma Centre karibu nawe — beba original ID yako ya kitaifa</p>
-                </div>
-                <div className="flex gap-3">
-                  <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">2</div>
-                  <p>Jisajili kama mpiga kura — inachukua dakika 10 tu</p>
-                </div>
-                <div className="flex gap-3">
-                  <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">3</div>
-                  <p>Pata KADI yako — wewe ni sehemu ya mabadiliko ya 2027</p>
-                </div>
-              </div>
-
-              {!showSharePrompt ? (
-                <div className="flex flex-col gap-3">
-                  <button onClick={handleRegisterKadi} disabled={registeringKadi} className="w-full py-3.5 rounded-xl bg-[#BB0000] hover:bg-[#990000] text-white font-black uppercase tracking-widest text-xs transition-all shadow-[0_0_20px_rgba(187,0,0,0.3)] flex items-center justify-center gap-2">
-                    {registeringKadi ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Ndio, nimejisajili
-                  </button>
-                  <a href="https://www.huduma.go.ke" target="_blank" rel="noreferrer" className="w-full py-3.5 rounded-xl border-2 border-white/10 hover:bg-white/5 text-white font-bold text-xs text-center transition-all flex items-center justify-center gap-2">
-                    Pata Huduma Centre karibu nawe <ChevronRight className="w-4 h-4" />
-                  </a>
-                </div>
-              ) : (
-                <div className="p-4 rounded-xl bg-[#006600]/10 border border-[#006600]/30 text-center animate-fade-in">
-                  <h3 className="text-white font-bold text-lg mb-2">Asante! 🇰🇪</h3>
-                  <p className="text-sm text-gray-300 mb-4">Waambie marafiki wako! Share your KADI badge.</p>
-                  <button onClick={copyShareLink} className="w-full py-3 rounded-xl bg-[#006600] hover:bg-[#005500] text-white font-bold text-xs flex items-center justify-center gap-2 transition-all">
-                    <Copy className="w-4 h-4" /> Copy Link
-                  </button>
-                </div>
-              )}
-
-              <p className="text-[10px] text-gray-500 mt-6 text-center italic">
-                TurnUp haishughulikii siasa. Tunaamini kila Mkenya ana haki ya kupiga kura. 🇰🇪
-              </p>
             </div>
-          </div>
+          )
         )}
+
+        {/* Filter Bar */}
+        <div className="flex overflow-x-auto pb-4 mb-2 gap-2 hide-scrollbar">
+          {['All', 'Same University', 'Same Course', 'Online Now'].map(f => (
+            <button
+              key={f}
+              onClick={() => setActiveFilter(f as any)}
+              className={`whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                activeFilter === f 
+                  ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]' 
+                  : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
 
         {showFilter && (
           <div className="card p-4 mb-4 animate-fade-in">

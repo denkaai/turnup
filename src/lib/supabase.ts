@@ -25,6 +25,8 @@ export type Profile = {
   relationship_goal?: string
   whatsapp_number?: string
   is_registered_voter?: boolean
+  vibe_count?: number
+  now_playing?: string
   created_at: string
 }
 

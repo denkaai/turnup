@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Camera, Edit2, Shield, Crown, LogOut, ChevronRight, CheckCircle, Star, Zap, MapPin, BookOpen, Save, Loader2, Upload, User, Lock, Settings } from 'lucide-react'
+import { Camera, Edit2, Shield, Crown, LogOut, ChevronRight, CheckCircle, Star, Zap, MapPin, BookOpen, Save, Loader2, Upload, User, Lock, Settings, Music } from 'lucide-react'
 import { useAuthStore } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -28,6 +28,7 @@ export default function Profile() {
     campus: profile?.campus || '',
     interests: profile?.interests || [],
     whatsapp_number: profile?.whatsapp_number || '',
+    now_playing: profile?.now_playing || '',
   })
 
   const [privacy, setPrivacy] = useState({
@@ -136,7 +137,8 @@ export default function Profile() {
       year: form.year,
       campus: form.campus,
       interests: form.interests,
-      whatsapp_number: wa
+      whatsapp_number: wa,
+      now_playing: form.now_playing
     }).eq('id', user.id)
 
     if (error) toast.error('Failed to save')
@@ -272,6 +274,25 @@ export default function Profile() {
               <p className="text-gray-600 text-[8px] sm:text-[9px] uppercase font-black tracking-[0.15em]">{s.label}</p>
             </div>
           ))}
+        </div>
+
+        {/* Now Playing */}
+        <div className="card p-5 mb-4 border-white/5 bg-white/[0.02]">
+          <h3 className="text-[9px] text-gray-500 mb-2.5 font-black uppercase tracking-[0.2em] flex items-center gap-1.5">
+            <Music className="w-3 h-3 text-purple-400" /> Now Playing
+          </h3>
+          {editing ? (
+            <input
+              type="text"
+              className="input-dark w-full text-sm"
+              placeholder="E.g. Listening to: Bien - Utanipenda 🎵"
+              value={form.now_playing}
+              onChange={e => setForm({...form, now_playing: e.target.value})}
+              maxLength={100}
+            />
+          ) : (
+            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{profile.now_playing || <span className="text-gray-600 italic">No song playing...</span>}</p>
+          )}
         </div>
 
         {/* Bio */}
