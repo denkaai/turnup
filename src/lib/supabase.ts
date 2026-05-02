@@ -24,6 +24,7 @@ export type Profile = {
   weekend_plan?: string
   relationship_goal?: string
   whatsapp_number?: string
+  is_registered_voter?: boolean
   created_at: string
 }
 

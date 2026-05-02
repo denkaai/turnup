@@ -248,13 +248,18 @@ export default function Profile() {
         </div>
 
         {/* Badges */}
-        <div className="flex gap-2 justify-center mb-8">
+        <div className="flex flex-wrap gap-2 justify-center mb-8">
           {profile.verified && (
             <span className="verified-badge px-4 py-1.5"><Shield className="w-3 h-3" /> Student Verified</span>
           )}
           {profile.premium && (
             <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1.5">
               <Crown className="w-3 h-3" /> Premium
+            </span>
+          )}
+          {profile.is_registered_voter && (
+            <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#006600]/20 border border-[#006600]/40 text-[#4ade80] flex items-center gap-1.5 shadow-[0_0_10px_rgba(0,102,0,0.2)]">
+              ✓ Nimejisajili — 2027 Ready
             </span>
           )}
         </div>

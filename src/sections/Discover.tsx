@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Heart, X, Star, MapPin, BookOpen, Filter, CheckCircle, Crown, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { Heart, X, Star, MapPin, BookOpen, Filter, CheckCircle, Crown, ChevronLeft, ChevronRight, Loader2, Share2, Copy } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
@@ -17,7 +17,7 @@ const DEMO_USERS: Profile[] = [
 ]
 
 export default function Discover() {
-  const { user, profile } = useAuthStore()
+  const { user, profile, fetchProfile } = useAuthStore()
   const [users, setUsers] = useState<Profile[]>([])
   const [index, setIndex] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -25,10 +25,44 @@ export default function Discover() {
   const [swipeDir, setSwipeDir] = useState<null | 'left' | 'right' | 'up'>(null)
   const [campusFilter, setCampusFilter] = useState('')
   const [showFilter, setShowFilter] = useState(false)
+  
+  const [showKadiBanner, setShowKadiBanner] = useState(() => !localStorage.getItem('kadi_banner_dismissed') && !profile?.is_registered_voter)
+  const [showSharePrompt, setShowSharePrompt] = useState(false)
+  const [registeringKadi, setRegisteringKadi] = useState(false)
+
+  useEffect(() => {
+    if (profile?.is_registered_voter) setShowKadiBanner(false)
+  }, [profile?.is_registered_voter])
 
   useEffect(() => {
     loadUsers()
   }, [])
+
+  const handleRegisterKadi = async () => {
+    if (!user) return
+    setRegisteringKadi(true)
+    try {
+      const { error } = await supabase.from('profiles').update({ is_registered_voter: true }).eq('id', user.id)
+      if (error) throw error
+      await fetchProfile(user.id)
+      setShowSharePrompt(true)
+    } catch (err: any) {
+      toast.error('Failed to update status')
+    } finally {
+      setRegisteringKadi(false)
+    }
+  }
+
+  const dismissKadiBanner = () => {
+    localStorage.setItem('kadi_banner_dismissed', 'true')
+    setShowKadiBanner(false)
+  }
+
+  const copyShareLink = () => {
+    navigator.clipboard.writeText("I'm registered to vote in 2027! Are you? Get your KADI badge on TurnUp. https://turnupcampus.netlify.app/")
+    toast.success('Link copied to clipboard! Share it with friends.')
+    dismissKadiBanner()
+  }
 
   const loadUsers = async () => {
     setLoading(true)
@@ -119,6 +153,72 @@ export default function Discover() {
             <Filter className="w-4 h-4 text-gray-400" />
           </button>
         </div>
+
+        {showKadiBanner && (
+          <div className="card mb-6 overflow-hidden animate-fade-in relative border-white/10 bg-gradient-to-br from-white/5 to-[#080810]">
+            <div className="absolute top-0 left-0 right-0 h-1.5 flex">
+              <div className="flex-1 bg-[#000000]" />
+              <div className="flex-1 bg-[#BB0000]" />
+              <div className="flex-1 bg-[#006600]" />
+            </div>
+            <button onClick={dismissKadiBanner} className="absolute top-3 right-3 p-1.5 rounded-full bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all z-10">
+              <X className="w-4 h-4" />
+            </button>
+            <div className="p-5 pt-6">
+              <div className="inline-block px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-black uppercase tracking-widest text-white mb-4">
+                🇰🇪 2027 GENERAL ELECTION
+              </div>
+              <h2 className="font-syne font-bold text-xl sm:text-2xl text-white tracking-tight mb-5">Uko na KADI? Kura yako = nguvu yako.</h2>
+              
+              <div className="space-y-3 mb-6">
+                <div className="pl-4 border-l-4 border-[#006600] py-1">
+                  <p className="text-gray-300 text-sm font-medium italic">"Gen Z moja. Kura moja. Kenya moja. Pata KADI yako." 🇰🇪</p>
+                </div>
+                <div className="pl-4 border-l-4 border-[#BB0000] py-1">
+                  <p className="text-gray-300 text-sm font-medium italic">"KADI = sauti yako. Bila KADI, unasema nini?" 🎤</p>
+                </div>
+              </div>
+
+              <div className="space-y-4 mb-6 text-sm text-gray-400">
+                <div className="flex gap-3">
+                  <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">1</div>
+                  <p>Nenda Huduma Centre karibu nawe — beba original ID yako ya kitaifa</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">2</div>
+                  <p>Jisajili kama mpiga kura — inachukua dakika 10 tu</p>
+                </div>
+                <div className="flex gap-3">
+                  <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">3</div>
+                  <p>Pata KADI yako — wewe ni sehemu ya mabadiliko ya 2027</p>
+                </div>
+              </div>
+
+              {!showSharePrompt ? (
+                <div className="flex flex-col gap-3">
+                  <button onClick={handleRegisterKadi} disabled={registeringKadi} className="w-full py-3.5 rounded-xl bg-[#BB0000] hover:bg-[#990000] text-white font-black uppercase tracking-widest text-xs transition-all shadow-[0_0_20px_rgba(187,0,0,0.3)] flex items-center justify-center gap-2">
+                    {registeringKadi ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Ndio, nimejisajili
+                  </button>
+                  <a href="https://www.huduma.go.ke" target="_blank" rel="noreferrer" className="w-full py-3.5 rounded-xl border-2 border-white/10 hover:bg-white/5 text-white font-bold text-xs text-center transition-all flex items-center justify-center gap-2">
+                    Pata Huduma Centre karibu nawe <ChevronRight className="w-4 h-4" />
+                  </a>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-[#006600]/10 border border-[#006600]/30 text-center animate-fade-in">
+                  <h3 className="text-white font-bold text-lg mb-2">Asante! 🇰🇪</h3>
+                  <p className="text-sm text-gray-300 mb-4">Waambie marafiki wako! Share your KADI badge.</p>
+                  <button onClick={copyShareLink} className="w-full py-3 rounded-xl bg-[#006600] hover:bg-[#005500] text-white font-bold text-xs flex items-center justify-center gap-2 transition-all">
+                    <Copy className="w-4 h-4" /> Copy Link
+                  </button>
+                </div>
+              )}
+
+              <p className="text-[10px] text-gray-500 mt-6 text-center italic">
+                TurnUp haishughulikii siasa. Tunaamini kila Mkenya ana haki ya kupiga kura. 🇰🇪
+              </p>
+            </div>
+          </div>
+        )}
 
         {showFilter && (
           <div className="card p-4 mb-4 animate-fade-in">
