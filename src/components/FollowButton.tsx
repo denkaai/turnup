@@ -12,6 +12,7 @@ interface FollowButtonProps {
 
 export default function FollowButton({ targetId, className = '', hideIfSelf = true }: FollowButtonProps) {
   const { user } = useAuthStore()
+  const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
   const [following, setFollowing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [confirming, setConfirming] = useState(false)
@@ -26,7 +27,7 @@ export default function FollowButton({ targetId, className = '', hideIfSelf = tr
 
   const checkFollow = async () => {
     const { data: { user: currentUser } } = await supabase.auth.getUser()
-    if (!currentUser || !targetId) {
+    if (!currentUser || !targetId || !isValidUUID(targetId)) {
       setLoading(false)
       return
     }
@@ -55,7 +56,10 @@ export default function FollowButton({ targetId, className = '', hideIfSelf = tr
 
   const follow = async () => {
     const { data: { user: currentUser } } = await supabase.auth.getUser()
-    if (!currentUser || !targetId) return
+    if (!currentUser || !targetId || !isValidUUID(targetId)) {
+      if (targetId && !isValidUUID(targetId)) console.log('Invalid UUID, skipping follow for id:', targetId)
+      return
+    }
     
     try {
       setFollowing(true) // Instant update
@@ -78,7 +82,10 @@ export default function FollowButton({ targetId, className = '', hideIfSelf = tr
   const unfollow = async (e: React.MouseEvent) => {
     e.stopPropagation()
     const { data: { user: currentUser } } = await supabase.auth.getUser()
-    if (!currentUser || !targetId) return
+    if (!currentUser || !targetId || !isValidUUID(targetId)) {
+      if (targetId && !isValidUUID(targetId)) console.log('Invalid UUID, skipping unfollow for id:', targetId)
+      return
+    }
 
     try {
       setFollowing(false) // Instant update

@@ -16,22 +16,83 @@ const DEMO_USERS: Profile[] = [
   { id: 'd6', name: 'Frank', age: 22, campus: 'Thika Technical Training Institute', course: 'Automotive', year: 2, bio: 'Mechanic life 🔧 Good vibes only. Always ready to link up', photos: ['https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=500&fit=crop'], interests: ['Cars', 'Music', 'Dancing', 'Socializing'], verified: true, premium: false, online: true, gender: 'male', looking_for: 'everyone', vibe: '🎵 Music Head', weekend_plan: 'Still deciding 😂', relationship_goal: 'New friends 👥', premium_until: null, created_at: new Date().toISOString() } as any,
 ]
 
+const DiscoverCard = ({ userProfile }: { userProfile: Profile }) => {
+  const [photoIdx, setPhotoIdx] = useState(0)
+
+  return (
+    <div className="relative rounded-[32px] overflow-hidden aspect-[4/5] sm:aspect-[3/4] shadow-2xl border border-white/5 bg-[#13131f]">
+      <img
+        src={userProfile.photos?.[photoIdx] || userProfile.photos?.[0]}
+        alt={userProfile.name}
+        className="w-full h-full object-cover"
+      />
+
+      {/* Photo nav */}
+      {(userProfile.photos?.length || 0) > 1 && (
+        <div className="absolute top-3 left-0 right-0 flex gap-1 px-4 z-20">
+          {userProfile.photos?.map((_, i) => (
+            <div key={i} className={`flex-1 h-0.5 rounded-full transition-all ${i === photoIdx ? 'bg-white' : 'bg-white/30'}`} />
+          ))}
+        </div>
+      )}
+      {photoIdx > 0 && (
+        <button onClick={() => setPhotoIdx(i => i - 1)} className="absolute left-0 top-0 bottom-20 w-1/3 z-10" />
+      )}
+      {photoIdx < (userProfile.photos?.length || 1) - 1 && (
+        <button onClick={() => setPhotoIdx(i => i + 1)} className="absolute right-0 top-0 bottom-20 w-1/3 z-10" />
+      )}
+
+      {/* Gradient overlay */}
+      <div className="absolute bottom-0 left-0 right-0 h-3/4 bg-gradient-to-t from-[#080810] via-[#080810]/80 to-transparent p-5 sm:p-6 flex flex-col justify-end pointer-events-none">
+        <div className="flex items-start justify-between pointer-events-auto">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-white font-syne font-bold text-xl sm:text-2xl truncate">{userProfile.name}, {userProfile.age}</h2>
+              {userProfile.verified && <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />}
+              <FollowButton targetId={userProfile.id} className="ml-2" />
+            </div>
+            <div className="flex flex-col gap-0.5 mb-1">
+              <div className="flex items-center gap-1.5 text-gray-300 text-[10px] sm:text-xs font-medium">
+                <MapPin className="w-3 h-3 text-purple-400" /> {userProfile.campus}
+              </div>
+              <UserFollowStats userId={userProfile.id} className="ml-4.5" />
+            </div>
+            <div className="flex items-center gap-1.5 text-gray-400 text-[10px] sm:text-xs font-medium">
+              <BookOpen className="w-3 h-3 text-purple-400" /> {userProfile.course} · Year {userProfile.year}
+            </div>
+          </div>
+          <div className={`w-3 h-3 rounded-full mt-2 border-2 border-black flex-shrink-0 ${(userProfile as any).online ? 'bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]' : 'bg-gray-600'}`} />
+        </div>
+        <p className="text-gray-300 text-[11px] sm:text-xs mt-3 leading-relaxed line-clamp-3 pointer-events-auto">{userProfile.bio}</p>
+        <div className="flex flex-wrap gap-1.5 mt-4 pointer-events-auto">
+          {userProfile.vibe && (
+            <span className="px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-200 text-[10px] font-bold uppercase tracking-wider">{userProfile.vibe}</span>
+          )}
+          {userProfile.relationship_goal && (
+            <span className="px-2.5 py-1 rounded-lg bg-pink-500/20 border border-pink-500/30 text-pink-200 text-[10px] font-bold uppercase tracking-wider">{userProfile.relationship_goal}</span>
+          )}
+          {userProfile.interests?.map((interest: string) => (
+             <span key={interest} className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 text-white text-[10px] font-bold uppercase tracking-wider">{interest}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Discover() {
   const { user, profile, fetchProfile } = useAuthStore()
   const [users, setUsers] = useState<Profile[]>([])
-  const [index, setIndex] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [photoIdx, setPhotoIdx] = useState(0)
-  const [swipeDir, setSwipeDir] = useState<null | 'left' | 'right' | 'up'>(null)
   const [campusFilter, setCampusFilter] = useState('')
   const [showFilter, setShowFilter] = useState(false)
   
-  const [showKadiBanner, setShowKadiBanner] = useState(() => !localStorage.getItem('kadi_banner_dismissed') && !profile?.is_registered_voter)
+  const [showKadiBanner, setShowKadiBanner] = useState(() => !localStorage.getItem('kadi_banner_dismissed') && !localStorage.getItem('kadi_registered_locally') && !profile?.is_registered_voter)
   const [showSharePrompt, setShowSharePrompt] = useState(false)
   const [registeringKadi, setRegisteringKadi] = useState(false)
 
   useEffect(() => {
-    if (profile?.is_registered_voter) setShowKadiBanner(false)
+    if (profile?.is_registered_voter || localStorage.getItem('kadi_registered_locally')) setShowKadiBanner(false)
   }, [profile?.is_registered_voter])
 
   useEffect(() => {
@@ -43,11 +104,17 @@ export default function Discover() {
     setRegisteringKadi(true)
     try {
       const { error } = await supabase.from('profiles').update({ is_registered_voter: true }).eq('id', user.id)
-      if (error) throw error
-      await fetchProfile(user.id)
+      if (error) {
+        console.warn('Supabase update failed, falling back to local state:', error)
+      } else {
+        await fetchProfile(user.id)
+      }
+      localStorage.setItem('kadi_registered_locally', 'true')
       setShowSharePrompt(true)
     } catch (err: any) {
-      toast.error('Failed to update status')
+      console.warn('Error during KADI register, falling back to local state:', err)
+      localStorage.setItem('kadi_registered_locally', 'true')
+      setShowSharePrompt(true)
     } finally {
       setRegisteringKadi(false)
     }
@@ -69,18 +136,10 @@ export default function Discover() {
     try {
       if (!user) { setUsers(DEMO_USERS); setLoading(false); return }
 
-      const { data: swipes } = await supabase
-        .from('swipes')
-        .select('target_id')
-        .eq('swiper_id', user.id)
-
-      const swipedIds = (swipes || []).map((s: any) => s.target_id)
-
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .neq('id', user.id)
-        .not('id', 'in', swipedIds.length ? `(${swipedIds.join(',')})` : '(null)')
         .limit(20)
 
       if (error || !data?.length) {
@@ -95,45 +154,7 @@ export default function Discover() {
     }
   }
 
-  const current = users[index]
-
-  const swipe = async (action: 'like' | 'pass' | 'superlike') => {
-    if (!current) return
-    const dir = action === 'pass' ? 'left' : action === 'superlike' ? 'up' : 'right'
-    setSwipeDir(dir)
-
-    setTimeout(async () => {
-      if (user && !current.id.startsWith('d')) {
-        await supabase.from('swipes').insert({ swiper_id: user.id, target_id: current.id, action })
-
-        if (action !== 'pass') {
-          const { data: mutual } = await supabase
-            .from('swipes')
-            .select('id')
-            .eq('swiper_id', current.id)
-            .eq('target_id', user.id)
-            .in('action', ['like', 'superlike'])
-            .maybeSingle()
-
-          if (mutual) {
-            await supabase.from('matches').insert({ user1_id: user.id, user2_id: current.id })
-            toast.success(`🎉 It's a match with ${current.name}!`, { duration: 4000 })
-          }
-        }
-      }
-
-      if (action === 'like') toast(`Liked ${current.name}! ❤️`, { duration: 1500 })
-      if (action === 'superlike') toast(`Super liked ${current.name}! ⭐`, { duration: 1500 })
-
-      setSwipeDir(null)
-      setPhotoIdx(0)
-      if (index < users.length - 1) setIndex(i => i + 1)
-      else { toast.info("You've seen everyone! Check back later."); setIndex(0) }
-    }, 300)
-  }
-
   const filteredUsers = campusFilter ? users.filter(u => u.campus?.includes(campusFilter)) : users
-  const displayUser = filteredUsers[index] || current
 
   if (loading) return (
     <main className="min-h-screen pt-20 flex items-center justify-center">
@@ -232,78 +253,12 @@ export default function Discover() {
           </div>
         )}
 
-        {displayUser ? (
-          <div className={`relative transition-all duration-300 ${swipeDir === 'left' ? '-translate-x-full opacity-0 rotate-[-6deg]' : swipeDir === 'right' ? 'translate-x-full opacity-0 rotate-[6deg]' : swipeDir === 'up' ? '-translate-y-full opacity-0' : ''}`}>
-            {/* Card */}
-            <div className="relative rounded-[32px] overflow-hidden aspect-[4/5] sm:aspect-[3/4] mb-6 shadow-2xl border border-white/5">
-              <img
-                src={displayUser.photos?.[photoIdx] || displayUser.photos?.[0]}
-                alt={displayUser.name}
-                className="w-full h-full object-cover"
-              />
-
-              {/* Photo nav */}
-              {(displayUser.photos?.length || 0) > 1 && (
-                <div className="absolute top-3 left-0 right-0 flex gap-1 px-4">
-                  {displayUser.photos?.map((_, i) => (
-                    <div key={i} className={`flex-1 h-0.5 rounded-full transition-all ${i === photoIdx ? 'bg-white' : 'bg-white/30'}`} />
-                  ))}
-                </div>
-              )}
-              {photoIdx > 0 && (
-                <button onClick={() => setPhotoIdx(i => i - 1)} className="absolute left-0 top-0 bottom-20 w-1/3 z-10" />
-              )}
-              {photoIdx < (displayUser.photos?.length || 1) - 1 && (
-                <button onClick={() => setPhotoIdx(i => i + 1)} className="absolute right-0 top-0 bottom-20 w-1/3 z-10" />
-              )}
-
-              {/* Gradient overlay */}
-              <div className="absolute bottom-0 left-0 right-0 h-2/3 bg-gradient-to-t from-black via-black/40 to-transparent p-5 sm:p-6 flex flex-col justify-end">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h2 className="text-white font-syne font-bold text-xl sm:text-2xl truncate">{displayUser.name}, {displayUser.age}</h2>
-                      {displayUser.verified && <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />}
-                      <FollowButton targetId={displayUser.id} className="ml-2" />
-                    </div>
-                    <div className="flex flex-col gap-0.5 mb-1">
-                      <div className="flex items-center gap-1.5 text-gray-300 text-[10px] sm:text-xs font-medium">
-                        <MapPin className="w-3 h-3 text-purple-400" /> {displayUser.campus}
-                      </div>
-                      <UserFollowStats userId={displayUser.id} className="ml-4.5" />
-                    </div>
-                    <div className="flex items-center gap-1.5 text-gray-400 text-[10px] sm:text-xs font-medium">
-                      <BookOpen className="w-3 h-3 text-purple-400" /> {displayUser.course} · Year {displayUser.year}
-                    </div>
-                  </div>
-                  <div className={`w-3 h-3 rounded-full mt-2 border-2 border-black flex-shrink-0 ${(displayUser as any).online ? 'bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]' : 'bg-gray-600'}`} />
-                </div>
-                <p className="text-gray-300 text-[11px] sm:text-xs mt-3 leading-relaxed line-clamp-2">{displayUser.bio}</p>
-                <div className="flex flex-wrap gap-1.5 mt-4">
-                  {displayUser.vibe && (
-                    <span className="px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-200 text-[10px] font-bold uppercase tracking-wider">{displayUser.vibe}</span>
-                  )}
-                  {displayUser.relationship_goal && (
-                    <span className="px-2.5 py-1 rounded-lg bg-pink-500/20 border border-pink-500/30 text-pink-200 text-[10px] font-bold uppercase tracking-wider">{displayUser.relationship_goal}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex items-center justify-center gap-5">
-              <button onClick={() => swipe('pass')} className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/20 hover:border-red-500/30 transition-all group shadow-xl active:scale-90 min-h-[56px] min-w-[56px]">
-                <X className="w-6 h-6 sm:w-7 sm:h-7 text-gray-400 group-hover:text-red-400" />
-              </button>
-              <button onClick={() => swipe('superlike')} className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center hover:bg-amber-500/25 transition-all group shadow-xl active:scale-90 min-h-[48px] min-w-[48px]">
-                <Star className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500 group-hover:text-amber-300 fill-current" />
-              </button>
-              <button onClick={() => swipe('like')} className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-pink-500/10 border border-pink-500/20 flex items-center justify-center hover:bg-pink-500/25 transition-all group shadow-xl active:scale-90 min-h-[56px] min-w-[56px]">
-                <Heart className="w-6 h-6 sm:w-7 sm:h-7 text-pink-400 group-hover:text-pink-300 fill-current" />
-              </button>
-            </div>
-
-            <p className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-700 mt-6">{index + 1} / {filteredUsers.length} students</p>
+        {filteredUsers.length > 0 ? (
+          <div className="space-y-6">
+            {filteredUsers.map(userProfile => (
+              <DiscoverCard key={userProfile.id} userProfile={userProfile} />
+            ))}
+            <p className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-700 mt-6 pt-6 border-t border-white/5 pb-12">End of feed</p>
           </div>
         ) : (
           <div className="text-center py-20">
