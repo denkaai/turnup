@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Users, Plus, MapPin, Calendar, Flame, ChevronRight, Search, Filter, Loader2, MessageSquare, CheckCircle, Send, Shield, Info, MoreVertical, Star, ArrowLeft, BarChart3, X, Zap } from 'lucide-react'
 import { useAuthStore } from '@/lib/store'
+import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import FollowButton from '@/components/FollowButton'
 import UserFollowStats from '@/components/UserFollowStats'
@@ -60,6 +61,11 @@ const DEMO_SQUADS: Squad[] = [
   }
 ]
 
+const isValidUUID = (uuid: string) => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+};
+
 export default function Squads() {
   const { user, profile } = useAuthStore()
   const [params] = useSearchParams()
@@ -92,9 +98,27 @@ export default function Squads() {
     return () => clearInterval(interval)
   }, [params])
 
-  const handleJoin = (squadId: string) => {
-    toast.success('Join request sent to the Squad leader! 🚀')
-    setSquads(prev => prev.map(s => s.id === squadId ? { ...s, joined: true } : s))
+  const handleJoinToggle = async (squad: Squad) => {
+    if (!user) return toast.error('Sign in to join squads!')
+    
+    const isJoining = !squad.joined
+    const newCount = isJoining ? squad.members + 1 : Math.max(1, squad.members - 1)
+    
+    setSquads(prev => prev.map(s => s.id === squad.id ? { ...s, joined: isJoining, members: newCount } : s))
+    if (isJoining) toast.success('Joined Squad! 🚀')
+    else toast.success('Left Squad.')
+
+    if (!isValidUUID(user.id) || !isValidUUID(squad.id)) {
+      console.log('Invalid UUID or demo squad, skipping Supabase call')
+      return
+    }
+
+    try {
+      const { error } = await supabase.from('squads').update({ members: newCount }).eq('id', squad.id)
+      if (error) console.warn('Supabase squad update failed, fallback active', error)
+    } catch (err) {
+      console.warn('Error joining squad:', err)
+    }
   }
 
   const sendMsg = () => {
@@ -375,11 +399,16 @@ export default function Squads() {
                   <div className="flex items-center gap-1.5 text-purple-400 text-[10px] font-bold"><Users className="w-3 h-3" /> {s.members}/{s.max_members}</div>
                 </div>
                 {s.joined ? (
-                  <button className="px-4 py-2 rounded-xl grad-bg text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-purple-500/20">
-                    Open Chat <ChevronRight className="w-3 h-3" />
-                  </button>
+                  <div className="flex gap-2">
+                    <button onClick={(e) => { e.stopPropagation(); handleJoinToggle(s); }} className="px-3 py-2 rounded-xl bg-purple-500/10 text-purple-400 text-xs font-bold transition-all flex items-center gap-1 border border-purple-500/20">
+                      Joined ✓
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); setSelectedSquad(s); }} className="px-4 py-2 rounded-xl grad-bg text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-purple-500/20">
+                      Open Chat <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
                 ) : (
-                  <button onClick={(e) => { e.stopPropagation(); handleJoin(s.id); }} className="px-4 py-2 rounded-xl bg-white/5 text-white text-xs font-bold hover:bg-white/10 transition-all flex items-center gap-2">
+                  <button onClick={(e) => { e.stopPropagation(); handleJoinToggle(s); }} className="px-4 py-2 rounded-xl bg-white/5 text-white text-xs font-bold hover:bg-white/10 transition-all flex items-center gap-2">
                     Join Squad <Plus className="w-3 h-3" />
                   </button>
                 )}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { Send, ArrowLeft, Shield, Loader2, MessageCircle, CheckCheck, Check, Smile, Plus, Mic, Image, MapPin, Play, Square, Trash2, Video, Phone, Search, Pencil, Users, ChevronRight } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
@@ -33,6 +34,9 @@ export default function Messages() {
   const [showNewMsgModal, setShowNewMsgModal] = useState(false)
   const [allUsers, setAllUsers] = useState<Profile[]>([])
   const [loadingUsers, setLoadingUsers] = useState(false)
+  const [activeReactionMsg, setActiveReactionMsg] = useState<string | null>(null)
+  const [msgReactions, setMsgReactions] = useState<Record<string, string>>({})
+  const [isTyping, setIsTyping] = useState(false)
   
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -71,7 +75,15 @@ export default function Messages() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, isTyping])
+
+  useEffect(() => {
+    if (selected) {
+      setIsTyping(true)
+      const timer = setTimeout(() => setIsTyping(false), 3000 + Math.random() * 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [selected])
 
   const loadConversations = async () => {
     if (!user) return
@@ -342,6 +354,9 @@ export default function Messages() {
                 <div className="flex items-center gap-1 text-green-500 text-[9px] font-black uppercase">
                   <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse" /> Online
                 </div>
+                <div className="hidden sm:flex items-center ml-2 px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-bold">
+                  🔥 Vibing with {Math.floor(Math.random() * 5) + 1} students today
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
@@ -364,28 +379,61 @@ export default function Messages() {
           <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 no-scrollbar bg-[#090912]">
             {messages.map((msg, idx) => {
               const isMe = msg.sender_id === user?.id
+              const reaction = msgReactions[msg.id]
+
               return (
-                <div key={msg.id} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div key={msg.id} className={`flex gap-2 w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
                   {!isMe && <img src={selectedConv?.other.photos?.[0]} className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1" alt="" />}
-                  <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                    <div className="relative group max-w-[85%] sm:max-w-[75%]">
-                      <div className={`rounded-2xl text-xs sm:text-sm leading-relaxed overflow-hidden shadow-2xl ${
-                        isMe
-                          ? 'grad-bg text-white rounded-tr-sm'
-                          : 'bg-[#1e1e3a] text-gray-200 rounded-tl-sm border border-white/5'
-                      }`}>
-                        {msg.type === 'text' && <div className="px-4 sm:px-5 py-2.5 sm:py-3">{msg.content}</div>}
-                        {msg.type === 'image' && (
-                          <div className="p-1">
-                            <img src={msg.content} className="max-w-[200px] sm:max-w-[300px] rounded-xl cursor-pointer hover:opacity-90 transition-opacity" alt="Sent photo" onClick={() => window.open(msg.content, '_blank')} />
-                          </div>
-                        )}
-                      </div>
-                      <div className={`flex items-center gap-2 mt-1.5 mx-1 ${isMe ? 'justify-end' : ''}`}>
-                        <p className="text-[9px] text-gray-600 font-bold uppercase">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                        {isMe && (msg.read ? <CheckCheck className="w-2.5 h-2.5 text-purple-400" /> : <Check className="w-2.5 h-2.5 text-gray-600" />)}
+                  
+                  <div 
+                    className={`relative group max-w-[85%] sm:max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                    onContextMenu={(e) => { e.preventDefault(); setActiveReactionMsg(msg.id); }}
+                  >
+                    {/* The bubble */}
+                    <div className={`relative px-4 py-2.5 rounded-[20px] text-sm shadow-md ${
+                      isMe 
+                        ? 'grad-bg text-white rounded-br-sm' 
+                        : 'bg-[#1a1a2e] border border-white/5 text-gray-200 rounded-bl-sm'
+                    }`}>
+                      {msg.type === 'text' && <div>{msg.content}</div>}
+                      {msg.type === 'image' && (
+                        <div className="p-1">
+                          <img src={msg.content} className="max-w-[200px] sm:max-w-[300px] rounded-xl cursor-pointer hover:opacity-90 transition-opacity" alt="Sent photo" onClick={() => window.open(msg.content, '_blank')} />
+                        </div>
+                      )}
+
+                      {/* Timestamp & Read Receipt */}
+                      <div className={`flex items-center gap-1.5 mt-1 opacity-70 ${isMe ? 'justify-end' : 'justify-start'}`}>
+                        <span className="text-[9px] font-bold">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        {isMe && (msg.read ? <CheckCheck className="w-3 h-3 text-blue-400" /> : <Check className="w-3 h-3 text-white" />)}
                       </div>
                     </div>
+
+                    {/* Reaction Display */}
+                    {reaction && (
+                      <div className={`absolute -bottom-3 ${isMe ? 'right-4' : 'left-4'} w-6 h-6 bg-[#0c0c18] border border-white/10 rounded-full flex items-center justify-center text-xs shadow-xl z-10`}>
+                        {reaction}
+                      </div>
+                    )}
+
+                    {/* Reaction Bar (Pop up on long press / right click) */}
+                    {activeReactionMsg === msg.id && (
+                      <div className={`absolute -top-12 ${isMe ? 'right-0' : 'left-0'} flex items-center gap-1 p-1.5 bg-[#121225] border border-white/10 rounded-full shadow-2xl z-50 animate-fade-in`}>
+                        {['🔥', '❤️', '😂', '💯', '👀'].map(emoji => (
+                          <button 
+                            key={emoji} 
+                            className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full text-base transition-all"
+                            onClick={() => {
+                              setMsgReactions(prev => ({ ...prev, [msg.id]: emoji }))
+                              setActiveReactionMsg(null)
+                            }}
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                        <button onClick={() => setActiveReactionMsg(null)} className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full text-gray-400 transition-all"><CloseIcon className="w-4 h-4" /></button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )
@@ -397,6 +445,17 @@ export default function Messages() {
                     <div className="w-1 h-1 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '0ms' }} />
                     <div className="w-1 h-1 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '150ms' }} />
                     <div className="w-1 h-1 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            {isTyping && !sending && (
+              <div className="flex justify-start">
+                <div className="bg-[#1a1a2e] px-4 py-2.5 rounded-2xl rounded-tl-sm border border-white/5">
+                  <div className="flex gap-1 items-center h-3">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>
@@ -475,19 +534,16 @@ export default function Messages() {
         </div>
       ) : (
         <div className="hidden md:flex flex-1 items-center justify-center bg-[#090912] relative">
-          <div className="absolute top-8 left-1/2 -translate-x-1/2 w-full max-w-sm px-6">
-            <div className="p-4 rounded-2xl bg-purple-500/5 border border-purple-500/10 text-center animate-bounce-slow">
-              <p className="text-purple-400 text-[10px] font-black uppercase tracking-[0.2em]">🔥 Pro Tip</p>
-              <p className="text-gray-400 text-xs mt-1 font-medium">Follow comrades on Discover or Events to start chatting</p>
-            </div>
-          </div>
-
           <div className="text-center animate-fade-in">
-            <div className="w-24 h-24 grad-bg rounded-[32px] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-purple-500/20 rotate-6">
-              <MessageCircle className="w-12 h-12 text-white" />
+            <div className="w-24 h-24 grad-bg rounded-[32px] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-purple-500/20 rotate-6 relative animate-pulse">
+              <MessageCircle className="w-12 h-12 text-white absolute" />
+              <div className="absolute inset-0 bg-purple-500/30 blur-2xl rounded-[32px]" />
             </div>
-            <h2 className="font-syne font-black text-3xl text-white mb-2">TurnUp Messages</h2>
-            <p className="text-gray-600 text-sm max-w-xs mx-auto font-medium">Select a chat to start vibing 🔥<br/>Campus life is better together.</p>
+            <h2 className="font-syne font-black text-3xl text-white mb-2">Who's sliding into your DMs? 👀</h2>
+            <p className="text-gray-600 text-sm max-w-xs mx-auto font-medium mb-6">Follow students on Discover to start vibing 🔥</p>
+            <Link to="/discover" className="text-purple-400 font-bold hover:text-purple-300 transition-colors flex items-center justify-center gap-2">
+              Go to Discover <ChevronRight className="w-4 h-4" />
+            </Link>
           </div>
         </div>
       )}
