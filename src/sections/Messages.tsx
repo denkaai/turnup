@@ -386,7 +386,7 @@ export default function Messages() {
                   {!isMe && <img src={selectedConv?.other.photos?.[0]} className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1" alt="" />}
                   
                   <div 
-                    className={`relative group max-w-[85%] sm:max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                    className={`relative group max-w-[92%] sm:max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                     onContextMenu={(e) => { e.preventDefault(); setActiveReactionMsg(msg.id); }}
                   >
                     {/* The bubble */}

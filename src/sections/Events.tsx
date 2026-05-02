@@ -6,12 +6,12 @@ import FollowButton from '@/components/FollowButton'
 import UserFollowStats from '@/components/UserFollowStats'
 
 const EVENTS = [
-  { id: 'e1', title: 'Thika Road Campus Bash', desc: 'The biggest party of the semester! All Thika Road campuses invited. Music, drinks, and good vibes.', date: 'Fri, 31 Jan 2026', time: '8:00 PM', location: 'Club Volume, Thika', campus: 'All Campuses', attendees: 156, max: 300, img: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800', price: 0, organizer: 'TurnUp Events', category: 'Party', joined: false, isThisWeekend: true },
-  { id: 'e2', title: 'MKU Talent Night', desc: 'Showcase your talent! Singing, dancing, poetry, comedy — all welcome. Prizes for winners!', date: 'Sat, 1 Feb 2026', time: '6:00 PM', location: 'MKU Main Hall', campus: 'MKU', attendees: 89, max: 200, img: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800', price: 0, organizer: 'MKU Student Assoc.', category: 'Culture', joined: false, isThisWeekend: true },
-  { id: 'e3', title: 'JKUAT Game Night', desc: 'FIFA tournament, board games, card games, and more! Pizza and drinks provided.', date: 'Sun, 2 Feb 2026', time: '5:00 PM', location: 'JKUAT Student Center', campus: 'JKUAT', attendees: 45, max: 100, img: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800', price: 0, organizer: 'JKUAT Gaming Club', category: 'Gaming', joined: true },
-  { id: 'e4', title: 'Sunset Picnic & Games', desc: 'Relaxed afternoon at Uhuru Gardens. Bring your squad! Games, music, and snacks.', date: 'Sat, 8 Feb 2026', time: '3:00 PM', location: 'Uhuru Gardens, Nairobi', campus: 'All Campuses', attendees: 67, max: 150, img: 'https://images.unsplash.com/photo-1528605248644-14dd04022da1?w=800', price: 0, organizer: 'TurnUp Community', category: 'Outdoor', joined: false },
-  { id: 'e5', title: 'Campus Study Meetup', desc: 'Finals prep session! Bring your books and notes. Study together, eat together, pass together.', date: 'Wed, 5 Feb 2026', time: '2:00 PM', location: 'Zetech Library', campus: 'Zetech', attendees: 23, max: 50, img: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800', price: 0, organizer: 'Zetech Study Group', category: 'Academic', joined: false },
-  { id: 'e6', title: 'Rooftop Sundowner', desc: 'Chill rooftop vibes with good music and friends. Watch the sunset over Thika town!', date: 'Fri, 14 Feb 2026', time: '4:00 PM', location: 'Thika Greens Hotel', campus: 'All Campuses', attendees: 82, max: 120, img: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800', price: 0, organizer: 'TurnUp Events', category: 'Social', joined: false },
+  { id: 'e1', title: 'Thika Road Campus Bash', desc: 'The biggest party of the semester! All Thika Road campuses invited. Music, drinks, and good vibes.', date: 'Fri, 15 May 2026', time: '8:00 PM', location: 'Club Volume, Thika', campus: 'All Campuses', attendees: 156, max: 300, img: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800', price: 0, organizer: 'TurnUp Events', category: 'Party', joined: false, isThisWeekend: true },
+  { id: 'e2', title: 'MKU Talent Night', desc: 'Showcase your talent! Singing, dancing, poetry, comedy — all welcome. Prizes for winners!', date: 'Sat, 16 May 2026', time: '6:00 PM', location: 'MKU Main Hall', campus: 'MKU', attendees: 89, max: 200, img: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800', price: 0, organizer: 'MKU Student Assoc.', category: 'Culture', joined: false, isThisWeekend: true },
+  { id: 'e3', title: 'JKUAT Game Night', desc: 'FIFA tournament, board games, card games, and more! Pizza and drinks provided.', date: 'Sun, 24 May 2026', time: '5:00 PM', location: 'JKUAT Student Center', campus: 'JKUAT', attendees: 45, max: 100, img: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800', price: 0, organizer: 'JKUAT Gaming Club', category: 'Gaming', joined: true },
+  { id: 'e4', title: 'Sunset Picnic & Games', desc: 'Relaxed afternoon at Uhuru Gardens. Bring your squad! Games, music, and snacks.', date: 'Sat, 6 Jun 2026', time: '3:00 PM', location: 'Uhuru Gardens, Nairobi', campus: 'All Campuses', attendees: 67, max: 150, img: 'https://images.unsplash.com/photo-1528605248644-14dd04022da1?w=800', price: 0, organizer: 'TurnUp Community', category: 'Outdoor', joined: false },
+  { id: 'e5', title: 'Campus Study Meetup', desc: 'Finals prep session! Bring your books and notes. Study together, eat together, pass together.', date: 'Wed, 10 Jun 2026', time: '2:00 PM', location: 'Zetech Library', campus: 'Zetech', attendees: 23, max: 50, img: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800', price: 0, organizer: 'Zetech Study Group', category: 'Academic', joined: false },
+  { id: 'e6', title: 'Rooftop Sundowner', desc: 'Chill rooftop vibes with good music and friends. Watch the sunset over Thika town!', date: 'Fri, 19 Jun 2026', time: '4:00 PM', location: 'Thika Greens Hotel', campus: 'All Campuses', attendees: 82, max: 120, img: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800', price: 0, organizer: 'TurnUp Events', category: 'Social', joined: false },
 ]
 
 const CATEGORIES = ['All', 'Party', 'Culture', 'Gaming', 'Outdoor', 'Academic', 'Social']
@@ -40,8 +40,8 @@ export default function Events() {
   }
 
   return (
-    <main className="min-h-screen pt-14 px-4 py-8">
-      <div className="max-w-4xl mx-auto">
+    <main className="min-h-screen pt-14 px-5 py-8 pb-24 md:pb-8">
+      <div className="container-responsive">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="font-syne font-bold text-2xl text-white">Events</h1>
@@ -63,9 +63,9 @@ export default function Events() {
         </div>
 
         {/* Events grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20 md:pb-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 pb-20 md:pb-0">
           {filtered.map(e => (
-            <div key={e.id} className="card overflow-hidden hover:border-purple-500/20 transition-all cursor-pointer group" onClick={() => setSelected(e)}>
+            <div key={e.id} className="card overflow-hidden transition-all duration-300 cursor-pointer group hover:scale-[1.02] hover:border-purple-500/50 hover:shadow-[0_0_25px_rgba(168,85,247,0.2)]" onClick={() => setSelected(e)}>
               <div className="relative h-40 overflow-hidden">
                 <img src={e.img} alt={e.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 <div className="absolute top-2 left-2 flex gap-1.5">

@@ -60,7 +60,7 @@ const DiscoverCard = ({ userProfile }: { userProfile: Profile }) => {
   }
 
   return (
-    <div className="relative rounded-[32px] overflow-hidden aspect-[4/5] sm:aspect-[3/4] shadow-2xl border border-white/5 bg-[#13131f]">
+    <div className="relative rounded-[24px] sm:rounded-[32px] overflow-hidden aspect-[3/4] shadow-2xl border border-white/5 bg-[#13131f] group transition-all duration-300 hover:shadow-purple-500/10">
       <img
         src={userProfile.photos?.[photoIdx] || userProfile.photos?.[0]}
         alt={userProfile.name}
@@ -90,15 +90,19 @@ const DiscoverCard = ({ userProfile }: { userProfile: Profile }) => {
               <h2 className="text-white font-syne font-bold text-xl sm:text-2xl truncate">{userProfile.name}, {userProfile.age}</h2>
               {userProfile.verified && <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />}
             </div>
-            <div className="flex items-center gap-2 mb-2">
-              <FollowButton targetId={userProfile.id} />
-              <button
-                onClick={handleSendVibe}
-                disabled={sendingVibe || (user && localStorage.getItem(`vibe_${user.id}_${userProfile.id}_${new Date().toISOString().split('T')[0]}`) !== null)}
-                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1 border border-orange-500/50 text-orange-400 hover:bg-orange-500/10 ${vibeSent ? 'animate-bounce bg-orange-500/20' : ''} ${user && localStorage.getItem(`vibe_${user.id}_${userProfile.id}_${new Date().toISOString().split('T')[0]}`) ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {sendingVibe ? <Loader2 className="w-3 h-3 animate-spin" /> : vibeSent ? '🔥 Sent!' : '🔥 Send Vibe'}
-              </button>
+            <div className="flex items-center gap-2 mb-3 pointer-events-auto">
+              <div className="flex-1">
+                <FollowButton targetId={userProfile.id} className="w-full" />
+              </div>
+              <div className="flex-1">
+                <button
+                  onClick={handleSendVibe}
+                  disabled={sendingVibe || (user && localStorage.getItem(`vibe_${user.id}_${userProfile.id}_${new Date().toISOString().split('T')[0]}`) !== null)}
+                  className={`w-full py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 border border-orange-500/50 text-orange-400 hover:bg-orange-500/10 ${vibeSent ? 'animate-bounce bg-orange-500/20' : ''} ${user && localStorage.getItem(`vibe_${user.id}_${userProfile.id}_${new Date().toISOString().split('T')[0]}`) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {sendingVibe ? <Loader2 className="w-3 h-3 animate-spin" /> : vibeSent ? '🔥 Sent!' : '🔥 Send Vibe'}
+                </button>
+              </div>
             </div>
             <div className="flex flex-col gap-0.5 mb-1">
               {vibeCount > 0 && (
@@ -239,8 +243,8 @@ export default function Discover() {
   )
 
   return (
-    <main className="min-h-screen pt-14 px-4 py-8 pb-24 md:pb-8">
-      <div className="max-w-sm mx-auto w-full">
+    <main className="min-h-screen pt-14 px-5 py-8 pb-24 md:pb-8">
+      <div className="container-responsive">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h1 className="font-syne font-bold text-xl sm:text-2xl text-white tracking-tight">Discover</h1>
@@ -358,11 +362,13 @@ export default function Discover() {
         )}
 
         {filteredUsers.length > 0 ? (
-          <div className="space-y-6">
-            {filteredUsers.map(userProfile => (
-              <DiscoverCard key={userProfile.id} userProfile={userProfile} />
-            ))}
-            <p className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-700 mt-6 pt-6 border-t border-white/5 pb-12">End of feed</p>
+          <div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredUsers.map(userProfile => (
+                <DiscoverCard key={userProfile.id} userProfile={userProfile} />
+              ))}
+            </div>
+            <p className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-700 mt-12 pt-6 border-t border-white/5 pb-12">End of feed</p>
           </div>
         ) : (
           <div className="text-center py-20">

@@ -1,8 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+
+
   :root {
     --bg: #080810;
     --surface: #0f0f1a;
@@ -22,8 +26,18 @@
 
   body {
     @apply bg-[#080810] text-white antialiased overflow-x-hidden;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
   }
+
+  h1, h2, h3, h4, h5, h6, .font-syne {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  /* Global responsive padding container */
+  .container-responsive {
+    @apply px-5 sm:px-6 lg:px-8 max-w-7xl mx-auto;
+  }
+
 
   .pb-safe-area {
     padding-bottom: env(safe-area-inset-bottom);

@@ -184,8 +184,8 @@ export default function Profile() {
   )
 
   return (
-    <main className="min-h-screen pt-14 px-4 py-8 pb-24 md:pb-12">
-      <div className="max-w-sm mx-auto w-full">
+    <main className="min-h-screen pt-14 px-5 py-8 pb-24 md:pb-8">
+      <div className="container-responsive max-w-2xl w-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>

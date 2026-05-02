@@ -307,8 +307,8 @@ export default function Squads() {
   }
 
   return (
-    <main className="min-h-screen pt-14 px-4 py-8 pb-24 md:pb-8">
-      <div className="max-w-2xl mx-auto">
+    <main className="min-h-screen pt-14 px-5 py-8 pb-24 md:pb-8">
+      <div className="container-responsive">
         {/* Vibe Meter */}
         <div className="card p-3 mb-6 bg-purple-500/5 border-purple-500/10 flex items-center justify-between animate-pulse">
           <div className="flex items-center gap-2 sm:gap-3">
@@ -364,7 +364,7 @@ export default function Squads() {
         )}
 
         {/* Squad List */}
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredSquads.map(s => (
             <div key={s.id} onClick={() => s.joined && setSelectedSquad(s)} className="card p-5 group hover:border-purple-500/30 transition-all cursor-pointer relative overflow-hidden">
               {s.joined && <div className="absolute top-0 right-0 p-2 bg-purple-500/20 text-purple-400 rounded-bl-xl"><MessageSquare className="w-3.5 h-3.5" /></div>}

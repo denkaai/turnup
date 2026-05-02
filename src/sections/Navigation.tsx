@@ -38,7 +38,7 @@ export default function Navigation() {
 
         {/* Desktop Nav Items - ONLY show if logged in */}
         {user ? (
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden sm:flex items-center gap-1">
             {navItems.map(({ path, label, icon: Icon }) => (
               <Link
                 key={path}
@@ -79,7 +79,7 @@ export default function Navigation() {
 
       {/* Bottom Tab Bar (Mobile Only - ONLY show if logged in and not onboarding) */}
       {user && !isOnboarding && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/5 px-2 pb-safe-area shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/5 px-2 pb-safe-area shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
           <div className="flex items-center justify-around h-16">
             {navItems.map(({ path, label, icon: Icon }) => (
               <Link
