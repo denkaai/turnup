@@ -1,11 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-
 
   :root {
     --bg: #080810;
@@ -17,6 +16,7 @@
     --accent2: #ec4899;
     --accent3: #f59e0b;
     --green: #22c55e;
+    --bottom-nav-h: 64px;
   }
 
   * {
@@ -24,27 +24,49 @@
     max-width: 100%;
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-[#080810] text-white antialiased overflow-x-hidden;
     font-family: 'Inter', sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
   h1, h2, h3, h4, h5, h6, .font-syne {
     font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
-  /* Global responsive padding container */
-  .container-responsive {
-    @apply px-5 sm:px-6 lg:px-8 max-w-7xl mx-auto;
+  /* Prevent text overflow on all viewports */
+  p, span, div {
+    word-break: break-word;
   }
 
+  /* Global responsive padding container */
+  .container-responsive {
+    @apply px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto;
+  }
 
+  /* Safe area for iOS bottom bar */
   .pb-safe-area {
     padding-bottom: env(safe-area-inset-bottom);
   }
 
+  /* Bottom nav height spacing for pages */
+  .pb-mobile-nav {
+    padding-bottom: calc(var(--bottom-nav-h) + 1.5rem);
+  }
+
+  @media (min-width: 640px) {
+    .pb-mobile-nav {
+      padding-bottom: 2rem;
+    }
+  }
+
   ::-webkit-scrollbar {
     width: 4px;
+    height: 4px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
@@ -52,6 +74,9 @@
   ::-webkit-scrollbar-thumb {
     background: rgba(139, 92, 246, 0.3);
     border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 92, 246, 0.5);
   }
 }
 
@@ -77,6 +102,17 @@
     border-radius: 16px;
   }
 
+  /* Event / content card with premium hover */
+  .card-hover {
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+  }
+  .card-hover:hover {
+    transform: scale(1.02);
+    border-color: rgba(139, 92, 246, 0.45);
+    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.25), 0 8px 32px rgba(139, 92, 246, 0.18);
+  }
+
   .glow-purple {
     box-shadow: 0 0 24px rgba(139, 92, 246, 0.25);
   }
@@ -92,6 +128,7 @@
     @apply w-full px-4 py-3 rounded-xl text-white placeholder-gray-600 outline-none transition-all;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--border2);
+    font-family: 'Inter', sans-serif;
   }
   .input-dark:focus {
     border-color: rgba(139, 92, 246, 0.5);
@@ -101,6 +138,8 @@
   .btn-grad {
     @apply px-6 py-3 rounded-xl font-medium text-white transition-all duration-200;
     background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
   }
   .btn-grad:hover {
     transform: scale(1.02);
@@ -137,6 +176,53 @@
     background-size: 200% 200%;
     animation: gradient-x 5s ease infinite;
   }
+
+  /* Hide scrollbar but allow scrolling */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Horizontal filter pill row */
+  .filter-pills {
+    @apply flex gap-2 overflow-x-auto pb-2 no-scrollbar;
+  }
+
+  /* Bottom safe padding for pages on mobile (accounts for bottom nav bar) */
+  .page-main {
+    @apply min-h-screen pt-14 px-4 sm:px-5 py-6 sm:py-8;
+    padding-bottom: calc(var(--bottom-nav-h) + 1.5rem);
+  }
+  @media (min-width: 640px) {
+    .page-main {
+      padding-bottom: 2rem;
+    }
+  }
+
+  /* Messages page chat bubbles */
+  .bubble-me {
+    @apply px-4 py-2.5 rounded-[20px] rounded-br-sm text-sm shadow-md text-white;
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  }
+  .bubble-other {
+    @apply px-4 py-2.5 rounded-[20px] rounded-bl-sm text-sm shadow-md text-gray-200;
+    background: #1a1a2e;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  /* Discover card — full-width on mobile */
+  .discover-card {
+    @apply relative rounded-[24px] sm:rounded-[32px] overflow-hidden shadow-2xl border border-white/5 bg-[#13131f] group;
+    aspect-ratio: 3 / 4;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .discover-card:hover {
+    border-color: rgba(139, 92, 246, 0.35);
+    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.2), 0 12px 40px rgba(139, 92, 246, 0.15);
+  }
 }
 
 @keyframes float {
@@ -147,4 +233,13 @@
 @keyframes gradient-x {
   0%, 100% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease forwards;
 }

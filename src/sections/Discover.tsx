@@ -60,11 +60,11 @@ const DiscoverCard = ({ userProfile }: { userProfile: Profile }) => {
   }
 
   return (
-    <div className="relative rounded-[24px] sm:rounded-[32px] overflow-hidden aspect-[3/4] shadow-2xl border border-white/5 bg-[#13131f] group transition-all duration-300 hover:shadow-purple-500/10">
+    <div className="discover-card card-hover">
       <img
         src={userProfile.photos?.[photoIdx] || userProfile.photos?.[0]}
         alt={userProfile.name}
-        className="w-full h-full object-cover"
+        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
       />
 
       {/* Photo nav */}
@@ -76,23 +76,38 @@ const DiscoverCard = ({ userProfile }: { userProfile: Profile }) => {
         </div>
       )}
       {photoIdx > 0 && (
-        <button onClick={() => setPhotoIdx(i => i - 1)} className="absolute left-0 top-0 bottom-20 w-1/3 z-10" />
+        <button onClick={() => setPhotoIdx(i => i - 1)} className="absolute left-0 top-0 bottom-24 w-1/3 z-10" />
       )}
       {photoIdx < (userProfile.photos?.length || 1) - 1 && (
-        <button onClick={() => setPhotoIdx(i => i + 1)} className="absolute right-0 top-0 bottom-20 w-1/3 z-10" />
+        <button onClick={() => setPhotoIdx(i => i + 1)} className="absolute right-0 top-0 bottom-24 w-1/3 z-10" />
       )}
 
       {/* Gradient overlay */}
-      <div className="absolute bottom-0 left-0 right-0 h-3/4 bg-gradient-to-t from-[#080810] via-[#080810]/80 to-transparent p-5 sm:p-6 flex flex-col justify-end pointer-events-none">
+      <div className="absolute bottom-0 left-0 right-0 h-4/5 bg-gradient-to-t from-[#080810] via-[#080810]/80 to-transparent p-4 sm:p-6 flex flex-col justify-end pointer-events-none">
         <div className="flex items-start justify-between pointer-events-auto">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-white font-syne font-bold text-xl sm:text-2xl truncate">{userProfile.name}, {userProfile.age}</h2>
+              <h2 className="text-white font-syne font-black text-xl sm:text-2xl truncate">{userProfile.name}, {userProfile.age}</h2>
               {userProfile.verified && <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />}
             </div>
-            <div className="flex items-center gap-2 mb-3 pointer-events-auto">
+            
+            <div className="flex flex-col gap-1 mb-3">
+              <div className="flex items-center gap-1.5 text-gray-300 text-[10px] sm:text-xs font-bold uppercase tracking-tight">
+                <MapPin className="w-3 h-3 text-purple-400" /> {userProfile.campus}
+              </div>
+              <div className="flex items-center gap-1.5 text-gray-400 text-[10px] sm:text-xs font-medium">
+                <BookOpen className="w-3 h-3 text-purple-400" /> {userProfile.course} · Yr {userProfile.year}
+              </div>
+              {vibeCount > 0 && (
+                <div className="flex items-center gap-1.5 text-orange-400 text-[10px] sm:text-xs font-black uppercase tracking-widest mt-0.5">
+                  <Flame className="w-3 h-3" /> {vibeCount} vibes
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 mb-4 pointer-events-auto">
               <div className="flex-1">
-                <FollowButton targetId={userProfile.id} className="w-full" />
+                <FollowButton targetId={userProfile.id} className="w-full text-[10px]" />
               </div>
               <div className="flex-1">
                 <button
@@ -104,41 +119,18 @@ const DiscoverCard = ({ userProfile }: { userProfile: Profile }) => {
                 </button>
               </div>
             </div>
-            <div className="flex flex-col gap-0.5 mb-1">
-              {vibeCount > 0 && (
-                <div className="flex items-center gap-1.5 text-orange-400 text-[10px] sm:text-xs font-bold mb-1">
-                  <Flame className="w-3 h-3" /> {vibeCount} vibes
-                </div>
-              )}
-              <div className="flex items-center gap-1.5 text-gray-300 text-[10px] sm:text-xs font-medium">
-                <MapPin className="w-3 h-3 text-purple-400" /> {userProfile.campus}
-              </div>
-              <UserFollowStats userId={userProfile.id} className="ml-4.5" />
-            </div>
-            <div className="flex items-center gap-1.5 text-gray-400 text-[10px] sm:text-xs font-medium">
-              <BookOpen className="w-3 h-3 text-purple-400" /> {userProfile.course} · Year {userProfile.year}
-            </div>
           </div>
-          <div className={`w-3 h-3 rounded-full mt-2 border-2 border-black flex-shrink-0 ${(userProfile as any).online ? 'bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]' : 'bg-gray-600'}`} />
+          <div className={`w-3 h-3 rounded-full mt-2 border-2 border-[#080810] flex-shrink-0 ${(userProfile as any).online ? 'bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]' : 'bg-gray-600'}`} />
         </div>
-        <p className="text-gray-300 text-[11px] sm:text-xs mt-3 leading-relaxed line-clamp-3 pointer-events-auto">{userProfile.bio}</p>
         
-        {userProfile.now_playing && (
-          <div className="mt-3 flex items-start gap-2 bg-purple-500/10 border border-purple-500/20 p-2.5 rounded-xl pointer-events-auto w-fit max-w-full">
-            <Music className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5 animate-pulse" />
-            <p className="text-purple-200 text-[10px] sm:text-xs font-medium leading-snug truncate">{userProfile.now_playing}</p>
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-1.5 mt-4 pointer-events-auto">
+        <p className="text-gray-300 text-[11px] sm:text-xs leading-relaxed line-clamp-2 pointer-events-auto mb-3 italic">"{userProfile.bio}"</p>
+        
+        <div className="flex flex-wrap gap-1.5 pointer-events-auto">
           {userProfile.vibe && (
-            <span className="px-2.5 py-1 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-200 text-[10px] font-bold uppercase tracking-wider">{userProfile.vibe}</span>
+            <span className="px-2 py-0.5 rounded-lg bg-purple-500/20 border border-purple-500/30 text-purple-200 text-[9px] font-black uppercase tracking-widest">{userProfile.vibe}</span>
           )}
-          {userProfile.relationship_goal && (
-            <span className="px-2.5 py-1 rounded-lg bg-pink-500/20 border border-pink-500/30 text-pink-200 text-[10px] font-bold uppercase tracking-wider">{userProfile.relationship_goal}</span>
-          )}
-          {userProfile.interests?.map((interest: string) => (
-             <span key={interest} className="px-2.5 py-1 rounded-lg bg-white/10 border border-white/20 text-white text-[10px] font-bold uppercase tracking-wider">{interest}</span>
+          {userProfile.interests?.slice(0, 3).map((interest: string) => (
+             <span key={interest} className="px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 text-white/70 text-[9px] font-black uppercase tracking-widest">{interest}</span>
           ))}
         </div>
       </div>
@@ -243,11 +235,11 @@ export default function Discover() {
   )
 
   return (
-    <main className="min-h-screen pt-14 px-5 py-8 pb-24 md:pb-8">
+    <main className="page-main">
       <div className="container-responsive">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="font-syne font-bold text-xl sm:text-2xl text-white tracking-tight">Discover</h1>
+            <h1 className="font-syne font-black text-xl sm:text-2xl text-white tracking-tight">Discover</h1>
             <p className="text-gray-600 text-[10px] sm:text-xs uppercase font-black tracking-widest">Find your people</p>
           </div>
           <button onClick={() => setShowFilter(!showFilter)} className="p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center">
@@ -258,7 +250,7 @@ export default function Discover() {
         {showKadiBanner && (
           kadiCollapsed ? (
             <div className="flex justify-center mb-6">
-              <button onClick={() => setKadiCollapsed(false)} className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center gap-2 shadow-lg">
+              <button onClick={() => setKadiCollapsed(false)} className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center gap-2 shadow-lg">
                 🇰🇪 Jisajili 2027
               </button>
             </div>
@@ -276,10 +268,10 @@ export default function Discover() {
                 <X className="w-4 h-4" />
               </button>
               <div className="p-5 pt-6">
-                <div className="inline-block px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-black uppercase tracking-widest text-white mb-4">
+                <div className="inline-block px-3 py-1 rounded-full bg-white/10 border border-white/20 text-[10px] font-black uppercase tracking-widest text-white mb-4">
                   🇰🇪 2027 GENERAL ELECTION
                 </div>
-                <h2 className="font-syne font-bold text-xl sm:text-2xl text-white tracking-tight mb-5">Uko na KADI? Kura yako = nguvu yako.</h2>
+                <h2 className="font-syne font-black text-xl sm:text-2xl text-white tracking-tight mb-5 leading-tight">Uko na KADI? Kura yako = nguvu yako.</h2>
                 
                 <div className="space-y-3 mb-6">
                   <div className="pl-4 border-l-4 border-[#006600] py-1">
@@ -307,24 +299,24 @@ export default function Discover() {
 
                 {!showSharePrompt ? (
                   <div className="flex flex-col gap-3">
-                    <button onClick={handleRegisterKadi} disabled={registeringKadi} className="w-full py-3.5 rounded-xl bg-[#BB0000] hover:bg-[#990000] text-white font-black uppercase tracking-widest text-xs transition-all shadow-[0_0_20px_rgba(187,0,0,0.3)] flex items-center justify-center gap-2">
+                    <button onClick={handleRegisterKadi} disabled={registeringKadi} className="w-full py-3.5 rounded-xl bg-[#BB0000] hover:bg-[#990000] text-white font-black uppercase tracking-widest text-[10px] transition-all shadow-[0_0_20px_rgba(187,0,0,0.3)] flex items-center justify-center gap-2 min-h-[44px]">
                       {registeringKadi ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Ndio, nimejisajili
                     </button>
-                    <a href="https://www.huduma.go.ke" target="_blank" rel="noreferrer" className="w-full py-3.5 rounded-xl border-2 border-white/10 hover:bg-white/5 text-white font-bold text-xs text-center transition-all flex items-center justify-center gap-2">
+                    <a href="https://www.huduma.go.ke" target="_blank" rel="noreferrer" className="w-full py-3.5 rounded-xl border-2 border-white/10 hover:bg-white/5 text-white font-bold text-[10px] uppercase tracking-widest text-center transition-all flex items-center justify-center gap-2 min-h-[44px]">
                       Pata Huduma Centre karibu nawe <ChevronRight className="w-4 h-4" />
                     </a>
                   </div>
                 ) : (
                   <div className="p-4 rounded-xl bg-[#006600]/10 border border-[#006600]/30 text-center animate-fade-in">
-                    <h3 className="text-white font-bold text-lg mb-2">Asante! 🇰🇪</h3>
-                    <p className="text-sm text-gray-300 mb-4">Waambie marafiki wako! Share your KADI badge.</p>
-                    <button onClick={copyShareLink} className="w-full py-3 rounded-xl bg-[#006600] hover:bg-[#005500] text-white font-bold text-xs flex items-center justify-center gap-2 transition-all">
+                    <h3 className="text-white font-black text-lg mb-2">Asante! 🇰🇪</h3>
+                    <p className="text-sm text-gray-300 mb-4 font-medium italic">Waambie marafiki wako! Share your KADI badge.</p>
+                    <button onClick={copyShareLink} className="w-full py-3 rounded-xl bg-[#006600] hover:bg-[#005500] text-white font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all min-h-[44px]">
                       <Copy className="w-4 h-4" /> Copy Link
                     </button>
                   </div>
                 )}
 
-                <p className="text-[10px] text-gray-500 mt-6 text-center italic">
+                <p className="text-[10px] text-gray-500 mt-6 text-center italic font-medium">
                   TurnUp haishughulikii siasa. Tunaamini kila Mkenya ana haki ya kupiga kura. 🇰🇪
                 </p>
               </div>
@@ -333,7 +325,7 @@ export default function Discover() {
         )}
 
         {/* Filter Bar */}
-        <div className="flex overflow-x-auto pb-4 mb-2 gap-2 hide-scrollbar">
+        <div className="flex overflow-x-auto pb-4 mb-2 gap-2 no-scrollbar">
           {['All', 'Same University', 'Same Course', 'Online Now'].map(f => (
             <button
               key={f}
@@ -375,9 +367,9 @@ export default function Discover() {
             <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
               <Heart className="w-8 h-8 text-gray-600" />
             </div>
-            <p className="text-white font-medium mb-1">No more profiles</p>
-            <p className="text-gray-600 text-sm">Check back later for new students!</p>
-            <button onClick={loadUsers} className="btn-grad mt-5 text-sm">Refresh</button>
+            <p className="text-white font-black text-lg mb-1">No more profiles</p>
+            <p className="text-gray-600 text-sm font-medium">Check back later for new students!</p>
+            <button onClick={loadUsers} className="btn-grad mt-6 text-xs px-8">Refresh</button>
           </div>
         )}
       </div>

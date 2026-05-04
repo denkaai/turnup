@@ -280,7 +280,7 @@ export default function Messages() {
       <div className={`${selected ? 'hidden' : 'flex'} md:flex flex-col w-full md:w-[380px] border-r border-white/5 bg-[#0c0c18] pb-16 md:pb-0`}>
         <div className="p-4 sm:p-6 pb-2">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h1 className="font-syne font-bold text-xl sm:text-2xl text-white">Messages</h1>
+            <h1 className="font-syne font-black text-xl sm:text-2xl text-white">Messages</h1>
             <button 
               onClick={() => { setShowNewMsgModal(true); fetchAllUsers(); }}
               className="w-10 h-10 sm:w-11 sm:h-11 grad-bg rounded-full flex items-center justify-center shadow-lg shadow-purple-500/20 hover:scale-105 transition-all min-h-[44px]"
@@ -338,9 +338,9 @@ export default function Messages() {
 
       {/* Chat area - Full screen on mobile when selected */}
       {selected && selectedConv ? (
-        <div className="flex-1 flex flex-col bg-[#090912] absolute inset-0 z-[60] md:relative md:z-0 md:inset-auto">
-          <div className="flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 glass border-b border-white/5 z-10 min-h-[64px]">
-            <button onClick={() => setSelected(null)} className="md:hidden p-2 -ml-2 text-gray-400 min-h-[44px] min-w-[44px] flex items-center justify-center">
+        <div className="flex-1 flex flex-col bg-[#090912] fixed inset-0 z-[60] md:relative md:z-0 md:inset-auto">
+          <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-6 py-3 sm:py-4 glass border-b border-white/5 z-10 min-h-[64px]">
+            <button onClick={() => setSelected(null)} className="md:hidden p-2 text-gray-400 min-h-[44px] min-w-[44px] flex items-center justify-center">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="relative flex-shrink-0">
@@ -350,29 +350,19 @@ export default function Messages() {
             <div className="flex-1 min-w-0">
               <p className="text-white font-bold text-sm leading-tight truncate">{selectedConv?.other.name}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <p className="text-gray-500 text-[9px] font-bold uppercase tracking-widest truncate">{selectedConv?.other.campus}</p>
+                <p className="text-gray-500 text-[9px] font-black uppercase tracking-widest truncate">{selectedConv?.other.campus}</p>
                 <div className="flex items-center gap-1 text-green-500 text-[9px] font-black uppercase">
                   <span className="w-1 h-1 bg-green-500 rounded-full animate-pulse" /> Online
                 </div>
-                <div className="hidden sm:flex items-center ml-2 px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-bold">
-                  🔥 Vibing with {Math.floor(Math.random() * 5) + 1} students today
-                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1 sm:gap-3">
               <button onClick={() => handleCall('audio')} className="p-2 sm:p-2.5 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center">
                 <Phone className="w-4 h-4" />
               </button>
               <button onClick={() => handleCall('video')} className="p-2 sm:p-2.5 rounded-xl bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center">
                 <Video className="w-4 h-4" />
               </button>
-              <a 
-                href={`https://wa.me/${selectedConv?.other.whatsapp_number || ''}`}
-                target="_blank"
-                className="p-2 sm:p-2.5 rounded-xl bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-all min-h-[40px] min-w-[40px] flex items-center justify-center"
-              >
-                <MessageCircle className="w-4 h-4 fill-current" />
-              </a>
             </div>
           </div>
 
@@ -383,10 +373,10 @@ export default function Messages() {
 
               return (
                 <div key={msg.id} className={`flex gap-2 w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
-                  {!isMe && <img src={selectedConv?.other.photos?.[0]} className="w-8 h-8 rounded-full object-cover flex-shrink-0 mt-1" alt="" />}
+                  {!isMe && <img src={selectedConv?.other.photos?.[0]} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover flex-shrink-0 mt-1" alt="" />}
                   
                   <div 
-                    className={`relative group max-w-[92%] sm:max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                    className={`relative group max-w-[85%] sm:max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                     onContextMenu={(e) => { e.preventDefault(); setActiveReactionMsg(msg.id); }}
                   >
                     {/* The bubble */}
@@ -395,7 +385,7 @@ export default function Messages() {
                         ? 'grad-bg text-white rounded-br-sm' 
                         : 'bg-[#1a1a2e] border border-white/5 text-gray-200 rounded-bl-sm'
                     }`}>
-                      {msg.type === 'text' && <div>{msg.content}</div>}
+                      {msg.type === 'text' && <div className="leading-relaxed">{msg.content}</div>}
                       {msg.type === 'image' && (
                         <div className="p-1">
                           <img src={msg.content} className="max-w-[200px] sm:max-w-[300px] rounded-xl cursor-pointer hover:opacity-90 transition-opacity" alt="Sent photo" onClick={() => window.open(msg.content, '_blank')} />

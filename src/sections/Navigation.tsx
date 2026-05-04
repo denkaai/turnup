@@ -33,17 +33,17 @@ export default function Navigation() {
           <div className="w-8 h-8 rounded-lg grad-bg flex items-center justify-center">
             <Flame className="w-4 h-4 text-white" />
           </div>
-          <span className="font-syne font-bold text-lg grad-text tracking-tighter">TURNUP</span>
+          <span className="font-syne font-black text-lg grad-text tracking-tighter">TURNUP</span>
         </Link>
 
-        {/* Desktop Nav Items - ONLY show if logged in */}
+        {/* Desktop Nav Items - ONLY show if logged in and on desktop */}
         {user ? (
           <div className="hidden sm:flex items-center gap-1">
             {navItems.map(({ path, label, icon: Icon }) => (
               <Link
                 key={path}
                 to={path}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all min-h-[44px] ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all min-h-[44px] ${
                   location.pathname === path
                     ? 'bg-purple-500/15 text-purple-300'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -58,20 +58,20 @@ export default function Navigation() {
 
         <div className="flex items-center gap-3">
           {user ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {profile?.verified && (
-                <span className="verified-badge hidden sm:flex">
+                <span className="verified-badge hidden md:flex">
                   <Shield className="w-3 h-3" /> Verified
                 </span>
               )}
-              <button onClick={handleSignOut} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all min-h-[44px]">
+              <button onClick={handleSignOut} className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all min-h-[44px]">
                 <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Sign out</span>
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Link to="/auth" className="px-4 py-2 rounded-xl text-sm font-bold text-gray-400 hover:text-white transition-all min-h-[44px] flex items-center">Sign In</Link>
-              <Link to="/auth?mode=signup" className="btn-grad text-sm px-5 py-2 min-h-[44px] flex items-center font-bold shadow-lg shadow-purple-500/20">Join Free</Link>
+              <Link to="/auth" className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-gray-400 hover:text-white transition-all min-h-[44px] flex items-center">Sign In</Link>
+              <Link to="/auth?mode=signup" className="btn-grad text-xs sm:text-sm px-4 sm:px-5 py-2 min-h-[44px] flex items-center font-bold shadow-lg shadow-purple-500/20">Join Free</Link>
             </div>
           )}
         </div>
@@ -79,7 +79,7 @@ export default function Navigation() {
 
       {/* Bottom Tab Bar (Mobile Only - ONLY show if logged in and not onboarding) */}
       {user && !isOnboarding && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/5 px-2 pb-safe-area shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/5 px-2 pb-safe-area shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
           <div className="flex items-center justify-around h-16">
             {navItems.map(({ path, label, icon: Icon }) => (
               <Link
@@ -92,8 +92,8 @@ export default function Navigation() {
                 {location.pathname === path && (
                   <div className="absolute top-0 w-8 h-1 grad-bg rounded-b-full shadow-[0_5px_15px_rgba(168,85,247,0.4)]" />
                 )}
-                <Icon className={`w-6 h-6 transition-transform ${location.pathname === path ? 'scale-110' : ''}`} />
-                <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+                <Icon className={`w-5 h-5 transition-transform ${location.pathname === path ? 'scale-110' : ''}`} />
+                <span className="text-[9px] font-black uppercase tracking-widest leading-none">{label}</span>
               </Link>
             ))}
           </div>

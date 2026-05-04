@@ -307,7 +307,7 @@ export default function Squads() {
   }
 
   return (
-    <main className="min-h-screen pt-14 px-5 py-8 pb-24 md:pb-8">
+    <main className="page-main">
       <div className="container-responsive">
         {/* Vibe Meter */}
         <div className="card p-3 mb-6 bg-purple-500/5 border-purple-500/10 flex items-center justify-between animate-pulse">
@@ -316,8 +316,8 @@ export default function Squads() {
               <Zap className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="text-white font-syne font-bold text-xs sm:text-sm tracking-tight">{vibeMeter} Students Active</p>
-              <p className="text-purple-400 text-[8px] sm:text-[10px] font-black uppercase tracking-widest">Weekend Vibe</p>
+              <p className="text-white font-syne font-black text-xs sm:text-sm tracking-tight">{vibeMeter} Students Active</p>
+              <p className="text-purple-400 text-[8px] sm:text-[10px] font-black uppercase tracking-widest leading-none">Weekend Vibe</p>
             </div>
           </div>
           <div className="flex -space-x-1.5 sm:-space-x-2">
@@ -332,7 +332,7 @@ export default function Squads() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="font-syne font-bold text-xl sm:text-2xl text-white">Squads</h1>
+            <h1 className="font-syne font-black text-xl sm:text-2xl text-white tracking-tight">Squads</h1>
             <p className="text-gray-500 text-[10px] sm:text-xs uppercase font-black tracking-widest">Find your people</p>
           </div>
           <button 

@@ -184,15 +184,15 @@ export default function Profile() {
   )
 
   return (
-    <main className="min-h-screen pt-14 px-5 py-8 pb-24 md:pb-8">
+    <main className="page-main">
       <div className="container-responsive max-w-2xl w-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="font-syne font-bold text-xl sm:text-2xl text-white tracking-tight">Profile</h1>
+            <h1 className="font-syne font-black text-xl sm:text-2xl text-white tracking-tight">Profile</h1>
             <p className="text-gray-600 text-[10px] uppercase font-black tracking-widest">Your Campus Identity</p>
           </div>
-          <button onClick={() => setEditing(!editing)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 transition-all text-xs font-bold min-h-[44px]">
+          <button onClick={() => setEditing(!editing)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 transition-all text-xs font-black uppercase tracking-widest min-h-[44px]">
             <Edit2 className="w-3.5 h-3.5" /> {editing ? 'Cancel' : 'Edit'}
           </button>
         </div>
@@ -219,31 +219,31 @@ export default function Profile() {
           </div>
           <div className="mt-4">
             <div className="flex items-center justify-center gap-2 mb-1.5">
-              <h2 className="font-syne font-bold text-xl sm:text-2xl text-white tracking-tight">{profile.name}, {profile.age}</h2>
+              <h2 className="font-syne font-black text-xl sm:text-2xl text-white tracking-tight">{profile.name}, {profile.age}</h2>
               {profile.verified && <CheckCircle className="w-4 h-4 text-green-400" />}
               {profile.premium && <Crown className="w-4 h-4 text-amber-400" />}
             </div>
-            <div className="flex items-center justify-center gap-1.5 text-gray-500 text-[10px] font-bold uppercase tracking-wider">
+            <div className="flex items-center justify-center gap-1.5 text-gray-500 text-[10px] font-black uppercase tracking-wider">
               <MapPin className="w-3 h-3 text-purple-400" /> {profile.campus}
             </div>
-            <div className="flex items-center justify-center gap-1.5 text-gray-600 text-[10px] font-bold uppercase tracking-wider mt-1">
-              <BookOpen className="w-3 h-3 text-purple-400" /> {profile.course} · Year {profile.year}
+            <div className="flex items-center justify-center gap-1.5 text-gray-600 text-[10px] font-black uppercase tracking-wider mt-1">
+              <BookOpen className="w-3 h-3 text-purple-400" /> {profile.course} · Yr {profile.year}
             </div>
-            <div className="flex items-center justify-center gap-3 mt-4">
+            <div className="flex items-center justify-center gap-4 mt-6">
               <button 
                 onClick={() => setShowListModal({ type: 'followers' })}
-                className="flex items-center gap-1 group"
+                className="flex flex-col items-center group"
               >
-                <span className="text-white font-black text-sm group-hover:text-purple-400 transition-colors">{followerCount}</span>
-                <span className="text-gray-600 text-[9px] uppercase tracking-widest font-bold group-hover:text-gray-400 transition-colors">followers</span>
+                <span className="text-white font-black text-lg group-hover:text-purple-400 transition-colors leading-none">{followerCount}</span>
+                <span className="text-gray-600 text-[8px] uppercase tracking-widest font-black group-hover:text-gray-400 transition-colors">followers</span>
               </button>
-              <div className="w-1 h-1 rounded-full bg-gray-800" />
+              <div className="w-[1px] h-4 bg-white/5" />
               <button 
                 onClick={() => setShowListModal({ type: 'following' })}
-                className="flex items-center gap-1 group"
+                className="flex flex-col items-center group"
               >
-                <span className="text-white font-black text-sm group-hover:text-purple-400 transition-colors">{followingCount}</span>
-                <span className="text-gray-600 text-[9px] uppercase tracking-widest font-bold group-hover:text-gray-400 transition-colors">following</span>
+                <span className="text-white font-black text-lg group-hover:text-purple-400 transition-colors leading-none">{followingCount}</span>
+                <span className="text-gray-600 text-[8px] uppercase tracking-widest font-black group-hover:text-gray-400 transition-colors">following</span>
               </button>
             </div>
           </div>
