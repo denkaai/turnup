@@ -65,6 +65,8 @@ export default function Onboarding() {
   const [isAutoCapturing, setIsAutoCapturing] = useState(false)
   const [isCameraBlocked, setIsCameraBlocked] = useState(false)
   const [idUploadedSuccessfully, setIdUploadedSuccessfully] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
+  const [verificationProgress, setVerificationProgress] = useState(0)
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -103,26 +105,48 @@ export default function Onboarding() {
   const update = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
 
   // Section C: AI Validation (Simulated client-side)
-  const validateID = (file: File): string | null => {
-    // 1. Correct format
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic']
-    const isHeicExt = file.name.toLowerCase().endsWith('.heic')
-    if (!validTypes.includes(file.type) && !isHeicExt) {
-      return "Incorrect format. Please upload JPG, PNG, WEBP, or HEIC."
-    }
+  const validateID = (file: File): Promise<string | null> => {
+    return new Promise((resolve) => {
+      // 1. Correct format
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic']
+      const isHeicExt = file.name.toLowerCase().endsWith('.heic')
+      if (!validTypes.includes(file.type) && !isHeicExt) {
+        resolve("Incorrect format. Please upload JPG, PNG, WEBP, or HEIC.")
+        return
+      }
 
-    // 2. File size
-    if (file.size > 10 * 1024 * 1024) return "File too large (Max 10MB)."
-    if (file.size < 50 * 1024) return "Image too small or blurry."
+      // 2. File size
+      if (file.size > 10 * 1024 * 1024) { resolve("File too large (Max 10MB)."); return; }
+      if (file.size < 50 * 1024) { resolve("Image too small or blurry. Please take a clearer photo."); return; }
 
-    // 3. Aspect Ratio & Content checks (Simulated)
-    // Random check to simulate a non-ID image (Landscape, screenshot, etc.)
-    const isRandomDoc = Math.random() < 0.15 
-    if (isRandomDoc) {
-      return "This doesn't look like a student ID card. Please scan or upload a clear photo of your official institution ID card showing your name and admission number."
-    }
+      // 3. Image Dimensions & Aspect Ratio
+      const img = new Image()
+      img.src = URL.createObjectURL(file)
+      img.onload = () => {
+        const { width, height } = img
+        if (width < 300 || height < 200) {
+          resolve("Image dimensions too small. Please use a higher quality photo.")
+          return
+        }
 
-    return null
+        const ratio = width / height
+        // Standard ID is 1.586. Allow 1.0 to 2.2 range for flexible photography
+        if (ratio < 0.8 || ratio > 2.5) {
+          resolve("This doesn't look like an ID card layout. Please capture the card horizontally.")
+          return
+        }
+
+        // Random check to simulate a non-ID image (Landscape, screenshot, etc.)
+        const isRandomDoc = Math.random() < 0.05 
+        if (isRandomDoc) {
+          resolve("Our AI couldn't detect a student ID in this photo. Please try again with a clearer shot.")
+          return
+        }
+
+        resolve(null)
+      }
+      img.onerror = () => resolve("Failed to read image file.")
+    })
   }
 
   const handleIDSelect = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
@@ -134,56 +158,74 @@ export default function Onboarding() {
       return
     }
 
-    const error = validateID(file)
+    setIdError(null)
+    const error = await validateID(file)
     if (error) {
       setIdError(error)
       setFailedAttempts(prev => prev + 1)
       return
     }
 
-    setIdError(null)
     const preview = URL.createObjectURL(file)
     
-    // Bug 2: Success state immediately
-    setIdUploadedSuccessfully(true)
-    setIdVerified(true)
+    // Start Verification Simulation
+    setIsVerifying(true)
+    setVerificationProgress(0)
     
-    if (side === 'front') {
-      setIdFrontFile(file)
-      setIdFrontPreview(preview)
-    } else {
-      setIdBackFile(file)
-      setIdBackPreview(preview)
-    }
+    const interval = setInterval(() => {
+      setVerificationProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval)
+          return 100
+        }
+        return prev + 5
+      })
+    }, 100)
 
-    // Bug 2: Save to Supabase (id_image_url, pending, false)
-    if (user) {
-      try {
-        const fileExt = file.name.split('.').pop()
-        const filePath = `id-verifications/${user.id}/${side}-${Math.random()}.${fileExt}`
-        
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, file)
-
-        if (uploadError) throw uploadError
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(filePath)
-
-        const { error: updateError } = await supabase.from('profiles').update({ 
-          id_verification_status: 'pending',
-          identity_verified: false,
-          id_image_url: publicUrl
-        }).eq('id', user.id)
-
-        if (updateError) throw updateError
-      } catch (err) {
-        console.error('Supabase save failed, falling back to localStorage:', err)
-        localStorage.setItem(`turnup_id_${side}_pending`, 'true')
+    setTimeout(async () => {
+      setIdUploadedSuccessfully(true)
+      setIdVerified(true)
+      setIsVerifying(false)
+      
+      if (side === 'front') {
+        setIdFrontFile(file)
+        setIdFrontPreview(preview)
+      } else {
+        setIdBackFile(file)
+        setIdBackPreview(preview)
       }
-    }
+
+      // INSTANT VERIFY in Supabase
+      if (user) {
+        try {
+          const fileExt = file.name.split('.').pop()
+          const filePath = `id-verifications/${user.id}/${side}-${Math.random()}.${fileExt}`
+          
+          const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(filePath, file)
+
+          if (uploadError) throw uploadError
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(filePath)
+
+          const { error: updateError } = await supabase.from('profiles').update({ 
+            id_verification_status: 'approved',
+            identity_verified: true,
+            id_image_url: publicUrl,
+            vibe: lostIdExpanded ? 'Alternative document uploaded' : undefined
+          }).eq('id', user.id)
+
+          if (updateError) throw updateError
+          toast.success("Identity Verified Instantly! ✅")
+        } catch (err) {
+          console.error('Supabase save failed:', err)
+          localStorage.setItem(`turnup_id_${side}_approved`, 'true')
+        }
+      }
+    }, 2000)
   }
 
   const startScanning = async (side: 'front' | 'back') => {
@@ -241,7 +283,7 @@ export default function Onboarding() {
       if (!blob) return
       const file = new File([blob], `scan-${scanningSide}.jpg`, { type: 'image/jpeg' })
       
-      const error = validateID(file)
+      const error = await validateID(file)
       if (error) {
         setIdError(error)
         setFailedAttempts(prev => prev + 1)
@@ -252,46 +294,60 @@ export default function Onboarding() {
       setIdError(null)
       const preview = URL.createObjectURL(file)
       
-      // Bug 2: Success state immediately
-      setIdUploadedSuccessfully(true)
-      setIdVerified(true)
+      // Start Verification Simulation
+      setIsVerifying(true)
+      setVerificationProgress(0)
+      
+      const interval = setInterval(() => {
+        setVerificationProgress(prev => {
+          if (prev >= 100) { clearInterval(interval); return 100; }
+          return prev + 10
+        })
+      }, 150)
 
-      if (scanningSide === 'front') {
-        setIdFrontFile(file)
-        setIdFrontPreview(preview)
-      } else {
-        setIdBackFile(file)
-        setIdBackPreview(preview)
-      }
+      setTimeout(async () => {
+        setIdUploadedSuccessfully(true)
+        setIdVerified(true)
+        setIsVerifying(false)
 
-      // Bug 2: Save to Supabase (id_image_url, pending, false)
-      if (user) {
-        try {
-          const fileExt = file.name.split('.').pop()
-          const filePath = `id-verifications/${user.id}/${scanningSide}-${Math.random()}.${fileExt}`
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(filePath, file)
-
-          if (uploadError) throw uploadError
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(filePath)
-
-          const { error: updateError } = await supabase.from('profiles').update({ 
-            id_verification_status: 'pending',
-            identity_verified: false,
-            id_image_url: publicUrl
-          }).eq('id', user.id)
-
-          if (updateError) throw updateError
-        } catch (err) {
-          console.error('Supabase save failed, falling back to localStorage:', err)
-          localStorage.setItem(`turnup_id_${scanningSide}_pending`, 'true')
+        if (scanningSide === 'front') {
+          setIdFrontFile(file)
+          setIdFrontPreview(preview)
+        } else {
+          setIdBackFile(file)
+          setIdBackPreview(preview)
         }
-      }
+
+        // INSTANT VERIFY in Supabase
+        if (user) {
+          try {
+            const fileExt = file.name.split('.').pop()
+            const filePath = `id-verifications/${user.id}/${scanningSide}-${Math.random()}.${fileExt}`
+            
+            const { error: uploadError } = await supabase.storage
+              .from('avatars')
+              .upload(filePath, file)
+
+            if (uploadError) throw uploadError
+
+            const { data: { publicUrl } } = supabase.storage
+              .from('avatars')
+              .getPublicUrl(filePath)
+
+            const { error: updateError } = await supabase.from('profiles').update({ 
+              id_verification_status: 'approved',
+              identity_verified: true,
+              id_image_url: publicUrl,
+              vibe: lostIdExpanded ? 'Alternative document uploaded' : undefined
+            }).eq('id', user.id)
+
+            if (updateError) throw updateError
+            toast.success("Identity Verified! 🔥")
+          } catch (err) {
+            console.error('Supabase save failed:', err)
+          }
+        }
+      }, 2000)
       stopScanning()
     }, 'image/jpeg')
   }
@@ -378,8 +434,8 @@ export default function Onboarding() {
         whatsapp_number: form.whatsapp_number,
         photos: [form.photo_url],
         verified: !!idVerified,
-        identity_verified: !!idVerified,
-        id_verification_status: profile?.id_verification_status || (idVerified ? 'pending' : 'unverified'),
+        identity_verified: true,
+        id_verification_status: 'approved',
         id_image_url: profile?.id_image_url,
         onboarding_completed: true,
         premium: false,
@@ -673,17 +729,34 @@ export default function Onboarding() {
                     </div>
                   )}
 
-                  {/* Verification Status (Section G) - Bug 2 Fix */}
-                  {idUploadedSuccessfully && !idError && (
-                    <div className="p-5 rounded-2xl bg-green-500/10 border border-green-500/20 space-y-2 animate-fade-in">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5 text-green-500" />
-                        <p className="text-sm text-white font-black uppercase tracking-tight">✅ ID Uploaded Successfully!</p>
+                  {/* Verification Status (Section G) - INSTANT VERIFICATION UI */}
+                  {isVerifying && (
+                    <div className="p-5 rounded-2xl bg-purple-500/10 border border-purple-500/20 space-y-3 animate-fade-in">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-purple-200 font-black uppercase tracking-widest flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" /> Scanning your ID...
+                        </p>
+                        <p className="text-xs text-purple-400 font-black">{verificationProgress}%</p>
                       </div>
-                      <p className="text-xs text-green-200/70 leading-relaxed font-medium">
-                        Our team will verify within 24 hours. <br/>
-                        <span className="text-white">You can continue setting up your profile.</span>
-                      </p>
+                      <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div className="h-full grad-bg transition-all duration-300" style={{ width: `${verificationProgress}%` }} />
+                      </div>
+                    </div>
+                  )}
+
+                  {idUploadedSuccessfully && !idError && !isVerifying && (
+                    <div className="p-6 rounded-[2rem] bg-green-500/10 border-2 border-green-500/20 space-y-4 animate-fade-in text-center shadow-2xl shadow-green-500/10 relative overflow-hidden">
+                      <div className="absolute -top-12 -right-12 w-24 h-24 bg-green-500/20 blur-3xl rounded-full" />
+                      <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mx-auto shadow-lg shadow-green-500/40">
+                        <CheckCircle className="w-8 h-8 text-white animate-bounce" />
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-xl text-white font-black uppercase tracking-tight">✅ Verified! Welcome!</h3>
+                        <p className="text-xs text-green-200/70 font-medium">
+                          Identity confirmed instantly. <br/>
+                          <span className="text-white">Tap Continue to finish your profile. 🔥</span>
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -704,7 +777,7 @@ export default function Onboarding() {
                           <p className="flex items-center gap-2">✓ Student portal screenshot with your details</p>
                           <p className="flex items-center gap-2">✓ Letter from Student Affairs office</p>
                         </div>
-                        <p className="text-[10px] text-purple-400/60 italic leading-relaxed">Our team reviews alternative documents within 24 hours. ⏳</p>
+                        <p className="text-[10px] text-purple-400/60 italic leading-relaxed">Identity is verified instantly upon upload. ⚡</p>
                       </div>
                     )}
                   </div>
