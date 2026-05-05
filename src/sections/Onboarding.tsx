@@ -27,17 +27,30 @@ const fileToBase64 = (file: File): Promise<string> => {
 export default function Onboarding() {
   const { user, profile, fetchProfile } = useAuthStore()
   const navigate = useNavigate()
+  const [step, setStep] = useState(1)
 
-  // If profile already exists, redirect to discover
-  if (profile?.name) {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const s = params.get('step')
+    if (s) {
+      setStep(parseInt(s))
+      toast.error("Complete your identity verification to access TurnUp Campus 🔐", {
+        id: 'verification-gate'
+      })
+    }
+  }, [])
+
+  // If profile is fully verified and onboarding complete, redirect to discover
+  if (profile?.onboarding_completed && profile?.identity_verified && profile?.id_verification_status === 'approved') {
     navigate('/discover')
     return null
   }
-  const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [idUploading, setIdUploading] = useState(false)
-  const [idVerified, setIdVerified] = useState<boolean | null>(null)
+  const [idVerified, setIdVerified] = useState<boolean | null>(
+    profile?.id_verification_status === 'pending' || profile?.id_verification_status === 'approved' ? true : null
+  )
   
   // ID Verification states
   const [idFrontPreview, setIdFrontPreview] = useState<string | null>(null)
@@ -63,6 +76,27 @@ export default function Onboarding() {
     photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=500&fit=crop',
     whatsapp_number: ''
   })
+
+  useEffect(() => {
+    if (profile) {
+      setForm({
+        name: profile.name || '',
+        age: profile.age?.toString() || '',
+        gender: profile.gender || '',
+        campus: profile.campus || '',
+        course: profile.course || '',
+        year: profile.year?.toString() || '1',
+        bio: profile.bio || '',
+        looking_for: profile.looking_for || 'everyone',
+        interests: profile.interests || [],
+        vibe: profile.vibe || '',
+        weekend_plan: profile.weekend_plan || '',
+        relationship_goal: profile.relationship_goal || '',
+        photo_url: profile.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=500&fit=crop',
+        whatsapp_number: profile.whatsapp_number || ''
+      })
+    }
+  }, [profile])
 
   const update = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
 
@@ -111,6 +145,13 @@ export default function Onboarding() {
       setIdFrontFile(file)
       setIdFrontPreview(preview)
       setIdVerified(true) // Enable continue for front
+      
+      // Update DB status to pending
+      if (user) {
+        supabase.from('profiles').update({ 
+          id_verification_status: 'pending' 
+        }).eq('id', user.id).then()
+      }
     } else {
       setIdBackFile(file)
       setIdBackPreview(preview)
@@ -174,6 +215,13 @@ export default function Onboarding() {
         setIdFrontFile(file)
         setIdFrontPreview(preview)
         setIdVerified(true)
+        
+        // Update DB status to pending
+        if (user) {
+          supabase.from('profiles').update({ 
+            id_verification_status: 'pending' 
+          }).eq('id', user.id).then()
+        }
       } else {
         setIdBackFile(file)
         setIdBackPreview(preview)
@@ -264,6 +312,9 @@ export default function Onboarding() {
         whatsapp_number: form.whatsapp_number,
         photos: [form.photo_url],
         verified: !!idVerified,
+        identity_verified: !!idVerified,
+        id_verification_status: profile?.id_verification_status || (idVerified ? 'pending' : 'unverified'),
+        onboarding_completed: true,
         premium: false,
         premium_until: null,
       }

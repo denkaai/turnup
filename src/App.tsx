@@ -17,8 +17,17 @@ import Squads from '@/sections/Squads'
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile } = useAuthStore()
   if (!user) return <Navigate to="/auth" replace />
-  // If user is logged in but profile hasn't been created yet or name is missing, go to onboarding
-  if (!profile || !profile.name) return <Navigate to="/onboarding" replace />
+  
+  // Verification Gate
+  const isComplete = profile?.onboarding_completed && 
+                    profile?.identity_verified && 
+                    profile?.id_verification_status === 'approved'
+
+  if (!isComplete) {
+    // If they haven't finished onboarding or verification, send to onboarding step 5
+    return <Navigate to="/onboarding?step=5" replace />
+  }
+
   return <>{children}</>
 }
 
