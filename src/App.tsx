@@ -12,6 +12,7 @@ import Messages from '@/sections/Messages'
 import Events from '@/sections/Events'
 import Profile from '@/sections/Profile'
 import Squads from '@/sections/Squads'
+import InstallBanner from '@/components/InstallBanner'
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -92,6 +93,7 @@ export default function App() {
           style: { background: '#13131f', color: '#fff', border: '1px solid rgba(255,255,255,0.07)' }
         }}
       />
+      <InstallBanner />
     </div>
   )
 }
