@@ -63,6 +63,8 @@ export default function Onboarding() {
   const [lostIdExpanded, setLostIdExpanded] = useState(false)
   const [idError, setIdError] = useState<string | null>(null)
   const [isAutoCapturing, setIsAutoCapturing] = useState(false)
+  const [isCameraBlocked, setIsCameraBlocked] = useState(false)
+  const [idUploadedSuccessfully, setIdUploadedSuccessfully] = useState(false)
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -141,20 +143,46 @@ export default function Onboarding() {
 
     setIdError(null)
     const preview = URL.createObjectURL(file)
+    
+    // Bug 2: Success state immediately
+    setIdUploadedSuccessfully(true)
+    setIdVerified(true)
+    
     if (side === 'front') {
       setIdFrontFile(file)
       setIdFrontPreview(preview)
-      setIdVerified(true) // Enable continue for front
-      
-      // Update DB status to pending
-      if (user) {
-        supabase.from('profiles').update({ 
-          id_verification_status: 'pending' 
-        }).eq('id', user.id).then()
-      }
     } else {
       setIdBackFile(file)
       setIdBackPreview(preview)
+    }
+
+    // Bug 2: Save to Supabase (id_image_url, pending, false)
+    if (user) {
+      try {
+        const fileExt = file.name.split('.').pop()
+        const filePath = `id-verifications/${user.id}/${side}-${Math.random()}.${fileExt}`
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, file)
+
+        if (uploadError) throw uploadError
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath)
+
+        const { error: updateError } = await supabase.from('profiles').update({ 
+          id_verification_status: 'pending',
+          identity_verified: false,
+          id_image_url: publicUrl
+        }).eq('id', user.id)
+
+        if (updateError) throw updateError
+      } catch (err) {
+        console.error('Supabase save failed, falling back to localStorage:', err)
+        localStorage.setItem(`turnup_id_${side}_pending`, 'true')
+      }
     }
   }
 
@@ -183,10 +211,22 @@ export default function Onboarding() {
         }, 2000)
       }
     } catch (err) {
-      toast.error("Camera access denied")
+      setIsCameraBlocked(true)
       setIsScanning(false)
+      toast.error("Camera access denied. Please upload from gallery.")
     }
   }
+
+  // Detect iOS Safari or Brave
+  useEffect(() => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+    const isBrave = (navigator as any).brave !== undefined
+    
+    if ((isIOS && isSafari) || isBrave) {
+      setIsCameraBlocked(true)
+    }
+  }, [])
 
   const captureFrame = () => {
     if (!videoRef.current || !canvasRef.current) return
@@ -211,20 +251,46 @@ export default function Onboarding() {
 
       setIdError(null)
       const preview = URL.createObjectURL(file)
+      
+      // Bug 2: Success state immediately
+      setIdUploadedSuccessfully(true)
+      setIdVerified(true)
+
       if (scanningSide === 'front') {
         setIdFrontFile(file)
         setIdFrontPreview(preview)
-        setIdVerified(true)
-        
-        // Update DB status to pending
-        if (user) {
-          supabase.from('profiles').update({ 
-            id_verification_status: 'pending' 
-          }).eq('id', user.id).then()
-        }
       } else {
         setIdBackFile(file)
         setIdBackPreview(preview)
+      }
+
+      // Bug 2: Save to Supabase (id_image_url, pending, false)
+      if (user) {
+        try {
+          const fileExt = file.name.split('.').pop()
+          const filePath = `id-verifications/${user.id}/${scanningSide}-${Math.random()}.${fileExt}`
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(filePath, file)
+
+          if (uploadError) throw uploadError
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(filePath)
+
+          const { error: updateError } = await supabase.from('profiles').update({ 
+            id_verification_status: 'pending',
+            identity_verified: false,
+            id_image_url: publicUrl
+          }).eq('id', user.id)
+
+          if (updateError) throw updateError
+        } catch (err) {
+          console.error('Supabase save failed, falling back to localStorage:', err)
+          localStorage.setItem(`turnup_id_${scanningSide}_pending`, 'true')
+        }
       }
       stopScanning()
     }, 'image/jpeg')
@@ -314,6 +380,7 @@ export default function Onboarding() {
         verified: !!idVerified,
         identity_verified: !!idVerified,
         id_verification_status: profile?.id_verification_status || (idVerified ? 'pending' : 'unverified'),
+        id_image_url: profile?.id_image_url,
         onboarding_completed: true,
         premium: false,
         premium_until: null,
@@ -354,7 +421,7 @@ export default function Onboarding() {
         <div className="card p-6 animate-fade-in relative overflow-hidden">
           {/* Header */}
           <div className="mb-6">
-            <h2 className="font-syne font-black text-2xl text-white mb-1 leading-tight">
+            <h2 className={`font-syne font-black text-white mb-1 leading-tight ${step === 6 ? 'text-3xl sm:text-4xl' : 'text-2xl'}`}>
               {step === 6 ? "What's your vibe this weekend? 🔥" : steps[step - 1]}
             </h2>
             <p className="text-gray-500 text-sm font-medium">
@@ -524,34 +591,51 @@ export default function Onboarding() {
                     </div>
                   </div>
 
-                  {/* Upload Options (Section A) */}
+                  {/* Upload Options (Section A) - Bug 1 Primary/Secondary */}
                   <div className="space-y-4">
                     {/* Front of ID */}
                     <div className="space-y-2">
                       <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Front of ID card</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <button 
-                          onClick={() => startScanning('front')}
-                          className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed transition-all ${idFrontPreview ? 'border-green-500/30 bg-green-500/5' : 'border-white/10 bg-white/5 hover:border-purple-500/30 hover:bg-white/8'}`}
-                        >
-                          <Camera className={`w-6 h-6 mb-2 ${idFrontPreview ? 'text-green-400' : 'text-gray-400'}`} />
-                          <span className="text-[10px] font-black uppercase tracking-tight">Scan with Camera</span>
-                        </button>
-                        <label className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${idFrontPreview ? 'border-green-500/30 bg-green-500/5' : 'border-white/10 bg-white/5 hover:border-purple-500/30 hover:bg-white/8'}`}>
-                          <Upload className={`w-6 h-6 mb-2 ${idFrontPreview ? 'text-green-400' : 'text-gray-400'}`} />
-                          <span className="text-[10px] font-black uppercase tracking-tight">Upload Gallery</span>
+                      
+                      {isCameraBlocked && (
+                        <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 flex gap-2 animate-fade-in mb-2">
+                          <Camera className="w-4 h-4 text-orange-400 flex-shrink-0" />
+                          <p className="text-[10px] text-orange-200/80 font-bold">📷 Camera blocked? No stress — upload your ID photo from your gallery instead.</p>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col gap-3">
+                        {/* Primary Option: Gallery */}
+                        <label className={`flex items-center justify-center gap-3 p-5 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${idFrontPreview ? 'border-green-500/30 bg-green-500/5' : 'border-purple-500/30 bg-purple-500/5 hover:border-purple-500 hover:bg-purple-500/10 shadow-lg shadow-purple-500/10'}`}>
+                          <Upload className={`w-6 h-6 ${idFrontPreview ? 'text-green-400' : 'text-purple-400'}`} />
+                          <div className="text-left">
+                            <span className="block text-xs font-black uppercase tracking-widest text-white">Upload from Gallery</span>
+                            <span className="block text-[9px] text-gray-500 font-bold uppercase">Fastest way to verify ⚡</span>
+                          </div>
                           <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.webp,.heic" onChange={(e) => handleIDSelect(e, 'front')} />
                         </label>
+
+                        {/* Secondary Option: Camera */}
+                        <button 
+                          onClick={() => startScanning('front')}
+                          className={`flex items-center justify-center gap-3 p-4 rounded-2xl border-2 border-dashed transition-all ${idFrontPreview ? 'border-green-500/30 bg-green-500/5' : 'border-white/10 bg-white/5 hover:bg-white/8'}`}
+                        >
+                          <Camera className={`w-5 h-5 ${idFrontPreview ? 'text-green-400' : 'text-gray-400'}`} />
+                          <div className="text-left">
+                            <span className="block text-[10px] font-black uppercase tracking-tight text-gray-400">Scan with Camera</span>
+                            <span className="block text-[8px] text-gray-600 font-bold">Open in Chrome for best experience</span>
+                          </div>
+                        </button>
                       </div>
                       
                       {idFrontPreview && (
-                        <div className="relative rounded-xl overflow-hidden aspect-[1.586/1] border border-white/10 animate-fade-in group">
+                        <div className="relative rounded-xl overflow-hidden aspect-[1.586/1] border border-white/10 animate-fade-in group mt-3">
                           <img src={idFrontPreview} className="w-full h-full object-cover" alt="ID Front" />
                           <div className="absolute top-2 right-2 bg-green-500 text-white text-[9px] font-black px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg">
                             <CheckCircle className="w-3 h-3" /> Looks good! ✓
                           </div>
                           <button 
-                            onClick={() => { setIdFrontPreview(null); setIdFrontFile(null); setIdVerified(null); }}
+                            onClick={() => { setIdFrontPreview(null); setIdFrontFile(null); setIdVerified(null); setIdUploadedSuccessfully(false); }}
                             className="absolute bottom-2 right-2 bg-black/60 text-white text-[9px] font-black px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
                           >
                             Try again
@@ -564,17 +648,10 @@ export default function Onboarding() {
                     {idFrontPreview && (
                       <div className="space-y-2 animate-fade-in">
                         <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Back of ID card (Optional ⚡)</p>
-                        <div className="grid grid-cols-2 gap-3">
-                          <button 
-                            onClick={() => startScanning('back')}
-                            className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed transition-all ${idBackPreview ? 'border-green-500/30 bg-green-500/5' : 'border-white/10 bg-white/5 hover:border-purple-500/30 hover:bg-white/8'}`}
-                          >
-                            <Camera className={`w-6 h-6 mb-2 ${idBackPreview ? 'text-green-400' : 'text-gray-400'}`} />
-                            <span className="text-[10px] font-black uppercase tracking-tight">Scan Back</span>
-                          </button>
-                          <label className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${idBackPreview ? 'border-green-500/30 bg-green-500/5' : 'border-white/10 bg-white/5 hover:border-purple-500/30 hover:bg-white/8'}`}>
-                            <Upload className={`w-6 h-6 mb-2 ${idBackPreview ? 'text-green-400' : 'text-gray-400'}`} />
-                            <span className="text-[10px] font-black uppercase tracking-tight">Gallery</span>
+                        <div className="flex flex-col gap-2">
+                           <label className={`flex items-center justify-center gap-3 p-4 rounded-xl border border-dashed cursor-pointer transition-all ${idBackPreview ? 'border-green-500/30 bg-green-500/5' : 'border-white/10 bg-white/5 hover:bg-white/8'}`}>
+                            <Upload className={`w-5 h-5 ${idBackPreview ? 'text-green-400' : 'text-gray-400'}`} />
+                            <span className="text-[10px] font-black uppercase tracking-tight text-gray-400">Upload Gallery</span>
                             <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.webp,.heic" onChange={(e) => handleIDSelect(e, 'back')} />
                           </label>
                         </div>
@@ -596,14 +673,17 @@ export default function Onboarding() {
                     </div>
                   )}
 
-                  {/* Verification Status (Section G) */}
-                  {idFrontPreview && !idError && (
-                    <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 flex gap-3 animate-fade-in">
-                      <Loader2 className="w-5 h-5 text-purple-400 animate-spin flex-shrink-0" />
-                      <div className="space-y-1">
-                        <p className="text-xs text-purple-200 font-bold">✅ ID detected! Submitting for verification...</p>
-                        <p className="text-[10px] text-purple-300/60 font-medium italic">⏳ Under review — you can continue. Your verified badge appears within 24hrs.</p>
+                  {/* Verification Status (Section G) - Bug 2 Fix */}
+                  {idUploadedSuccessfully && !idError && (
+                    <div className="p-5 rounded-2xl bg-green-500/10 border border-green-500/20 space-y-2 animate-fade-in">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                        <p className="text-sm text-white font-black uppercase tracking-tight">✅ ID Uploaded Successfully!</p>
                       </div>
+                      <p className="text-xs text-green-200/70 leading-relaxed font-medium">
+                        Our team will verify within 24 hours. <br/>
+                        <span className="text-white">You can continue setting up your profile.</span>
+                      </p>
                     </div>
                   )}
 
@@ -637,32 +717,35 @@ export default function Onboarding() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4">
                 {[
-                  { id: 'Turn Up 🎉', sub: 'CLUBS, PARTIES, LOUD MUSIC — NIKO TAYARI', gradient: 'from-purple-500 to-pink-500', glow: 'rgba(168,85,247,0.5)' },
-                  { id: 'Lowkey Hangout 🍗', sub: 'NYAMA CHOMA, GOOD PEOPLE, CHILL VIBES', gradient: 'from-orange-500 to-amber-500', glow: 'rgba(249,115,22,0.5)' },
-                  { id: 'Squad Goals 👥', sub: 'ROAD TRIPS, ADVENTURES, MY DAY ONES', gradient: 'from-blue-500 to-teal-500', glow: 'rgba(59,130,246,0.5)' },
-                  { id: 'Home Vibes 🛋️', sub: 'SERIES, SNACKS, RECHARGE MODE — INTROVERT SZN', gradient: 'from-green-500 to-emerald-500', glow: 'rgba(16,185,129,0.5)' }
+                  { id: 'Turn Up 🎉', sub: 'CLUBS, PARTIES, LOUD MUSIC — NIKO TAYARI', gradient: 'from-purple-600 to-pink-600', glow: 'rgba(219,39,119,0.6)', emoji: '🎉' },
+                  { id: 'Lowkey Hangout 🍗', sub: 'NYAMA CHOMA, GOOD PEOPLE, CHILL VIBES', gradient: 'from-orange-600 to-amber-600', glow: 'rgba(245,158,11,0.6)', emoji: '🍗' },
+                  { id: 'Squad Goals 👥', sub: 'ROAD TRIPS, ADVENTURES, MY DAY ONES', gradient: 'from-blue-700 to-cyan-500', glow: 'rgba(6,182,212,0.6)', emoji: '👥' },
+                  { id: 'Home Vibes 🛋️', sub: 'SERIES, SNACKS, RECHARGE MODE — INTROVERT SZN', gradient: 'from-green-700 to-emerald-500', glow: 'rgba(16,185,129,0.6)', emoji: '🛋️' }
                 ].map(v => (
                   <button
                     key={v.id}
                     onClick={() => update('vibe', v.id)}
-                    className={`group relative py-6 px-6 rounded-2xl text-left transition-all border-2 overflow-hidden hover:scale-[1.02] active:scale-[0.98] ${
+                    className={`group relative py-8 px-6 rounded-[2rem] text-left transition-all border-2 overflow-hidden hover:scale-[1.03] active:scale-[0.97] flex flex-col justify-end min-h-[140px] shadow-xl ${
                       form.vibe === v.id 
-                        ? 'border-white/20 bg-white/10 shadow-2xl' 
-                        : 'border-white/5 bg-white/2 text-gray-400 hover:bg-white/5 hover:border-white/10'
+                        ? `border-white/40 bg-gradient-to-br ${v.gradient}` 
+                        : 'border-white/5 bg-white/[0.03] text-gray-400 hover:bg-white/5 hover:border-white/10'
                     }`}
                     style={{
-                      boxShadow: form.vibe === v.id ? `0 0 40px ${v.glow}` : ''
+                      boxShadow: form.vibe === v.id ? `0 20px 40px -10px ${v.glow}` : ''
                     }}
                   >
-                    {form.vibe === v.id && (
-                      <div className={`absolute inset-0 bg-gradient-to-br ${v.gradient} opacity-20 animate-pulse`} />
-                    )}
-                    <p className={`font-syne font-black text-lg mb-1 transition-colors ${form.vibe === v.id ? 'text-white' : 'text-gray-300'}`}>{v.id}</p>
-                    <p className={`text-[10px] font-black uppercase tracking-widest leading-tight transition-colors ${form.vibe === v.id ? 'text-white/80' : 'text-gray-500'}`}>{v.sub}</p>
+                    <div className={`absolute top-6 right-6 text-4xl transition-all duration-300 ${form.vibe === v.id ? 'scale-125 rotate-12 opacity-100' : 'opacity-20 group-hover:opacity-40 group-hover:scale-110'}`}>
+                      {v.emoji}
+                    </div>
+
+                    <div className="relative z-10">
+                      <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 transition-colors ${form.vibe === v.id ? 'text-white/80' : 'text-gray-500'}`}>{v.sub}</p>
+                      <p className={`font-syne font-black text-2xl sm:text-3xl transition-colors leading-none ${form.vibe === v.id ? 'text-white' : 'text-gray-300'}`}>{v.id}</p>
+                    </div>
                     
                     {form.vibe === v.id && (
-                      <div className="absolute top-4 right-4">
-                        <CheckCircle className="w-5 h-5 text-white" />
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                        <CheckCircle className="w-24 h-24 text-white/10 animate-ping" />
                       </div>
                     )}
                   </button>
