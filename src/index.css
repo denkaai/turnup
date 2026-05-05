@@ -215,7 +215,7 @@
 
   /* Discover card — full-width on mobile */
   .discover-card {
-    @apply relative rounded-[24px] sm:rounded-[32px] overflow-hidden shadow-2xl border border-white/5 bg-[#13131f] group;
+    @apply relative rounded-[24px] sm:rounded-[32px] overflow-hidden shadow-2xl border border-white/5 bg-[#13131f];
     aspect-ratio: 3 / 4;
     transition: box-shadow 0.2s ease, border-color 0.2s ease;
   }
