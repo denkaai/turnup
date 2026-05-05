@@ -49,9 +49,11 @@ export default function Onboarding() {
   const [failedAttempts, setFailedAttempts] = useState(0)
   const [lostIdExpanded, setLostIdExpanded] = useState(false)
   const [idError, setIdError] = useState<string | null>(null)
+  const [isAutoCapturing, setIsAutoCapturing] = useState(false)
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const autoCaptureTimeout = useRef<NodeJS.Timeout | null>(null)
 
   const [form, setForm] = useState({
     name: '', age: '', gender: '', campus: '',
@@ -78,11 +80,10 @@ export default function Onboarding() {
     if (file.size < 50 * 1024) return "Image too small or blurry."
 
     // 3. Aspect Ratio & Content checks (Simulated)
-    // In a real app, we'd use a canvas to check pixels/OCR
-    // Here we simulate randomness for the security block requirement
-    const isRandom = Math.random() < 0.1 // 10% chance to fail for demo purposes if it looks random
-    if (isRandom && failedAttempts < 3) {
-      return "This doesn't look like a student ID card. Please scan or upload a clear photo showing your name and admission number."
+    // Random check to simulate a non-ID image (Landscape, screenshot, etc.)
+    const isRandomDoc = Math.random() < 0.15 
+    if (isRandomDoc) {
+      return "This doesn't look like a student ID card. Please scan or upload a clear photo of your official institution ID card showing your name and admission number."
     }
 
     return null
@@ -93,7 +94,7 @@ export default function Onboarding() {
     if (!file) return
 
     if (failedAttempts >= 3) {
-      toast.error("Too many failed attempts. Please contact support.")
+      setIdError("Too many failed attempts. Please contact support.")
       return
     }
 
@@ -120,10 +121,25 @@ export default function Onboarding() {
     if (failedAttempts >= 3) return
     setScanningSide(side)
     setIsScanning(true)
+    setIsAutoCapturing(false)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        } 
+      })
       if (videoRef.current) {
         videoRef.current.srcObject = stream
+        
+        // Start auto-capture countdown after 2 seconds of "holding steady"
+        autoCaptureTimeout.current = setTimeout(() => {
+          setIsAutoCapturing(true)
+          setTimeout(() => {
+            captureFrame()
+          }, 1500)
+        }, 2000)
       }
     } catch (err) {
       toast.error("Camera access denied")
@@ -167,11 +183,13 @@ export default function Onboarding() {
   }
 
   const stopScanning = () => {
+    if (autoCaptureTimeout.current) clearTimeout(autoCaptureTimeout.current)
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream
       stream.getTracks().forEach(track => track.stop())
     }
     setIsScanning(false)
+    setIsAutoCapturing(false)
   }
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -416,22 +434,38 @@ export default function Onboarding() {
 
           {step === 5 && (
             <div className="space-y-6">
-              {/* Security Block Check */}
+              {/* Security Block Check (Section E) */}
               {failedAttempts >= 3 ? (
                 <div className="p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-center space-y-4 animate-fade-in">
                   <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
                   <div className="space-y-2">
-                    <h3 className="text-white font-black text-lg">Verification Blocked</h3>
-                    <p className="text-gray-400 text-sm leading-relaxed">Too many failed attempts. Please contact support at <span className="text-red-400 font-bold">support@turnupcampus.com</span></p>
+                    <h3 className="text-white font-black text-lg uppercase tracking-tight">Verification Blocked 🚫</h3>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      Too many failed attempts. Please contact support at <br/>
+                      <span className="text-red-400 font-bold">support@turnupcampus.com</span>
+                    </p>
                   </div>
                 </div>
               ) : (
                 <>
                   {/* Visual Guide (Section D) */}
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <h3 className="text-white font-black text-base flex items-center gap-2">
                       <ImageIcon className="w-4 h-4 text-purple-400" /> Upload Your Student ID 📸
                     </h3>
+                    
+                    {/* Card Outline Diagram */}
+                    <div className="w-full aspect-[1.586/1] rounded-2xl border-2 border-white/5 bg-white/[0.02] flex items-center justify-center relative overflow-hidden group">
+                      <div className="absolute inset-4 border border-dashed border-purple-500/30 rounded-xl flex items-center justify-center">
+                         <div className="text-center space-y-2">
+                            <div className="w-12 h-1 rounded-full bg-purple-500/20 mx-auto" />
+                            <div className="w-20 h-1 rounded-full bg-purple-500/10 mx-auto" />
+                            <div className="w-16 h-1 rounded-full bg-purple-500/20 mx-auto" />
+                         </div>
+                      </div>
+                      <div className="absolute top-8 left-8 w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20" />
+                    </div>
+
                     <div className="grid grid-cols-1 gap-2 text-[10px] font-bold uppercase tracking-tight text-gray-500">
                       <p className="flex items-center gap-2"><CheckCircle className="w-3 h-3 text-green-500" /> Must show: Name, Institution, Adm Number</p>
                       <p className="flex items-center gap-2"><CheckCircle className="w-3 h-3 text-green-500" /> Place ID on a flat dark surface</p>
@@ -455,7 +489,7 @@ export default function Onboarding() {
                         <label className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${idFrontPreview ? 'border-green-500/30 bg-green-500/5' : 'border-white/10 bg-white/5 hover:border-purple-500/30 hover:bg-white/8'}`}>
                           <Upload className={`w-6 h-6 mb-2 ${idFrontPreview ? 'text-green-400' : 'text-gray-400'}`} />
                           <span className="text-[10px] font-black uppercase tracking-tight">Upload Gallery</span>
-                          <input type="file" className="hidden" accept="image/*" onChange={(e) => handleIDSelect(e, 'front')} />
+                          <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.webp,.heic" onChange={(e) => handleIDSelect(e, 'front')} />
                         </label>
                       </div>
                       
@@ -490,7 +524,7 @@ export default function Onboarding() {
                           <label className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${idBackPreview ? 'border-green-500/30 bg-green-500/5' : 'border-white/10 bg-white/5 hover:border-purple-500/30 hover:bg-white/8'}`}>
                             <Upload className={`w-6 h-6 mb-2 ${idBackPreview ? 'text-green-400' : 'text-gray-400'}`} />
                             <span className="text-[10px] font-black uppercase tracking-tight">Gallery</span>
-                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleIDSelect(e, 'back')} />
+                            <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.webp,.heic" onChange={(e) => handleIDSelect(e, 'back')} />
                           </label>
                         </div>
                         {idBackPreview && (
@@ -539,7 +573,7 @@ export default function Onboarding() {
                           <p className="flex items-center gap-2">✓ Student portal screenshot with your details</p>
                           <p className="flex items-center gap-2">✓ Letter from Student Affairs office</p>
                         </div>
-                        <p className="text-[10px] text-purple-400/60 italic">Our team reviews alternative documents within 24 hours. ⏳</p>
+                        <p className="text-[10px] text-purple-400/60 italic leading-relaxed">Our team reviews alternative documents within 24 hours. ⏳</p>
                       </div>
                     )}
                   </div>
@@ -552,25 +586,25 @@ export default function Onboarding() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4">
                 {[
-                  { id: 'Turn Up 🎉', sub: 'CLUBS, PARTIES, LOUD MUSIC — NIKO TAYARI', glow: 'hover:shadow-purple-500/40 selected:shadow-purple-500/50', gradient: 'from-purple-600/20 to-pink-600/20', activeBorder: 'border-purple-500' },
-                  { id: 'Lowkey Hangout 🍗', sub: 'NYAMA CHOMA, GOOD PEOPLE, CHILL VIBES', glow: 'hover:shadow-orange-500/40 selected:shadow-orange-500/50', gradient: 'from-orange-600/20 to-amber-600/20', activeBorder: 'border-orange-500' },
-                  { id: 'Squad Goals 👥', sub: 'ROAD TRIPS, ADVENTURES, MY DAY ONES', glow: 'hover:shadow-blue-500/40 selected:shadow-blue-500/50', gradient: 'from-blue-600/20 to-teal-600/20', activeBorder: 'border-blue-500' },
-                  { id: 'Home Vibes 🛋️', sub: 'SERIES, SNACKS, RECHARGE MODE — INTROVERT SZN', glow: 'hover:shadow-emerald-500/40 selected:shadow-emerald-500/50', gradient: 'from-emerald-600/20 to-green-600/20', activeBorder: 'border-emerald-500' }
+                  { id: 'Turn Up 🎉', sub: 'CLUBS, PARTIES, LOUD MUSIC — NIKO TAYARI', gradient: 'from-purple-500 to-pink-500', glow: 'rgba(168,85,247,0.5)' },
+                  { id: 'Lowkey Hangout 🍗', sub: 'NYAMA CHOMA, GOOD PEOPLE, CHILL VIBES', gradient: 'from-orange-500 to-amber-500', glow: 'rgba(249,115,22,0.5)' },
+                  { id: 'Squad Goals 👥', sub: 'ROAD TRIPS, ADVENTURES, MY DAY ONES', gradient: 'from-blue-500 to-teal-500', glow: 'rgba(59,130,246,0.5)' },
+                  { id: 'Home Vibes 🛋️', sub: 'SERIES, SNACKS, RECHARGE MODE — INTROVERT SZN', gradient: 'from-green-500 to-emerald-500', glow: 'rgba(16,185,129,0.5)' }
                 ].map(v => (
                   <button
                     key={v.id}
                     onClick={() => update('vibe', v.id)}
-                    className={`group relative py-6 px-6 rounded-2xl text-left transition-all border-2 overflow-hidden ${
+                    className={`group relative py-6 px-6 rounded-2xl text-left transition-all border-2 overflow-hidden hover:scale-[1.02] active:scale-[0.98] ${
                       form.vibe === v.id 
-                        ? `${v.activeBorder} bg-gradient-to-br ${v.gradient} shadow-2xl` 
+                        ? 'border-white/20 bg-white/10 shadow-2xl' 
                         : 'border-white/5 bg-white/2 text-gray-400 hover:bg-white/5 hover:border-white/10'
                     }`}
                     style={{
-                      boxShadow: form.vibe === v.id ? `0 0 40px ${v.id.includes('Turn Up') ? 'rgba(168,85,247,0.25)' : v.id.includes('Lowkey') ? 'rgba(249,115,22,0.25)' : v.id.includes('Squad') ? 'rgba(59,130,246,0.25)' : 'rgba(16,185,129,0.25)'}` : ''
+                      boxShadow: form.vibe === v.id ? `0 0 40px ${v.glow}` : ''
                     }}
                   >
                     {form.vibe === v.id && (
-                      <div className="absolute inset-0 bg-white/5 animate-pulse" />
+                      <div className={`absolute inset-0 bg-gradient-to-br ${v.gradient} opacity-20 animate-pulse`} />
                     )}
                     <p className={`font-syne font-black text-lg mb-1 transition-colors ${form.vibe === v.id ? 'text-white' : 'text-gray-300'}`}>{v.id}</p>
                     <p className={`text-[10px] font-black uppercase tracking-widest leading-tight transition-colors ${form.vibe === v.id ? 'text-white/80' : 'text-gray-500'}`}>{v.sub}</p>
@@ -661,7 +695,7 @@ export default function Onboarding() {
               <button
                 onClick={() => setStep(s => s + 1)}
                 disabled={!canNext()}
-                className="btn-grad flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed shadow-lg"
+                className="btn-grad flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed shadow-lg transition-all"
               >
                 Continue <ChevronRight className="w-4 h-4" />
               </button>
@@ -669,7 +703,7 @@ export default function Onboarding() {
               <button
                 onClick={handleFinish}
                 disabled={loading}
-                className="btn-grad flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                className="btn-grad flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Start Discovering 🔥
@@ -681,34 +715,51 @@ export default function Onboarding() {
 
       {/* Camera Modal Overlay (Section A) */}
       {isScanning && (
-        <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-4">
-          <div className="relative w-full max-w-xl aspect-[1.586/1] border-4 border-white/30 rounded-3xl overflow-hidden shadow-2xl">
+        <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-4 sm:p-8 animate-fade-in">
+          <div className="relative w-full max-w-2xl aspect-[1.586/1] border-4 border-white/20 rounded-[32px] overflow-hidden shadow-2xl">
             <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
             
             {/* Overlay Frame */}
-            <div className="absolute inset-4 border-2 border-dashed border-white/50 rounded-2xl flex flex-col items-center justify-center pointer-events-none">
-              <div className="px-4 py-2 rounded-full bg-black/60 text-white text-[10px] font-black uppercase tracking-widest mb-4">
-                Hold ID steady inside the frame...
+            <div className={`absolute inset-6 border-4 border-dashed rounded-2xl flex flex-col items-center justify-center pointer-events-none transition-all duration-500 ${isAutoCapturing ? 'border-green-500 scale-95' : 'border-white/40'}`}>
+              <div className={`px-6 py-3 rounded-full bg-black/60 text-white text-xs font-black uppercase tracking-widest mb-4 transition-all ${isAutoCapturing ? 'bg-green-600 scale-110' : ''}`}>
+                {isAutoCapturing ? 'Capturing ID... Hold steady! ⚡' : 'Hold ID steady inside the frame...'}
               </div>
+              
+              {/* Corner markers */}
+              <div className="absolute top-0 left-0 w-12 h-12 border-t-8 border-l-8 border-purple-500 rounded-tl-xl" />
+              <div className="absolute top-0 right-0 w-12 h-12 border-t-8 border-r-8 border-purple-500 rounded-tr-xl" />
+              <div className="absolute bottom-0 left-0 w-12 h-12 border-b-8 border-l-8 border-purple-500 rounded-bl-xl" />
+              <div className="absolute bottom-0 right-0 w-12 h-12 border-b-8 border-r-8 border-purple-500 rounded-br-xl" />
+            </div>
+
+            {/* AI Scanning Progress Bar */}
+            <div className="absolute bottom-0 left-0 right-0 h-2 bg-white/10">
+              <div className={`h-full grad-bg transition-all duration-[3500ms] ease-linear ${isScanning ? 'w-full' : 'w-0'}`} />
             </div>
 
             {/* Controls */}
-            <div className="absolute bottom-6 left-0 right-0 flex items-center justify-center gap-6">
-              <button onClick={stopScanning} className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all">
-                <X className="w-6 h-6" />
+            <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center gap-8">
+              <button onClick={stopScanning} className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/60 transition-all border border-white/10">
+                <X className="w-8 h-8" />
               </button>
-              <button onClick={captureFrame} className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center hover:scale-105 transition-all">
-                <div className="w-14 h-14 rounded-full bg-white shadow-xl" />
+              <button onClick={captureFrame} className="w-24 h-24 rounded-full border-4 border-white flex items-center justify-center hover:scale-105 transition-all shadow-2xl">
+                <div className="w-18 h-18 rounded-full bg-white shadow-inner" />
               </button>
             </div>
           </div>
-          <p className="mt-8 text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] text-center">AI Smart ID Scan Active</p>
+          <div className="mt-10 flex items-center gap-3">
+             <div className="flex gap-1">
+                {[1,2,3].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" style={{ animationDelay: `${i*0.2}s` }} />)}
+             </div>
+             <p className="text-purple-400 text-[10px] font-black uppercase tracking-[0.3em] text-center">AI Smart ID Scan Active</p>
+          </div>
         </div>
       )}
       <canvas ref={canvasRef} className="hidden" />
     </main>
   )
 }
+
 
 // Helper icons not imported
 const MapPin = ({ className }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
