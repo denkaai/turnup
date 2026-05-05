@@ -4,6 +4,7 @@ import { ChevronRight, ChevronLeft, Loader2, Upload, CheckCircle, Camera, X, Ale
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
+import { handleSupabaseError, safeProfileUpsert } from '@/lib/safe-supabase'
 
 const CAMPUSES = [
   'KU', 'JKUAT', 'Zetech', 'MKU', 'PAC University', 'Gretsa', 'Murang\'a University', 'KCA University'
@@ -218,8 +219,8 @@ export default function Onboarding() {
             vibe: lostIdExpanded ? 'Alternative document uploaded' : undefined
           }).eq('id', user.id)
 
-          if (updateError) throw updateError
-          toast.success("Identity Verified Instantly! ✅")
+          if (updateError) handleSupabaseError(updateError)
+          else toast.success("Identity Verified Instantly! ✅")
         } catch (err) {
           console.error('Supabase save failed:', err)
           localStorage.setItem(`turnup_id_${side}_approved`, 'true')
@@ -341,8 +342,8 @@ export default function Onboarding() {
               vibe: lostIdExpanded ? 'Alternative document uploaded' : undefined
             }).eq('id', user.id)
 
-            if (updateError) throw updateError
-            toast.success("Identity Verified! 🔥")
+            if (updateError) handleSupabaseError(updateError)
+            else toast.success("Identity Verified! 🔥")
           } catch (err) {
             console.error('Supabase save failed:', err)
           }
@@ -376,7 +377,10 @@ export default function Onboarding() {
         .from('avatars')
         .upload(filePath, file)
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        handleSupabaseError(uploadError)
+        return
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
@@ -385,7 +389,6 @@ export default function Onboarding() {
       update('photo_url', publicUrl)
       toast.success('Photo uploaded!')
     } catch (err: any) {
-      toast.error('Error uploading photo')
       console.error(err)
     } finally {
       setUploading(false)
@@ -432,22 +435,25 @@ export default function Onboarding() {
         weekend_plan: form.weekend_plan,
         relationship_goal: form.relationship_goal,
         whatsapp_number: form.whatsapp_number,
+        phone_number: user.phone || '', // Safely handle phone number
         photos: [form.photo_url],
-        verified: !!idVerified,
+        verified: true,
         identity_verified: true,
         id_verification_status: 'approved',
-        id_image_url: profile?.id_image_url,
+        id_image_url: profile?.id_image_url || null,
         onboarding_completed: true,
         premium: false,
         premium_until: null,
       }
-      const { error } = await supabase.from('profiles').upsert(profileData)
-      if (error) throw error
-      await fetchProfile(user.id)
-      toast.success('Profile created! Welcome to TurnUp 🎉')
-      window.location.href = '/discover'
+      
+      const success = await safeProfileUpsert(profileData)
+      if (success) {
+        await fetchProfile(user.id)
+        toast.success('Profile created! Welcome to TurnUp 🎉')
+        window.location.href = '/discover'
+      }
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save profile')
+      handleSupabaseError(err)
     } finally {
       setLoading(false)
     }

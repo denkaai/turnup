@@ -9,7 +9,7 @@ interface AuthState {
   setUser: (user: any) => void
   setProfile: (profile: Profile | null) => void
   signOut: () => Promise<void>
-  fetchProfile: (userId: string) => Promise<void>
+  fetchProfile: (userId: string) => Promise<Profile | null>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -30,6 +30,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       .maybeSingle()
     
     if (error) console.error('fetchProfile error:', error.message)
-    set({ profile: data || null })
+    const prof = data || null
+    set({ profile: prof })
+    return prof
   },
 }))

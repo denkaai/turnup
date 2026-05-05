@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
+import { handleSupabaseError } from '@/lib/safe-supabase'
 import Navigation from '@/sections/Navigation'
 import Landing from '@/sections/Landing'
 import AuthPage from '@/sections/AuthPage'
@@ -46,10 +47,24 @@ export default function App() {
       }
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setUser(session.user)
-        fetchProfile(session.user.id)
+        const prof = await fetchProfile(session.user.id)
+        
+        // Handle Redirections after login (Step 4 Fix)
+        if (prof) {
+          const isVerified = prof.identity_verified && prof.id_verification_status === 'approved'
+          if (prof.onboarding_completed && isVerified) {
+             // Already fully verified
+          } else if (!prof.onboarding_completed) {
+            window.location.href = '/onboarding'
+          } else if (!isVerified) {
+            window.location.href = '/onboarding?step=5'
+          }
+        } else {
+          window.location.href = '/onboarding'
+        }
       } else {
         setUser(null)
         setProfile(null)

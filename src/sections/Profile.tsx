@@ -4,6 +4,7 @@ import { useAuthStore } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { useNavigate, Link } from 'react-router-dom'
+import { handleSupabaseError, safeProfileUpsert } from '@/lib/safe-supabase'
 import FollowListModal from '@/components/FollowListModal'
 import FollowButton from '@/components/FollowButton'
 
@@ -74,8 +75,8 @@ export default function Profile() {
       supabase.from('follows').select('id', { count: 'exact', head: true }).eq('follower_id', user.id)
     ])
     
-    if (followers.error) console.error('Error fetching followers count:', followers.error.message)
-    if (following.error) console.error('Error fetching following count:', following.error.message)
+    if (followers.error) handleSupabaseError(followers.error)
+    if (following.error) handleSupabaseError(following.error)
     
     setFollowerCount(followers.count || 0)
     setFollowingCount(following.count || 0)
@@ -106,10 +107,11 @@ export default function Profile() {
         .update({ photos: [publicUrl, ...(profile.photos?.slice(1) || [])] })
         .eq('id', user.id)
 
-      if (updateError) throw updateError
-
-      await fetchProfile(user.id)
-      toast.success('Photo updated!')
+      if (updateError) handleSupabaseError(updateError)
+      else {
+        await fetchProfile(user.id)
+        toast.success('Photo updated!')
+      }
     } catch (err: any) {
       toast.error('Error uploading photo')
       console.error(err)
@@ -130,7 +132,8 @@ export default function Profile() {
       else wa = '+' + wa
     }
 
-    const { error } = await supabase.from('profiles').update({ 
+    const success = await safeProfileUpsert({ 
+      id: user.id,
       name: form.name,
       bio: form.bio, 
       course: form.course, 
@@ -138,11 +141,13 @@ export default function Profile() {
       campus: form.campus,
       interests: form.interests,
       whatsapp_number: wa,
-      now_playing: form.now_playing
-    }).eq('id', user.id)
+      now_playing: form.now_playing,
+      identity_verified: profile?.identity_verified || false,
+      id_verification_status: profile?.id_verification_status || 'unverified',
+      onboarding_completed: true
+    })
 
-    if (error) toast.error('Failed to save')
-    else {
+    if (success) {
       await fetchProfile(user.id)
       toast.success('Profile updated!')
       setEditing(false)
