@@ -4,6 +4,8 @@ import { Flame, Eye, EyeOff, Loader2, Mail, Lock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 
+import { CAMPUSES } from '@/lib/constants'
+
 export default function AuthPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
@@ -69,7 +71,14 @@ export default function AuthPage() {
   }
 
   return (
-    <main className="min-h-screen flex flex-col md:flex-row bg-[#090912]">
+    <main className="min-h-screen flex flex-col md:flex-row bg-[#08080F] relative overflow-hidden">
+      {/* Kenyan Flag Bar */}
+      <div className="absolute top-0 left-0 right-0 h-1 z-[60] flex">
+        <div className="flex-1 bg-black" />
+        <div className="flex-1 bg-red-600" />
+        <div className="flex-1 bg-green-600" />
+      </div>
+
       <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) translateX(0px); }
@@ -81,11 +90,11 @@ export default function AuthPage() {
       `}</style>
 
       {/* Left Panel */}
-      <div className="hidden md:flex flex-col flex-1 relative overflow-hidden bg-[#0d0d1a] items-center justify-center p-12">
+      <div className="hidden md:flex flex-col flex-1 relative overflow-hidden bg-[#08080F] items-center justify-center p-12">
         {/* Floating Orbs */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#c026d3]/20 rounded-full blur-[100px] animate-float-1" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#7c3aed]/15 rounded-full blur-[100px] animate-float-2" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#ec4899]/10 rounded-full blur-[80px] animate-float-3" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#8B5CF6]/20 rounded-full blur-[100px] animate-float-1" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#EC4899]/15 rounded-full blur-[100px] animate-float-2" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#F59E0B]/10 rounded-full blur-[80px] animate-float-3" />
         
         {/* Content */}
         <div className="relative z-10 text-center">
@@ -95,10 +104,11 @@ export default function AuthPage() {
             </div>
             <span className="font-syne font-black text-3xl tracking-tighter grad-text">TURNUP</span>
           </Link>
-          <h1 className="font-syne font-bold text-5xl text-white mb-6 leading-tight">Where campus <br /> comes alive 🔥</h1>
+          <h1 className="font-syne font-black text-5xl text-white mb-4 leading-tight">Campus Vibes. <br /> Real Connections. 🔥</h1>
+          <p className="text-gray-400 font-bold text-sm mb-8 uppercase tracking-[0.3em]">Where campus comes alive</p>
           <div className="flex flex-wrap justify-center gap-2 max-w-sm mx-auto">
-            {['MKU', 'JKUAT', 'Kenyatta University', 'Zetech', 'KCA', 'KMTC Thika'].map(c => (
-              <span key={c} className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-gray-400 text-[10px] font-bold uppercase tracking-widest whitespace-nowrap">
+            {CAMPUSES.map(c => (
+              <span key={c} className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-gray-400 text-[9px] font-bold uppercase tracking-widest whitespace-nowrap">
                 {c}
               </span>
             ))}
@@ -112,7 +122,10 @@ export default function AuthPage() {
         <div className="md:hidden absolute top-0 left-0 w-64 h-64 bg-purple-600/10 rounded-full blur-[80px] -translate-x-1/2 -translate-y-1/2" />
         
         <div className="w-full max-w-sm relative z-10">
-          <div className="bg-[#111128]/80 backdrop-blur-xl border border-white/5 p-8 rounded-[32px] shadow-2xl">
+          <div className="bg-[#0F0F1A]/80 backdrop-blur-[20px] border border-white/5 p-8 rounded-[32px] shadow-2xl relative overflow-hidden">
+            {/* Glossy overlay */}
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
             {/* Mode Toggle */}
             {mode !== 'forgot' && (
               <div className="bg-white/5 p-1 rounded-2xl flex mb-8">

@@ -7,6 +7,8 @@ import { toast } from 'sonner'
 import FollowButton from '@/components/FollowButton'
 import UserFollowStats from '@/components/UserFollowStats'
 
+import { CAMPUSES } from '@/lib/constants'
+
 interface Squad {
   id: string
   title: string
@@ -29,7 +31,7 @@ const DEMO_SQUADS: Squad[] = [
     leader: { id: 'l1', name: 'Brian', photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop' },
     members: 4,
     max_members: 8,
-    campus: 'JKUAT',
+    campus: 'Jomo Kenyatta University (JKUAT)',
     vibe: '🔥 High Energy',
     date: 'Saturday, 2:00 PM',
     tags: ['Food', 'Drinks', 'RoadTrip'],
@@ -37,24 +39,24 @@ const DEMO_SQUADS: Squad[] = [
   },
   {
     id: 's2',
-    title: 'MKU Party Squad 💃',
+    title: 'KU Weekend Vibes 💃',
     description: 'Hitting Club Volume this Friday. Looking for a squad of 5 to share a table!',
     leader: { id: 'l2', name: 'Amina', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop' },
     members: 3,
     max_members: 6,
-    campus: 'MKU',
+    campus: 'Kenyatta University (KU)',
     vibe: '✨ Party Vibes',
     date: 'Friday, 9:00 PM',
     tags: ['Party', 'Dancing', 'Verified']
   },
   {
     id: 's3',
-    title: 'KU Study & Chill 📚',
-    description: 'Med school exams are coming. Let\'s study at the library then grab coffee after.',
+    title: 'KCA Study & Chill 📚',
+    description: 'Finance exams are coming. Let\'s study at the library then grab coffee after.',
     leader: { id: 'l3', name: 'Cynthia', photo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&h=100&fit=crop' },
     members: 2,
     max_members: 4,
-    campus: 'Kenyatta University',
+    campus: 'KCA University - Thika Road',
     vibe: '🧠 Productive',
     date: 'Sunday, 10:00 AM',
     tags: ['Study', 'Coffee']
@@ -307,7 +309,13 @@ export default function Squads() {
   }
 
   return (
-    <main className="page-main">
+    <main className="page-main relative overflow-hidden">
+      {/* Kenyan Flag Bar */}
+      <div className="absolute top-0 left-0 right-0 h-1 z-[60] flex">
+        <div className="flex-1 bg-black" />
+        <div className="flex-1 bg-red-600" />
+        <div className="flex-1 bg-green-600" />
+      </div>
       <div className="container-responsive">
         {/* Vibe Meter */}
         <div className="card p-3 mb-6 bg-purple-500/5 border-purple-500/10 flex items-center justify-between animate-pulse">
@@ -357,7 +365,7 @@ export default function Squads() {
         {activeTab === 'discover' && (
           <div className="flex gap-2 mb-6 overflow-x-auto pb-2 no-scrollbar">
             <button onClick={() => setCampusFilter('')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${!campusFilter ? 'grad-bg text-white' : 'bg-white/5 text-gray-500'}`}>All Campus</button>
-            {['MKU', 'JKUAT', 'KU', 'Zetech', 'KCA'].map(c => (
+            {CAMPUSES.map(c => (
               <button key={c} onClick={() => setCampusFilter(c)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${campusFilter === c ? 'grad-bg text-white' : 'bg-white/5 text-gray-500'}`}>{c}</button>
             ))}
           </div>

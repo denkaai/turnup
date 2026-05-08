@@ -7,11 +7,11 @@ import UserFollowStats from '@/components/UserFollowStats'
 
 const EVENTS = [
   { id: 'e1', title: 'Thika Road Campus Bash', desc: 'The biggest party of the semester! All Thika Road campuses invited. Music, drinks, and good vibes.', date: 'Fri, 15 May 2026', time: '8:00 PM', location: 'Club Volume, Thika', campus: 'All Campuses', attendees: 156, max: 300, img: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800', price: 0, organizer: 'TurnUp Events', category: 'Party', joined: false, isThisWeekend: true },
-  { id: 'e2', title: 'MKU Talent Night', desc: 'Showcase your talent! Singing, dancing, poetry, comedy — all welcome. Prizes for winners!', date: 'Sat, 16 May 2026', time: '6:00 PM', location: 'MKU Main Hall', campus: 'MKU', attendees: 89, max: 200, img: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800', price: 0, organizer: 'MKU Student Assoc.', category: 'Culture', joined: false, isThisWeekend: true },
-  { id: 'e3', title: 'JKUAT Game Night', desc: 'FIFA tournament, board games, card games, and more! Pizza and drinks provided.', date: 'Sun, 24 May 2026', time: '5:00 PM', location: 'JKUAT Student Center', campus: 'JKUAT', attendees: 45, max: 100, img: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800', price: 0, organizer: 'JKUAT Gaming Club', category: 'Gaming', joined: true },
+  { id: 'e2', title: 'MKU Main Talent Night', desc: 'Showcase your talent! Singing, dancing, poetry, comedy — all welcome. Prizes for winners!', date: 'Sat, 16 May 2026', time: '6:00 PM', location: 'MKU Main Hall', campus: 'Mount Kenya University (MKU)', attendees: 89, max: 200, img: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=800', price: 0, organizer: 'MKU Student Assoc.', category: 'Culture', joined: false, isThisWeekend: true },
+  { id: 'e3', title: 'JKUAT Expo Game Night', desc: 'FIFA tournament, board games, card games, and more! Pizza and drinks provided.', date: 'Sun, 24 May 2026', time: '5:00 PM', location: 'JKUAT Student Center', campus: 'Jomo Kenyatta University (JKUAT)', attendees: 45, max: 100, img: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800', price: 0, organizer: 'JKUAT Gaming Club', category: 'Gaming', joined: true },
   { id: 'e4', title: 'Sunset Picnic & Games', desc: 'Relaxed afternoon at Uhuru Gardens. Bring your squad! Games, music, and snacks.', date: 'Sat, 6 Jun 2026', time: '3:00 PM', location: 'Uhuru Gardens, Nairobi', campus: 'All Campuses', attendees: 67, max: 150, img: 'https://images.unsplash.com/photo-1528605248644-14dd04022da1?w=800', price: 0, organizer: 'TurnUp Community', category: 'Outdoor', joined: false },
-  { id: 'e5', title: 'Campus Study Meetup', desc: 'Finals prep session! Bring your books and notes. Study together, eat together, pass together.', date: 'Wed, 10 Jun 2026', time: '2:00 PM', location: 'Zetech Library', campus: 'Zetech', attendees: 23, max: 50, img: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800', price: 0, organizer: 'Zetech Study Group', category: 'Academic', joined: false },
-  { id: 'e6', title: 'Rooftop Sundowner', desc: 'Chill rooftop vibes with good music and friends. Watch the sunset over Thika town!', date: 'Fri, 19 Jun 2026', time: '4:00 PM', location: 'Thika Greens Hotel', campus: 'All Campuses', attendees: 82, max: 120, img: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800', price: 0, organizer: 'TurnUp Events', category: 'Social', joined: false },
+  { id: 'e5', title: 'KU Med Finals Prep', desc: 'Finals prep session! Bring your books and notes. Study together, eat together, pass together.', date: 'Wed, 10 Jun 2026', time: '2:00 PM', location: 'KU Library', campus: 'Kenyatta University (KU)', attendees: 23, max: 50, img: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800', price: 0, organizer: 'KU Study Group', category: 'Academic', joined: false },
+  { id: 'e6', title: 'Zetech Rooftop Vibe', desc: 'Chill rooftop vibes with good music and friends. Watch the sunset over Thika town!', date: 'Fri, 19 Jun 2026', time: '4:00 PM', location: 'Thika Greens Hotel', campus: 'Zetech University', attendees: 82, max: 120, img: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800', price: 0, organizer: 'TurnUp Events', category: 'Social', joined: false },
 ]
 
 const CATEGORIES = ['All', 'Party', 'Culture', 'Gaming', 'Outdoor', 'Academic', 'Social']
@@ -40,7 +40,13 @@ export default function Events() {
   }
 
   return (
-    <main className="page-main">
+    <main className="page-main relative overflow-hidden">
+      {/* Kenyan Flag Bar */}
+      <div className="absolute top-0 left-0 right-0 h-1 z-[60] flex">
+        <div className="flex-1 bg-black" />
+        <div className="flex-1 bg-red-600" />
+        <div className="flex-1 bg-green-600" />
+      </div>
       <div className="container-responsive">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -49,10 +55,15 @@ export default function Events() {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
-          <input className="input-dark pl-10 text-sm min-h-[44px]" placeholder="Search events or campus..." value={search} onChange={e => setSearch(e.target.value)} />
+        {/* Search V3 */}
+        <div className="relative group mb-6">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
+          <input 
+            className="w-full bg-[#0F0F1A]/80 backdrop-blur-xl border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 transition-all shadow-xl" 
+            placeholder="Search events, campus or category..." 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+          />
         </div>
 
         {/* Category tabs */}
@@ -138,8 +149,8 @@ export default function Events() {
                 <div className="flex justify-between text-xs text-gray-600 mb-1.5">
                   <span>Spots taken</span><span>{Math.round(selected.attendees/selected.max*100)}% full</span>
                 </div>
-                  <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full grad-bg rounded-full" style={{ width: `${Math.round(selected.attendees/selected.max*100)}%` }} />
+                  <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-1000" style={{ width: `${Math.round(selected.attendees/selected.max*100)}%` }} />
                   </div>
                 </div>
 

@@ -14,6 +14,7 @@ import Events from '@/sections/Events'
 import Profile from '@/sections/Profile'
 import Squads from '@/sections/Squads'
 import InstallBanner from '@/components/InstallBanner'
+import AIAssistant from '@/components/AIAssistant'
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -109,6 +110,7 @@ export default function App() {
         }}
       />
       <InstallBanner />
+      <AIAssistant />
     </div>
   )
 }

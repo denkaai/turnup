@@ -6,9 +6,7 @@ import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
 import { handleSupabaseError, safeProfileUpsert } from '@/lib/safe-supabase'
 
-const CAMPUSES = [
-  'KU', 'JKUAT', 'Zetech', 'MKU', 'PAC University', 'Gretsa', 'Murang\'a University', 'KCA University'
-]
+import { CAMPUSES } from '@/lib/constants'
 
 const INTERESTS = [
   'Music', 'Dancing', 'Coding', 'Gaming', 'Movies', 'Sports', 'Travel',
@@ -71,7 +69,7 @@ export default function Onboarding() {
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const autoCaptureTimeout = useRef<NodeJS.Timeout | null>(null)
+  const autoCaptureTimeout = useRef<any>(null)
 
   const [form, setForm] = useState({
     name: '', age: '', gender: '', campus: '',
@@ -81,6 +79,10 @@ export default function Onboarding() {
     photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=500&fit=crop',
     whatsapp_number: ''
   })
+
+  const [campusSearch, setCampusSearch] = useState('')
+  const [showCampusDropdown, setShowCampusDropdown] = useState(false)
+  const filteredCampuses = CAMPUSES.filter(c => c.toLowerCase().includes(campusSearch.toLowerCase()))
 
   useEffect(() => {
     if (profile) {
@@ -464,23 +466,23 @@ export default function Onboarding() {
   return (
     <main className="min-h-screen flex items-center justify-center px-4 py-12 bg-[#080810]">
       <div className="w-full max-w-md">
-        {/* Progress */}
-        <div className="flex items-center gap-2 mb-8">
-          {steps.map((s, i) => (
-            <div key={s} className="flex items-center gap-2 flex-1">
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black transition-all ${
-                i + 1 < step ? 'grad-bg text-white' : i + 1 === step ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50' : 'bg-white/5 text-gray-600'
-              }`}>
-                {i + 1 < step ? <CheckCircle className="w-3.5 h-3.5" /> : i + 1}
-              </div>
-              {i < steps.length - 1 && (
-                <div className={`flex-1 h-0.5 ${i + 1 < step ? 'bg-purple-500' : 'bg-white/8'}`} />
-              )}
-            </div>
-          ))}
+        {/* Progress Bar V3 */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-400">Step {step} of {steps.length}</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-400">{Math.round((step / steps.length) * 100)}%</span>
+          </div>
+          <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+            <div 
+              className="h-full grad-bg transition-all duration-500 ease-out shadow-[0_0_15px_rgba(168,85,247,0.5)]" 
+              style={{ width: `${(step / steps.length) * 100}%` }}
+            />
+          </div>
         </div>
 
-        <div className="card p-6 animate-fade-in relative overflow-hidden">
+        <div className="bg-[#0F0F1A]/80 backdrop-blur-[20px] border border-white/10 p-6 rounded-[32px] animate-fade-in relative overflow-hidden shadow-2xl">
+          {/* Glossy accent */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
           {/* Header */}
           <div className="mb-6">
             <h2 className={`font-syne font-black text-white mb-1 leading-tight ${step === 6 ? 'text-3xl sm:text-4xl' : 'text-2xl'}`}>
@@ -554,10 +556,50 @@ export default function Onboarding() {
             <div className="space-y-4">
               <div>
                 <label className="block text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1.5">Campus</label>
-                <select className="input-dark" value={form.campus} onChange={e => update('campus', e.target.value)}>
-                  <option value="">Select campus...</option>
-                  {CAMPUSES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <div className="relative">
+                  <div 
+                    className="input-dark flex items-center justify-between cursor-pointer"
+                    onClick={() => setShowCampusDropdown(!showCampusDropdown)}
+                  >
+                    <span className={form.campus ? 'text-white' : 'text-gray-500'}>
+                      {form.campus || 'Search your campus...'}
+                    </span>
+                    <ChevronLeft className={`w-4 h-4 transition-transform ${showCampusDropdown ? 'rotate-90' : '-rotate-90'}`} />
+                  </div>
+
+                  {showCampusDropdown && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-[#161625] border border-white/10 rounded-2xl shadow-2xl z-[100] max-h-60 overflow-y-auto p-2 animate-in fade-in slide-in-from-top-2">
+                      <div className="sticky top-0 bg-[#161625] pb-2 mb-2 border-b border-white/5">
+                        <input 
+                          autoFocus
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500"
+                          placeholder="Type to filter..."
+                          value={campusSearch}
+                          onChange={e => setCampusSearch(e.target.value)}
+                          onClick={e => e.stopPropagation()}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        {filteredCampuses.map(c => (
+                          <button
+                            key={c}
+                            className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-all ${form.campus === c ? 'bg-purple-500 text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                            onClick={() => {
+                              update('campus', c)
+                              setShowCampusDropdown(false)
+                              setCampusSearch('')
+                            }}
+                          >
+                            {c}
+                          </button>
+                        ))}
+                        {filteredCampuses.length === 0 && (
+                          <div className="py-8 text-center text-gray-500 text-xs italic">No campus found matching "{campusSearch}"</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1.5">Course</label>
@@ -898,17 +940,12 @@ export default function Onboarding() {
             </div>
           )}
 
-          <div className="flex gap-3 mt-8">
-            {step > 1 && (
-              <button onClick={() => setStep(s => s - 1)} className="flex items-center gap-1.5 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest text-gray-500 hover:text-white hover:bg-white/5 transition-all">
-                <ChevronLeft className="w-4 h-4" /> Back
-              </button>
-            )}
+          <div className="flex flex-col gap-3 mt-8">
             {step < 9 ? (
               <button
                 onClick={() => setStep(s => s + 1)}
                 disabled={!canNext()}
-                className="btn-grad flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed shadow-lg transition-all"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] text-white text-sm font-black uppercase tracking-[0.2em] disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all active:scale-[0.96] flex items-center justify-center gap-2"
               >
                 Continue <ChevronRight className="w-4 h-4" />
               </button>
@@ -916,10 +953,19 @@ export default function Onboarding() {
               <button
                 onClick={handleFinish}
                 disabled={loading}
-                className="btn-grad flex-1 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed shadow-lg transition-all"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] text-white text-sm font-black uppercase tracking-[0.2em] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all active:scale-[0.96] flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Start Discovering 🔥
+              </button>
+            )}
+            
+            {step > 1 && (
+              <button 
+                onClick={() => setStep(s => s - 1)} 
+                className="w-full py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white hover:bg-white/5 transition-all flex items-center justify-center gap-1.5"
+              >
+                <ChevronLeft className="w-3 h-3" /> Go Back
               </button>
             )}
           </div>

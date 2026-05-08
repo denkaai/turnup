@@ -42,7 +42,7 @@ export default function Messages() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorder = useRef<MediaRecorder | null>(null)
   const audioChunks = useRef<Blob[]>([])
-  const recordingTimer = useRef<NodeJS.Timeout | null>(null)
+  const recordingTimer = useRef<any>(null)
 
   const EMOJIS = ['😊', '😂', '🔥', '❤️', '🙌', '😎', '😍', '✨', '👌', '🙏', '💯', '🤔', '😢', '💀', '👀', '🎉', '🤩', '🤣', '😅', '🙄', '😏', '😉', '😜', '🥳', '🥺', '😡', '😱', '🤯', '😴', '🤤', '🍻', '🍕', '🍔', '🚀', '🌈', '💎', '💡', '✅', '❌', '👋']
   const filteredConversations = conversations.filter(c => c.other.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -275,7 +275,13 @@ export default function Messages() {
   const selectedConv = conversations.find(c => c.id === selected)
 
   return (
-    <main className="h-screen pt-14 flex bg-[#090912] overflow-hidden">
+    <main className="h-screen pt-14 flex bg-[#090912] overflow-hidden relative">
+      {/* Kenyan Flag Bar */}
+      <div className="absolute top-0 left-0 right-0 h-1 z-[70] flex">
+        <div className="flex-1 bg-black" />
+        <div className="flex-1 bg-red-600" />
+        <div className="flex-1 bg-green-600" />
+      </div>
       {/* Sidebar - Hidden on mobile when chat is selected */}
       <div className={`${selected ? 'hidden' : 'flex'} md:flex flex-col w-full md:w-[380px] border-r border-white/5 bg-[#0c0c18] pb-16 md:pb-0`}>
         <div className="p-4 sm:p-6 pb-2">
@@ -289,12 +295,12 @@ export default function Messages() {
             </button>
           </div>
           
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <div className="relative group mb-4">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
             <input 
               type="text" 
-              placeholder="Search conversations..." 
-              className="input-dark pl-10 text-sm min-h-[44px]"
+              placeholder="Search chats..." 
+              className="w-full bg-white/5 border border-white/5 rounded-2xl py-3 pl-10 pr-4 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-purple-500/50 transition-all"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -380,10 +386,10 @@ export default function Messages() {
                     onContextMenu={(e) => { e.preventDefault(); setActiveReactionMsg(msg.id); }}
                   >
                     {/* The bubble */}
-                    <div className={`relative px-4 py-2.5 rounded-[20px] text-sm shadow-md ${
+                    <div className={`relative px-4 py-3 rounded-[24px] text-sm shadow-xl ${
                       isMe 
-                        ? 'grad-bg text-white rounded-br-sm' 
-                        : 'bg-[#1a1a2e] border border-white/5 text-gray-200 rounded-bl-sm'
+                        ? 'bg-gradient-to-tr from-purple-600 to-pink-600 text-white rounded-br-sm shadow-purple-500/10' 
+                        : 'bg-[#1a1a2e]/90 backdrop-blur-xl border border-white/5 text-gray-200 rounded-bl-sm'
                     }`}>
                       {msg.type === 'text' && <div className="leading-relaxed">{msg.content}</div>}
                       {msg.type === 'image' && (

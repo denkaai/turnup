@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Camera, Edit2, Shield, Crown, LogOut, ChevronRight, CheckCircle, Star, Zap, MapPin, BookOpen, Save, Loader2, Upload, User, Lock, Settings, Music } from 'lucide-react'
+import { Camera, Edit2, Shield, Crown, LogOut, ChevronRight, CheckCircle, Star, Zap, MapPin, BookOpen, Save, Loader2, Upload, User, Lock, Settings, Music, ChevronLeft } from 'lucide-react'
 import { useAuthStore } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -8,7 +8,7 @@ import { handleSupabaseError, safeProfileUpsert } from '@/lib/safe-supabase'
 import FollowListModal from '@/components/FollowListModal'
 import FollowButton from '@/components/FollowButton'
 
-const UNIVERSITIES = ['KU', 'JKUAT', 'Zetech', 'MKU', 'PAC University', 'Gretsa', 'Murang\'a University']
+import { CAMPUSES } from '@/lib/constants'
 
 export default function Profile() {
   const { user, profile, fetchProfile, signOut } = useAuthStore()
@@ -189,70 +189,105 @@ export default function Profile() {
   )
 
   return (
-    <main className="page-main">
-      <div className="container-responsive max-w-2xl w-full">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="font-syne font-black text-xl sm:text-2xl text-white tracking-tight">Profile</h1>
-            <p className="text-gray-600 text-[10px] uppercase font-black tracking-widest">Your Campus Identity</p>
+    <main className="page-main !pt-0">
+      <div className="w-full max-w-2xl mx-auto min-h-screen bg-[#08080F]">
+        {/* Cover Banner */}
+        <div className="relative h-48 sm:h-64 w-full bg-gradient-to-br from-[#8B5CF6] via-[#EC4899] to-[#08080F] overflow-hidden">
+          <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#08080F] to-transparent" />
+          
+          {/* Top Actions */}
+          <div className="absolute top-6 left-6 right-6 flex items-center justify-between z-10">
+            <Link to="/discover" className="p-2 rounded-full bg-black/20 backdrop-blur-md border border-white/10 text-white hover:bg-black/40 transition-all">
+              <ChevronLeft className="w-5 h-5" />
+            </Link>
+            <button 
+              onClick={() => setEditing(!editing)} 
+              className="px-4 py-2 rounded-xl bg-black/20 backdrop-blur-md border border-white/10 text-white hover:bg-black/40 transition-all text-[10px] font-black uppercase tracking-widest"
+            >
+              {editing ? 'Cancel' : 'Edit Profile'}
+            </button>
           </div>
-          <button onClick={() => setEditing(!editing)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/5 text-gray-400 hover:bg-white/10 transition-all text-xs font-black uppercase tracking-widest min-h-[44px]">
-            <Edit2 className="w-3.5 h-3.5" /> {editing ? 'Cancel' : 'Edit'}
-          </button>
         </div>
 
-        {/* Avatar */}
-        <div className="text-center mb-8">
-          <div className="relative inline-block">
-            <div className="p-1 rounded-full grad-bg shadow-2xl shadow-purple-500/20">
-              <img
-                src={profile.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop'}
-                alt={profile.name}
-                className={`w-28 h-28 rounded-full object-cover border-4 border-[#090912] ${photoUploading ? 'opacity-50' : ''}`}
-              />
-            </div>
-            {photoUploading && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
+        {/* Profile Content */}
+        <div className="px-6 -mt-20 relative z-10">
+          <div className="flex flex-col items-center">
+            {/* Overlapping Avatar */}
+            <div className="relative inline-block group">
+              <div className="p-1 rounded-[2.5rem] bg-gradient-to-tr from-[#8B5CF6] to-[#EC4899] shadow-2xl shadow-purple-500/20">
+                <img
+                  src={profile.photos?.[0] || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop'}
+                  alt={profile.name}
+                  className={`w-32 h-32 rounded-[2.2rem] object-cover border-4 border-[#08080F] ${photoUploading ? 'opacity-50' : ''}`}
+                />
               </div>
-            )}
-            <label className="absolute bottom-1 right-1 w-10 h-10 grad-bg rounded-full flex items-center justify-center border-4 border-[#090912] cursor-pointer hover:scale-110 transition-all shadow-xl">
-              <Camera className="w-4 h-4 text-white" />
-              <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={photoUploading} />
-            </label>
-          </div>
-          <div className="mt-4">
-            <div className="flex items-center justify-center gap-2 mb-1.5">
-              <h2 className="font-syne font-black text-xl sm:text-2xl text-white tracking-tight">{profile.name}, {profile.age}</h2>
-              {profile.verified && <CheckCircle className="w-4 h-4 text-green-400" />}
-              {profile.premium && <Crown className="w-4 h-4 text-amber-400" />}
+              {photoUploading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
+                </div>
+              )}
+              <label className="absolute bottom-1 right-1 w-10 h-10 bg-[#8B5CF6] rounded-2xl flex items-center justify-center border-4 border-[#08080F] cursor-pointer hover:scale-110 transition-all shadow-xl active:scale-95">
+                <Camera className="w-4 h-4 text-white" />
+                <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={photoUploading} />
+              </label>
             </div>
-            <div className="flex items-center justify-center gap-1.5 text-gray-500 text-[10px] font-black uppercase tracking-wider">
-              <MapPin className="w-3 h-3 text-purple-400" /> {profile.campus}
-            </div>
-            <div className="flex items-center justify-center gap-1.5 text-gray-600 text-[10px] font-black uppercase tracking-wider mt-1">
-              <BookOpen className="w-3 h-3 text-purple-400" /> {profile.course} · Yr {profile.year}
-            </div>
-            <div className="flex items-center justify-center gap-4 mt-6">
-              <button 
-                onClick={() => setShowListModal({ type: 'followers' })}
-                className="flex flex-col items-center group"
-              >
-                <span className="text-white font-black text-lg group-hover:text-purple-400 transition-colors leading-none">{followerCount}</span>
-                <span className="text-gray-600 text-[8px] uppercase tracking-widest font-black group-hover:text-gray-400 transition-colors">followers</span>
-              </button>
-              <div className="w-[1px] h-4 bg-white/5" />
-              <button 
-                onClick={() => setShowListModal({ type: 'following' })}
-                className="flex flex-col items-center group"
-              >
-                <span className="text-white font-black text-lg group-hover:text-purple-400 transition-colors leading-none">{followingCount}</span>
-                <span className="text-gray-600 text-[8px] uppercase tracking-widest font-black group-hover:text-gray-400 transition-colors">following</span>
-              </button>
+
+            {/* User Info */}
+            <div className="mt-4 text-center">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <h2 className="font-syne font-black text-2xl sm:text-3xl text-white tracking-tight">
+                  {profile.name}, {profile.age}
+                </h2>
+                {profile.verified && <CheckCircle className="w-5 h-5 text-purple-400" />}
+              </div>
+              
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-gray-500 text-[10px] font-black uppercase tracking-[0.1em]">
+                <div className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-purple-400" /> {profile.campus}
+                </div>
+                <div className="w-1 h-1 rounded-full bg-gray-800" />
+                <div className="flex items-center gap-1">
+                  <BookOpen className="w-3 h-3 text-purple-400" /> {profile.course}
+                </div>
+              </div>
+
+              {/* Follow Stats Prominent */}
+              <div className="flex items-center justify-center gap-8 mt-8">
+                <button 
+                  onClick={() => setShowListModal({ type: 'followers' })}
+                  className="flex flex-col items-center group"
+                >
+                  <span className="text-2xl text-white font-black group-hover:text-purple-400 transition-colors leading-none">{followerCount}</span>
+                  <span className="text-[9px] text-gray-600 uppercase tracking-[0.2em] font-black group-hover:text-gray-400 transition-colors mt-1">followers</span>
+                </button>
+                <div className="w-px h-8 bg-white/5" />
+                <button 
+                  onClick={() => setShowListModal({ type: 'following' })}
+                  className="flex flex-col items-center group"
+                >
+                  <span className="text-2xl text-white font-black group-hover:text-purple-400 transition-colors leading-none">{followingCount}</span>
+                  <span className="text-[9px] text-gray-600 uppercase tracking-[0.2em] font-black group-hover:text-gray-400 transition-colors mt-1">following</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
+
+        <div className="px-6 py-8 space-y-6">
+          {/* Vibe Count Card */}
+          <div className="grid grid-cols-2 gap-3">
+             <div className="bg-[#0F0F1A]/80 backdrop-blur-xl border border-white/5 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                <span className="text-2xl mb-1">🔥</span>
+                <span className="text-white font-black text-xl leading-none">{profile.vibe_count || 0}</span>
+                <span className="text-[8px] text-gray-600 uppercase tracking-widest font-black mt-1">Vibes Received</span>
+             </div>
+             <div className="bg-[#0F0F1A]/80 backdrop-blur-xl border border-white/5 p-4 rounded-2xl flex flex-col items-center justify-center text-center">
+                <span className="text-2xl mb-1">✨</span>
+                <span className="text-white font-black text-xl leading-none">3</span>
+                <span className="text-[8px] text-gray-600 uppercase tracking-widest font-black mt-1">Events RSVP'd</span>
+             </div>
+          </div>
 
         {/* Badges */}
         <div className="flex flex-wrap gap-2 justify-center mb-8">
@@ -271,15 +306,7 @@ export default function Profile() {
           )}
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-8">
-          {[{ label: 'Matches', value: '12' }, { label: 'Events', value: '3' }, { label: 'Vibes', value: '5' }].map(s => (
-            <div key={s.label} className="card p-4 text-center hover:scale-105 transition-all cursor-default border-white/5 bg-white/[0.02]">
-              <p className="font-syne font-black text-xl grad-text leading-none mb-1.5">{s.value}</p>
-              <p className="text-gray-600 text-[8px] sm:text-[9px] uppercase font-black tracking-[0.15em]">{s.label}</p>
-            </div>
-          ))}
-        </div>
+        {/* Stats Section Removed - Integrated into cards below */}
 
         {/* Now Playing */}
         <div className="card p-5 mb-4 border-white/5 bg-white/[0.02]">
@@ -368,7 +395,8 @@ export default function Profile() {
                     value={form.campus} 
                     onChange={e => setForm({...form, campus: e.target.value})}
                   >
-                    {UNIVERSITIES.map(u => <option key={u} value={u}>{u}</option>)}
+                    <option value="">Select campus...</option>
+                    {CAMPUSES.map(u => <option key={u} value={u}>{u}</option>)}
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -447,6 +475,7 @@ export default function Profile() {
           onClose={() => setShowListModal(null)} 
         />
       )}
+      </div>
     </main>
   )
 }
