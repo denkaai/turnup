@@ -226,8 +226,13 @@ export default function Landing() {
           Developed & Designed by <span className="text-[#c026d3] font-bold">DEV.Den.kaai</span>&lt;/&gt;
         </p>
         <div className="flex gap-6 justify-center mt-10">
-          {['Privacy', 'Terms', 'Safety', 'Support'].map((l) => (
-            <a key={l} href="#" className="text-gray-600 hover:text-purple-400 transition-colors text-xs font-bold uppercase tracking-widest">{l}</a>
+          {[
+            { label: 'Privacy', path: '/privacy' },
+            { label: 'Terms', path: '/terms' },
+            { label: 'Safety', path: '/safety' },
+            { label: 'Support', path: '/support' }
+          ].map((l) => (
+            <Link key={l.label} to={l.path} className="text-gray-600 hover:text-purple-400 transition-colors text-xs font-bold uppercase tracking-widest">{l.label}</Link>
           ))}
         </div>
       </footer>

@@ -15,6 +15,10 @@ import Profile from '@/sections/Profile'
 import Squads from '@/sections/Squads'
 import InstallBanner from '@/components/InstallBanner'
 import AIAssistant from '@/components/AIAssistant'
+import Privacy from '@/sections/legal/Privacy'
+import Terms from '@/sections/legal/Terms'
+import Safety from '@/sections/legal/Safety'
+import Support from '@/sections/legal/Support'
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -101,6 +105,12 @@ export default function App() {
         <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
         <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/safety" element={<Safety />} />
+        <Route path="/support" element={<Support />} />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toaster
