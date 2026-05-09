@@ -30,6 +30,15 @@ export default function AIAssistant() {
     scrollToBottom()
   }, [messages])
 
+  useEffect(() => {
+    const key = import.meta.env.VITE_NVIDIA_API_KEY
+    if (key) {
+      console.log('TurnUp AI: Key loaded (starts with:', key.substring(0, 10) + '...)')
+    } else {
+      console.warn('TurnUp AI: VITE_NVIDIA_API_KEY is missing!')
+    }
+  }, [])
+
   const handleSend = async () => {
     if (!input.trim() || loading) return
 
