@@ -66,11 +66,6 @@ export default function Landing() {
         </div>
 
         <div className="relative z-10 max-w-5xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-md">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
-            <span className="text-gray-300 text-xs font-bold uppercase tracking-widest">LIVE IN THIKA ROAD CAMPUSES</span>
-          </div>
-
           <h1 className="font-syne font-extrabold text-5xl sm:text-7xl md:text-9xl leading-[0.9] mb-8 tracking-tighter">
             <span className="block text-white">Weekend</span>
             <span className="block grad-text animate-gradient-x">TURNUP</span>
