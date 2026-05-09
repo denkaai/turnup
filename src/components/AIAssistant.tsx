@@ -38,26 +38,42 @@ export default function AIAssistant() {
     setInput('')
     setLoading(true)
 
-    try {
-      const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_NVIDIA_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: "meta/llama3-70b-instruct",
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            ...messages,
-            userMsg
-          ],
-          temperature: 0.7,
-          max_tokens: 512,
+    const callAI = async (currentMessages: Message[], retryCount = 1): Promise<any> => {
+      try {
+        const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_NVIDIA_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: "meta/llama3-70b-instruct",
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              ...currentMessages
+            ],
+            temperature: 0.7,
+            max_tokens: 512,
+          })
         })
-      })
 
-      const data = await response.json()
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        return await response.json()
+      } catch (err) {
+        if (retryCount > 0) {
+          console.log(`AI Assistant: Retrying... (${retryCount} left)`)
+          await new Promise(resolve => setTimeout(resolve, 1000)) // 1s delay before retry
+          return callAI(currentMessages, retryCount - 1)
+        }
+        throw err
+      }
+    }
+
+    try {
+      const data = await callAI([...messages, userMsg])
       
       if (data.choices?.[0]?.message) {
         setMessages(prev => [...prev, data.choices[0].message])
@@ -66,8 +82,11 @@ export default function AIAssistant() {
       }
     } catch (err) {
       console.error('AI Assistant Error:', err)
-      toast.error('AI is a bit tired right now. Try again soon!')
-      setMessages(prev => [...prev, { role: 'assistant', content: "My bad, something went wrong on my end. Say that again? 😅" }])
+      toast.error('AI is taking a quick break. Try again in a moment!')
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: "AI is temporarily unavailable, try again in a moment. I'm probably just grabbing some campus coffee! ☕😅" 
+      }])
     } finally {
       setLoading(false)
     }
