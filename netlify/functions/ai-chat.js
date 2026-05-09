@@ -1,14 +1,10 @@
-import { Handler } from "@netlify/functions";
-
 const SYSTEM_PROMPT = `You are "TurnUp AI", a cool, Gen Z campus assistant for students in Kenya, specifically focusing on the Thika Road campus circuit (KU, JKUAT, MKU, Zetech, KCA, etc.). 
 Your vibe is helpful, energetic, and savvy about Kenyan campus life. Use some local slang like "form", "mbogi", "vibe", "plot" where appropriate but stay professional enough to help with academic or administrative questions.
 You help students find squads, events, study tips, and navigate campus life.
 If asked about "TurnUp", you are the official AI assistant of the TurnUp Campus V3 app.
 Keep responses concise and punchy. Be funny sometimes.`;
 
-export const handler: Handler = async (event) => {
-  // Add CORS headers for local development if needed, 
-  // though Netlify handles this in production.
+exports.handler = async (event) => {
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
@@ -50,7 +46,6 @@ export const handler: Handler = async (event) => {
 
     if (!response.ok) {
       const errBody = await response.text();
-      console.error("NVIDIA API Error:", errBody);
       return {
         statusCode: response.status,
         headers,
@@ -67,8 +62,7 @@ export const handler: Handler = async (event) => {
       },
       body: JSON.stringify(data),
     };
-  } catch (error: any) {
-    console.error("Function Error:", error);
+  } catch (error) {
     return {
       statusCode: 500,
       headers,
