@@ -49,20 +49,13 @@ export default function AIAssistant() {
 
     const callAI = async (currentMessages: Message[], retryCount = 1): Promise<any> => {
       try {
-        const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+        const response = await fetch('/api/ai-chat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_NVIDIA_API_KEY}`
           },
           body: JSON.stringify({
-            model: "meta/llama3-70b-instruct",
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT },
-              ...currentMessages
-            ],
-            temperature: 0.7,
-            max_tokens: 512,
+            messages: currentMessages
           })
         })
 
