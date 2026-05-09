@@ -463,7 +463,7 @@ export default function Profile() {
         </div>
 
         <div className="text-center mt-12 pb-8">
-          <p className="text-gray-700 text-[10px] font-black uppercase tracking-[0.3em]">TurnUp v2.0</p>
+          <p className="text-gray-700 text-[10px] font-black uppercase tracking-[0.3em]">TurnUp v3.0.0</p>
           <p className="text-gray-800 text-[9px] mt-1.5 font-bold uppercase tracking-widest opacity-50">Kenyatta University · Thika Road</p>
         </div>
       </div>

@@ -43,11 +43,23 @@ export default function App() {
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
+    // Safety timeout to prevent getting stuck on "Loading vibes..."
+    const safetyTimer = setTimeout(() => {
+      setReady(true)
+      console.warn('App: Loading safety timeout triggered')
+    }, 6000)
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user)
-        fetchProfile(session.user.id).finally(() => setReady(true))
+        fetchProfile(session.user.id)
+          .catch(err => console.error('App: Profile fetch error', err))
+          .finally(() => {
+            clearTimeout(safetyTimer)
+            setReady(true)
+          })
       } else {
+        clearTimeout(safetyTimer)
         setReady(true)
       }
     })
@@ -83,10 +95,12 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#080810] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-xl grad-bg flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <span className="text-white font-syne font-bold text-xl">T</span>
+          <div className="w-16 h-16 rounded-[24px] grad-bg flex items-center justify-center mx-auto mb-6 animate-pulse shadow-[0_0_30px_rgba(139,92,246,0.3)] relative">
+            <span className="text-white font-syne font-black text-3xl">T</span>
+            <div className="absolute -top-2 -right-2 bg-white text-black text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-[#080810]">V3</div>
           </div>
-          <p className="text-gray-500 text-sm">Loading vibes...</p>
+          <h2 className="text-white font-syne font-black text-xl mb-1 tracking-tight">TURNUP</h2>
+          <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.3em]">Loading Vibes...</p>
         </div>
       </div>
     )

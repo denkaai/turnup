@@ -34,7 +34,10 @@ export default function Navigation() {
             <div className="w-8 h-8 rounded-lg grad-bg flex items-center justify-center">
               <Flame className="w-4 h-4 text-white" />
             </div>
-            <span className="font-syne font-black text-lg grad-text tracking-tighter">TURNUP</span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-syne font-black text-lg grad-text tracking-tighter">TURNUP</span>
+              <span className="bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter">V3</span>
+            </div>
           </Link>
 
           {/* Desktop Nav Items - ONLY show if logged in and on desktop */}

@@ -225,7 +225,7 @@ export default function Landing() {
         <p className="text-[12px] text-gray-700 mt-2 font-medium tracking-wide">
           Developed & Designed by <span className="text-[#c026d3] font-bold">DEV.Den.kaai</span>&lt;/&gt;
         </p>
-        <div className="flex gap-6 justify-center mt-10">
+        <div className="flex gap-4 sm:gap-6 justify-center mt-10">
           {[
             { label: 'Privacy', path: '/privacy' },
             { label: 'Terms', path: '/terms' },
