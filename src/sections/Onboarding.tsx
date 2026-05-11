@@ -105,6 +105,34 @@ export default function Onboarding() {
     }
   }, [profile])
 
+  // BUG 3: Fetch real values directly from Supabase on mount
+  useEffect(() => {
+    const loadRealValues = async () => {
+      if (!user) return
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('name, campus, course, year, vibe')
+          .eq('id', user.id)
+          .single()
+        
+        if (data && !error) {
+          setForm(f => ({
+            ...f,
+            name: data.name || f.name,
+            campus: data.campus || f.campus,
+            course: data.course || f.course,
+            year: data.year?.toString() || f.year,
+            vibe: data.vibe || f.vibe
+          }))
+        }
+      } catch (err) {
+        console.error('Error loading real profile values:', err)
+      }
+    }
+    loadRealValues()
+  }, [user])
+
   const update = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
 
   // Section C: AI Validation (Simulated client-side)
@@ -217,12 +245,17 @@ export default function Onboarding() {
           const { error: updateError } = await supabase.from('profiles').update({ 
             id_verification_status: 'approved',
             identity_verified: true,
+            onboarding_completed: true,
             id_image_url: publicUrl,
             vibe: lostIdExpanded ? 'Alternative document uploaded' : undefined
           }).eq('id', user.id)
 
           if (updateError) handleSupabaseError(updateError)
-          else toast.success("Identity Verified Instantly! ✅")
+          else {
+            toast.success("Identity Verified Instantly! ✅")
+            await fetchProfile(user.id)
+            navigate('/discover')
+          }
         } catch (err) {
           console.error('Supabase save failed:', err)
           localStorage.setItem(`turnup_id_${side}_approved`, 'true')
@@ -340,12 +373,17 @@ export default function Onboarding() {
             const { error: updateError } = await supabase.from('profiles').update({ 
               id_verification_status: 'approved',
               identity_verified: true,
+              onboarding_completed: true,
               id_image_url: publicUrl,
               vibe: lostIdExpanded ? 'Alternative document uploaded' : undefined
             }).eq('id', user.id)
 
             if (updateError) handleSupabaseError(updateError)
-            else toast.success("Identity Verified! 🔥")
+            else {
+              toast.success("Identity Verified! 🔥")
+              await fetchProfile(user.id)
+              navigate('/discover')
+            }
           } catch (err) {
             console.error('Supabase save failed:', err)
           }
@@ -420,16 +458,14 @@ export default function Onboarding() {
 
   const handleFinish = async () => {
     if (!user) return
-    setLoading(true)
+    
+    // BUG 1: Remove spinner immediately and navigate non-blocking
+    setLoading(false)
+    navigate('/discover')
 
-    // BUG 4 Safety Fallback: If save takes longer than 5 seconds, navigate anyway
+    // BUG 4 Safety Fallback (from previous fix) - still useful but now in background
     const safetyTimeout = setTimeout(() => {
-      console.error('Onboarding save timed out - forcing navigation for safety')
-      toast.error("Save taking longer than expected. Taking you to discover anyway! 🚀", {
-        id: 'save-timeout'
-      })
-      setLoading(false)
-      navigate('/discover')
+      console.warn('Onboarding background save timed out')
     }, 5000)
 
     try {
@@ -448,7 +484,6 @@ export default function Onboarding() {
         weekend_plan: form.weekend_plan,
         relationship_goal: form.relationship_goal,
         whatsapp_number: form.whatsapp_number,
-        // phone_number removed as it causes DB errors (not in profiles table)
         photos: [form.photo_url],
         verified: true,
         identity_verified: true,
@@ -459,22 +494,16 @@ export default function Onboarding() {
         premium_until: null,
       }
       
-      const success = await safeProfileUpsert(profileData)
-      clearTimeout(safetyTimeout)
-
-      if (success) {
-        await fetchProfile(user.id)
-        toast.success('Profile created! Welcome to TurnUp 🎉')
-        setLoading(false)
-        navigate('/discover')
-      } else {
-        // If safeProfileUpsert failed but didn't throw, we still want to stop loading
-        setLoading(false)
-      }
+      // Perform save in background
+      safeProfileUpsert(profileData).then((success) => {
+        clearTimeout(safetyTimeout)
+        if (success) {
+          fetchProfile(user.id)
+        }
+      })
     } catch (err: any) {
       clearTimeout(safetyTimeout)
-      handleSupabaseError(err)
-      setLoading(false)
+      console.error('Onboarding background save error:', err)
     }
   }
 
@@ -962,11 +991,17 @@ export default function Onboarding() {
           <div className="flex flex-col gap-3 mt-8">
             {step < 9 ? (
               <button
-                onClick={() => setStep(s => s + 1)}
+                onClick={() => {
+                  if (step === 5 && idVerified) {
+                    navigate('/discover')
+                  } else {
+                    setStep(s => s + 1)
+                  }
+                }}
                 disabled={!canNext()}
                 className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] text-white text-sm font-black uppercase tracking-[0.2em] disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all active:scale-[0.96] flex items-center justify-center gap-2"
               >
-                Continue <ChevronRight className="w-4 h-4" />
+                {step === 5 && idVerified ? 'Continue to Discover 🔥' : 'Continue'} <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
               <button
