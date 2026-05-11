@@ -421,15 +421,26 @@ export default function Onboarding() {
   const handleFinish = async () => {
     if (!user) return
     setLoading(true)
+
+    // BUG 4 Safety Fallback: If save takes longer than 5 seconds, navigate anyway
+    const safetyTimeout = setTimeout(() => {
+      console.error('Onboarding save timed out - forcing navigation for safety')
+      toast.error("Save taking longer than expected. Taking you to discover anyway! 🚀", {
+        id: 'save-timeout'
+      })
+      setLoading(false)
+      navigate('/discover')
+    }, 5000)
+
     try {
       const profileData = {
         id: user.id,
         name: form.name,
-        age: parseInt(form.age),
+        age: parseInt(form.age) || 18,
         gender: form.gender,
         campus: form.campus,
         course: form.course,
-        year: parseInt(form.year),
+        year: parseInt(form.year) || 1,
         bio: form.bio,
         looking_for: form.looking_for,
         interests: form.interests,
@@ -437,7 +448,7 @@ export default function Onboarding() {
         weekend_plan: form.weekend_plan,
         relationship_goal: form.relationship_goal,
         whatsapp_number: form.whatsapp_number,
-        phone_number: user.phone || '', // Safely handle phone number
+        // phone_number removed as it causes DB errors (not in profiles table)
         photos: [form.photo_url],
         verified: true,
         identity_verified: true,
@@ -449,14 +460,20 @@ export default function Onboarding() {
       }
       
       const success = await safeProfileUpsert(profileData)
+      clearTimeout(safetyTimeout)
+
       if (success) {
         await fetchProfile(user.id)
         toast.success('Profile created! Welcome to TurnUp 🎉')
-        window.location.href = '/discover'
+        setLoading(false)
+        navigate('/discover')
+      } else {
+        // If safeProfileUpsert failed but didn't throw, we still want to stop loading
+        setLoading(false)
       }
     } catch (err: any) {
+      clearTimeout(safetyTimeout)
       handleSupabaseError(err)
-    } finally {
       setLoading(false)
     }
   }
@@ -916,15 +933,17 @@ export default function Onboarding() {
               <div className="w-24 h-24 rounded-full grad-bg flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-purple-500/30">
                 <CheckCircle className="w-12 h-12 text-white" />
               </div>
-              <h3 className="text-white font-syne font-black text-2xl mb-2 leading-tight">You're ready, {form.name}!</h3>
+              <h3 className="text-white font-syne font-black text-2xl mb-2 leading-tight">
+                You're ready, {form.name || profile?.name || user?.user_metadata?.full_name || 'Student'}!
+              </h3>
               <p className="text-gray-400 text-sm mb-8 leading-relaxed font-medium px-4">
                 Your profile is set up. Start discovering students across Thika Road campuses and plan your next weekend!
               </p>
               <div className="space-y-2.5 text-left">
                 {[
-                  { label: 'Campus', val: form.campus, icon: MapPin },
-                  { label: 'Study', val: `${form.course}, Year ${form.year}`, icon: BookOpen },
-                  { label: 'Vibe', val: form.vibe, icon: Flame },
+                  { label: 'Campus', val: form.campus || profile?.campus || 'Your Campus', icon: MapPin },
+                  { label: 'Study', val: `${form.course || profile?.course || 'Your Course'}, Year ${form.year || profile?.year || '1'}`, icon: BookOpen },
+                  { label: 'Vibe', val: form.vibe || profile?.vibe || 'Ready to TurnUp', icon: Flame },
                 ].map((t, idx) => (
                   <div key={idx} className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/5 border border-white/5">
                     <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
