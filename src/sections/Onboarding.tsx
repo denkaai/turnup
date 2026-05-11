@@ -138,17 +138,28 @@ export default function Onboarding() {
   // Section C: AI Validation (Simulated client-side)
   const validateID = (file: File): Promise<string | null> => {
     return new Promise((resolve) => {
-      // 1. Correct format
-      const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic']
-      const isHeicExt = file.name.toLowerCase().endsWith('.heic')
-      if (!validTypes.includes(file.type) && !isHeicExt) {
-        resolve("Incorrect format. Please upload JPG, PNG, WEBP, or HEIC.")
+      // BUG 3: Strict type validation
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp']
+      if (!validTypes.includes(file.type)) {
+        const err = "Please upload a clear photo of your student ID (JPG, PNG, or WEBP only)"
+        toast.error(err)
+        resolve(err)
         return
       }
 
-      // 2. File size
-      if (file.size > 10 * 1024 * 1024) { resolve("File too large (Max 10MB)."); return; }
-      if (file.size < 50 * 1024) { resolve("Image too small or blurry. Please take a clearer photo."); return; }
+      // BUG 3: Strict size validation (50KB to 10MB)
+      if (file.size > 10 * 1024 * 1024) { 
+        const err = "File too large (Max 10MB). Please upload a smaller photo."
+        toast.error(err)
+        resolve(err)
+        return 
+      }
+      if (file.size < 50 * 1024) { 
+        const err = "Please upload a clear photo of your student ID (too small or blurry)"
+        toast.error(err)
+        resolve(err)
+        return 
+      }
 
       // 3. Image Dimensions & Aspect Ratio
       const img = new Image()
@@ -245,7 +256,6 @@ export default function Onboarding() {
           const { error: updateError } = await supabase.from('profiles').update({ 
             id_verification_status: 'approved',
             identity_verified: true,
-            onboarding_completed: true,
             id_image_url: publicUrl,
             vibe: lostIdExpanded ? 'Alternative document uploaded' : undefined
           }).eq('id', user.id)
@@ -254,7 +264,7 @@ export default function Onboarding() {
           else {
             toast.success("Identity Verified Instantly! ✅")
             await fetchProfile(user.id)
-            navigate('/discover')
+            setStep(s => s + 1)
           }
         } catch (err) {
           console.error('Supabase save failed:', err)
@@ -266,6 +276,14 @@ export default function Onboarding() {
 
   const startScanning = async (side: 'front' | 'back') => {
     if (failedAttempts >= 3) return
+    
+    // BUG 2: Check for mediaDevices support
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setIsCameraBlocked(true)
+      toast.error("Camera access unavailable. Use Upload from Gallery instead.")
+      return
+    }
+
     setScanningSide(side)
     setIsScanning(true)
     setIsAutoCapturing(false)
@@ -373,7 +391,6 @@ export default function Onboarding() {
             const { error: updateError } = await supabase.from('profiles').update({ 
               id_verification_status: 'approved',
               identity_verified: true,
-              onboarding_completed: true,
               id_image_url: publicUrl,
               vibe: lostIdExpanded ? 'Alternative document uploaded' : undefined
             }).eq('id', user.id)
@@ -382,7 +399,7 @@ export default function Onboarding() {
             else {
               toast.success("Identity Verified! 🔥")
               await fetchProfile(user.id)
-              navigate('/discover')
+              setStep(s => s + 1)
             }
           } catch (err) {
             console.error('Supabase save failed:', err)
@@ -991,17 +1008,11 @@ export default function Onboarding() {
           <div className="flex flex-col gap-3 mt-8">
             {step < 9 ? (
               <button
-                onClick={() => {
-                  if (step === 5 && idVerified) {
-                    navigate('/discover')
-                  } else {
-                    setStep(s => s + 1)
-                  }
-                }}
+                onClick={() => setStep(s => s + 1)}
                 disabled={!canNext()}
                 className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#8B5CF6] to-[#EC4899] text-white text-sm font-black uppercase tracking-[0.2em] disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all active:scale-[0.96] flex items-center justify-center gap-2"
               >
-                {step === 5 && idVerified ? 'Continue to Discover 🔥' : 'Continue'} <ChevronRight className="w-4 h-4" />
+                Continue <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
               <button
