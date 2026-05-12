@@ -138,126 +138,77 @@ export default function Onboarding() {
   // Section C: AI Validation (Simulated client-side)
   const validateID = (file: File): Promise<string | null> => {
     return new Promise((resolve) => {
-      // BUG 3: Strict type validation
       const validTypes = ['image/jpeg', 'image/png', 'image/webp']
       if (!validTypes.includes(file.type)) {
-        const err = "Please upload a clear photo of your student ID (JPG, PNG, or WEBP only)"
-        toast.error(err)
-        resolve(err)
+        resolve("Please upload a clear photo of your student ID (JPG, PNG, or WEBP only)")
         return
       }
 
-      // BUG 3: Strict size validation (50KB to 10MB)
-      if (file.size > 10 * 1024 * 1024) { 
-        const err = "File too large (Max 10MB). Please upload a smaller photo."
-        toast.error(err)
-        resolve(err)
+      // 50KB to 15MB
+      if (file.size > 15 * 1024 * 1024) { 
+        resolve("File too large (Max 15MB). Please upload a smaller photo.")
         return 
       }
       if (file.size < 50 * 1024) { 
-        const err = "Please upload a clear photo of your student ID (too small or blurry)"
-        toast.error(err)
-        resolve(err)
+        resolve("Please upload a clear photo of your student ID (too small or blurry)")
         return 
       }
 
-      // 3. Image Dimensions & Aspect Ratio
-      const img = new Image()
-      img.src = URL.createObjectURL(file)
-      img.onload = () => {
-        const { width, height } = img
-        if (width < 300 || height < 200) {
-          resolve("Image dimensions too small. Please use a higher quality photo.")
-          return
-        }
-
-        const ratio = width / height
-        // BUG 4: Relaxed ID validation. Only reject if completely square (likely a logo)
-        if (ratio > 0.95 && ratio < 1.05) {
-          resolve("This doesn't look like an ID card. Please capture the card horizontally.")
-          return
-        }
-
-        resolve(null)
-      }
-      img.onerror = () => resolve("Failed to read image file.")
+      resolve(null)
     })
   }
 
   const handleIDSelect = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = e.target.files?.[0]
-    if (!file) return
-
-    if (failedAttempts >= 3) {
-      setIdError("Too many failed attempts. Please contact support.")
-      return
-    }
+    if (!file || !user) return
 
     setIdError(null)
     const error = await validateID(file)
     if (error) {
       setIdError(error)
-      setFailedAttempts(prev => prev + 1)
+      toast.error(error)
       return
     }
 
-    const preview = URL.createObjectURL(file)
-    
-    // Start Verification Simulation
     setIsVerifying(true)
     setVerificationProgress(0)
-    
-    const interval = setInterval(() => {
-      setVerificationProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          return 100
-        }
-        return prev + 5
-      })
-    }, 100)
 
-    setTimeout(async () => {
-      if (user) {
-        try {
-          const fileExt = file.name.split('.').pop()
-          const filePath = `id-verifications/${user.id}/${side}-${Math.random()}.${fileExt}`
-          
-          const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(filePath, file)
+    try {
+      const fileExt = 'jpg'
+      const filePath = `${user.id}/student-id-${Date.now()}.${fileExt}`
+      
+      const { error: uploadError } = await supabase.storage
+        .from('student-ids')
+        .upload(filePath, file)
 
-          if (uploadError) throw uploadError
+      if (uploadError) throw uploadError
 
-          const { data: { publicUrl } } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(filePath)
+      const { data: { publicUrl } } = supabase.storage
+        .from('student-ids')
+        .getPublicUrl(filePath)
 
-          const { error: updateError } = await supabase.from('profiles').update({ 
-            id_verification_status: 'approved',
-            identity_verified: true,
-            id_image_url: publicUrl,
-            onboarding_completed: true
-          }).eq('id', user.id)
+      const { error: updateError } = await supabase.from('profiles').update({ 
+        identity_verified: true,
+        id_verified: true,
+        student_id_url: publicUrl,
+        id_verification_status: 'approved',
+        onboarding_completed: true
+      } as any).eq('id', user.id)
 
-          if (updateError) throw updateError
-          
-          setIdUploadedSuccessfully(true)
-          setIdVerified(true)
-          setIsVerifying(false)
-          setIdFrontFile(file)
-          setIdFrontPreview(preview)
-          
-          toast.success("ID Verified! Welcome to TurnUp Campus 🔥")
-          await fetchProfile(user.id)
-          setStep(s => s + 1)
-        } catch (err) {
-          console.error('Supabase save failed:', err)
-          toast.error("Upload failed. Please try again.")
-          setIsVerifying(false)
-        }
-      }
-    }, 1500)
+      if (updateError) throw updateError
+      
+      setIdUploadedSuccessfully(true)
+      setIsVerifying(false)
+      
+      setTimeout(async () => {
+        await fetchProfile(user.id)
+        setStep(s => s + 1)
+      }, 1500)
+    } catch (err) {
+      console.error('Upload failed:', err)
+      toast.error("Upload failed. Please try again.")
+      setIsVerifying(false)
+    }
   }
 
   const startScanning = async (side: 'front' | 'back') => {
@@ -311,7 +262,7 @@ export default function Onboarding() {
   }, [])
 
   const captureFrame = () => {
-    if (!videoRef.current || !canvasRef.current) return
+    if (!videoRef.current || !canvasRef.current || !user) return
     const context = canvasRef.current.getContext('2d')
     if (!context) return
 
@@ -325,82 +276,49 @@ export default function Onboarding() {
       
       const error = await validateID(file)
       if (error) {
-        setIdError(error)
-        setFailedAttempts(prev => prev + 1)
+        toast.error(error)
         stopScanning()
         return
       }
 
-      setIdError(null)
-      const preview = URL.createObjectURL(file)
-      
-      // Start Verification Simulation
       setIsVerifying(true)
-      setVerificationProgress(0)
-      
-      const interval = setInterval(() => {
-        setVerificationProgress(prev => {
-          if (prev >= 100) { clearInterval(interval); return 100; }
-          return prev + 10
-        })
-      }, 150)
-
-      const uploadTimeout = setTimeout(() => {
-        setIsVerifying(false)
-        stopScanning()
-        toast.error("Upload timed out. Please try gallery instead.")
-      }, 15000)
-
-      setTimeout(async () => {
-        if (user) {
-          try {
-            const fileExt = file.name.split('.').pop()
-            const filePath = `id-verifications/${user.id}/${scanningSide}-${Math.random()}.${fileExt}`
-            
-            const { error: uploadError } = await supabase.storage
-              .from('avatars')
-              .upload(filePath, file)
-
-            if (uploadError) throw uploadError
-
-            const { data: { publicUrl } } = supabase.storage
-              .from('avatars')
-              .getPublicUrl(filePath)
-
-            const { error: updateError } = await supabase.from('profiles').update({ 
-              id_verification_status: 'approved',
-              identity_verified: true,
-              id_image_url: publicUrl,
-              onboarding_completed: true
-            }).eq('id', user.id)
-
-            if (updateError) throw updateError
-
-            clearTimeout(uploadTimeout)
-            setIdUploadedSuccessfully(true)
-            setIdVerified(true)
-            setIsVerifying(false)
-
-            if (scanningSide === 'front') {
-              setIdFrontFile(file)
-              setIdFrontPreview(preview)
-            } else {
-              setIdBackFile(file)
-              setIdBackPreview(preview)
-            }
-
-            toast.success("ID Verified! Welcome to TurnUp Campus 🔥")
-            await fetchProfile(user.id)
-            setStep(s => s + 1)
-          } catch (err) {
-            clearTimeout(uploadTimeout)
-            console.error('Supabase save failed:', err)
-            toast.error("Scan failed. Please try gallery upload.")
-            setIsVerifying(false)
-          }
-        }
-      }, 1500)
       stopScanning()
+
+      try {
+        const filePath = `${user.id}/student-id-${Date.now()}.jpg`
+        
+        const { error: uploadError } = await supabase.storage
+          .from('student-ids')
+          .upload(filePath, file)
+
+        if (uploadError) throw uploadError
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('student-ids')
+          .getPublicUrl(filePath)
+
+        const { error: updateError } = await supabase.from('profiles').update({ 
+          identity_verified: true,
+          id_verified: true,
+          student_id_url: publicUrl,
+          id_verification_status: 'approved',
+          onboarding_completed: true
+        } as any).eq('id', user.id)
+
+        if (updateError) throw updateError
+
+        setIdUploadedSuccessfully(true)
+        setIsVerifying(false)
+
+        setTimeout(async () => {
+          await fetchProfile(user.id)
+          setStep(s => s + 1)
+        }, 1500)
+      } catch (err) {
+        console.error('Upload failed:', err)
+        toast.error("Upload failed. Please try again.")
+        setIsVerifying(false)
+      }
     }, 'image/jpeg')
   }
 
@@ -752,122 +670,66 @@ export default function Onboarding() {
                     </div>
                   </div>
 
-                  {/* Upload Options (Section A) - Bug 1 Primary/Secondary */}
-                  <div className="space-y-4">
-                    {/* Front of ID */}
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Front of ID card</p>
-                      
-                      {isCameraBlocked && (
-                        <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 flex gap-2 animate-fade-in mb-2">
-                          <Camera className="w-4 h-4 text-orange-400 flex-shrink-0" />
-                          <p className="text-[10px] text-orange-200/80 font-bold">📷 Camera blocked? No stress — upload your ID photo from your gallery instead.</p>
-                        </div>
-                      )}
-
-                      <div className="flex flex-col gap-3">
-                        {/* Primary Option: Gallery */}
-                        <label className={`flex items-center justify-center gap-3 p-5 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${idFrontPreview ? 'border-green-500/30 bg-green-500/5' : 'border-purple-500/30 bg-purple-500/5 hover:border-purple-500 hover:bg-purple-500/10 shadow-lg shadow-purple-500/10'}`}>
-                          <Upload className={`w-6 h-6 ${idFrontPreview ? 'text-green-400' : 'text-purple-400'}`} />
-                          <div className="text-left">
-                            <span className="block text-xs font-black uppercase tracking-widest text-white">Upload from Gallery</span>
-                            <span className="block text-[9px] text-gray-500 font-bold uppercase">Fastest way to verify ⚡</span>
-                          </div>
-                          <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.webp,.heic" onChange={(e) => handleIDSelect(e, 'front')} />
-                        </label>
-
-                        {/* Secondary Option: Camera */}
-                        <button 
-                          onClick={() => startScanning('front')}
-                          className={`flex items-center justify-center gap-3 p-4 rounded-2xl border-2 border-dashed transition-all ${idFrontPreview ? 'border-green-500/30 bg-green-500/5' : 'border-white/10 bg-white/5 hover:bg-white/8'}`}
-                        >
-                          <Camera className={`w-5 h-5 ${idFrontPreview ? 'text-green-400' : 'text-gray-400'}`} />
-                          <div className="text-left">
-                            <span className="block text-[10px] font-black uppercase tracking-tight text-gray-400">Scan with Camera</span>
-                            <span className="block text-[8px] text-gray-600 font-bold">Open in Chrome for best experience</span>
-                          </div>
-                        </button>
+                  {/* Success UI */}
+                  {idUploadedSuccessfully ? (
+                    <div className="text-center py-8 animate-fade-in">
+                      <div className="w-20 h-20 rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center mx-auto mb-4 animate-pulse">
+                        <CheckCircle className="text-green-400" size={40} />
                       </div>
-                      
-                      {idFrontPreview && (
-                        <div className="relative rounded-xl overflow-hidden aspect-[1.586/1] border border-white/10 animate-fade-in group mt-3">
-                          <img src={idFrontPreview} className="w-full h-full object-cover" alt="ID Front" />
-                          <div className="absolute top-2 right-2 bg-green-500 text-white text-[9px] font-black px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg">
-                            <CheckCircle className="w-3 h-3" /> Looks good! ✓
-                          </div>
-                          <button 
-                            onClick={() => { 
-                              setIdFrontPreview(null); 
-                              setIdFrontFile(null); 
-                              setIdVerified(null); 
-                              setIdUploadedSuccessfully(false); 
-                              setIdError(null);
-                            }}
-                            className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md text-white text-[10px] font-black px-4 py-2 rounded-full border border-white/20 shadow-xl opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 hover:bg-purple-600 active:scale-95"
-                          >
-                            <Camera className="w-3 h-3" /> Re-upload front of ID
-                          </button>
-                        </div>
-                      )}
+                      <h3 className="text-white font-bold text-xl mb-2">
+                        ID Uploaded! ✅
+                      </h3>
+                      <p className="text-gray-400 text-sm">
+                        Redirecting you in...
+                      </p>
                     </div>
-
-                    {/* Back of ID (Section B) */}
-                    {idFrontPreview && (
-                      <div className="space-y-2 animate-fade-in">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Back of ID card (Optional ⚡)</p>
-                        <div className="flex flex-col gap-2">
-                           <label className={`flex items-center justify-center gap-3 p-4 rounded-xl border border-dashed cursor-pointer transition-all ${idBackPreview ? 'border-green-500/30 bg-green-500/5' : 'border-white/10 bg-white/5 hover:bg-white/8'}`}>
-                            <Upload className={`w-5 h-5 ${idBackPreview ? 'text-green-400' : 'text-gray-400'}`} />
-                            <span className="text-[10px] font-black uppercase tracking-tight text-gray-400">Upload Gallery</span>
-                            <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.webp,.heic" onChange={(e) => handleIDSelect(e, 'back')} />
-                          </label>
-                        </div>
-                        {idBackPreview && (
-                          <div className="relative rounded-xl overflow-hidden aspect-[1.586/1] border border-white/10 animate-fade-in group">
-                            <img src={idBackPreview} className="w-full h-full object-cover" alt="ID Back" />
-                            <button onClick={() => { setIdBackPreview(null); setIdBackFile(null); }} className="absolute bottom-2 right-2 bg-black/60 text-white text-[9px] font-black px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all">Remove</button>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Front of ID */}
+                      <div className="space-y-2">
+                        {isCameraBlocked && (
+                          <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 flex gap-2 animate-fade-in mb-2">
+                            <Camera className="w-4 h-4 text-orange-400 flex-shrink-0" />
+                            <p className="text-[10px] text-orange-200/80 font-bold">📷 Camera blocked? Upload from gallery instead.</p>
                           </div>
                         )}
-                      </div>
-                    )}
-                  </div>
 
-                  {/* ID Error (Section C/E) */}
-                  {idError && (
-                    <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex gap-3 animate-bounce">
-                      <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-                      <p className="text-xs text-red-200/80 leading-relaxed font-bold">❌ {idError}</p>
-                    </div>
-                  )}
+                        <div className="flex flex-col gap-3">
+                          {/* Gallery Upload */}
+                          <label className={`flex items-center justify-center gap-3 p-5 rounded-2xl border-2 border-dashed cursor-pointer transition-all border-purple-500/30 bg-purple-500/5 hover:border-purple-500 hover:bg-purple-500/10 shadow-lg shadow-purple-500/10`}>
+                            <Upload className="text-purple-400 w-6 h-6" />
+                            <div className="text-left">
+                              <span className="block text-xs font-black uppercase tracking-widest text-white">Upload from Gallery</span>
+                              <span className="block text-[9px] text-gray-500 font-bold uppercase">Fastest way to verify ⚡</span>
+                            </div>
+                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleIDSelect(e, 'front')} />
+                          </label>
 
-                  {/* Verification Status (Section G) - INSTANT VERIFICATION UI */}
-                  {isVerifying && (
-                    <div className="p-5 rounded-2xl bg-purple-500/10 border border-purple-500/20 space-y-3 animate-fade-in">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs text-purple-200 font-black uppercase tracking-widest flex items-center gap-2">
-                          <Loader2 className="w-4 h-4 animate-spin" /> Scanning your ID...
-                        </p>
-                        <p className="text-xs text-purple-400 font-black">{verificationProgress}%</p>
+                          {/* Camera Button */}
+                          <button 
+                            onClick={() => startScanning('front')}
+                            className="flex items-center justify-center gap-3 p-4 rounded-2xl border-2 border-dashed border-white/10 bg-white/5 hover:bg-white/8 transition-all"
+                          >
+                            <Camera className="text-gray-400 w-5 h-5" />
+                            <div className="text-left">
+                              <span className="block text-[10px] font-black uppercase tracking-tight text-gray-400">Scan with Camera</span>
+                              <span className="block text-[8px] text-gray-600 font-bold">Open in Chrome for best experience</span>
+                            </div>
+                          </button>
+                        </div>
                       </div>
-                      <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <div className="h-full grad-bg transition-all duration-300" style={{ width: `${verificationProgress}%` }} />
-                      </div>
-                    </div>
-                  )}
 
-                  {idUploadedSuccessfully && !idError && !isVerifying && (
-                    <div className="p-6 rounded-[2rem] bg-green-500/10 border-2 border-green-500/20 space-y-4 animate-fade-in text-center shadow-2xl shadow-green-500/10 relative overflow-hidden">
-                      <div className="absolute -top-12 -right-12 w-24 h-24 bg-green-500/20 blur-3xl rounded-full" />
-                      <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mx-auto shadow-lg shadow-green-500/40">
-                        <CheckCircle className="w-8 h-8 text-white animate-bounce" />
-                      </div>
-                      <div className="space-y-1">
-                        <h3 className="text-xl text-white font-black uppercase tracking-tight">✅ Verified! Welcome!</h3>
-                        <p className="text-xs text-green-200/70 font-medium">
-                          Identity confirmed instantly. <br/>
-                          <span className="text-white">Tap Continue to finish your profile. 🔥</span>
-                        </p>
-                      </div>
+                      {/* Uploading Progress */}
+                      {isVerifying && (
+                        <div className="p-5 rounded-2xl bg-purple-500/10 border border-purple-500/20 space-y-3 animate-fade-in">
+                          <div className="flex items-center gap-2 text-xs text-purple-200 font-black uppercase tracking-widest">
+                            <Loader2 className="w-4 h-4 animate-spin" /> Uploading ID...
+                          </div>
+                          <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div className="h-full grad-bg animate-pulse w-full" />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1056,9 +918,9 @@ export default function Onboarding() {
               <div className="absolute bottom-0 right-0 w-12 h-12 border-b-8 border-r-8 border-purple-500 rounded-br-xl" />
             </div>
 
-            {/* AI Scanning Progress Bar */}
+            {/* Camera Progress Bar (Simplified) */}
             <div className="absolute bottom-0 left-0 right-0 h-2 bg-white/10">
-              <div className={`h-full grad-bg transition-all duration-[3500ms] ease-linear ${isScanning ? 'w-full' : 'w-0'}`} />
+              <div className={`h-full grad-bg transition-all duration-[1000ms] ease-linear ${isScanning ? 'w-full' : 'w-0'}`} />
             </div>
 
             {/* Controls */}
