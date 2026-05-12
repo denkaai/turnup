@@ -26,6 +26,11 @@ export default function AuthPage() {
     if (password.length < 6) return toast.error('Password must be at least 6 characters')
 
     setLoading(true)
+    const timeout = setTimeout(() => {
+      setLoading(false)
+      toast.error('Sign in timed out. Please try again.')
+    }, 10000)
+
     try {
       if (mode === 'signup') {
         const { error } = await supabase.auth.signUp({ email, password })
@@ -41,6 +46,7 @@ export default function AuthPage() {
     } catch (err: any) {
       toast.error(err.message || 'Something went wrong')
     } finally {
+      clearTimeout(timeout)
       setLoading(false)
     }
   }

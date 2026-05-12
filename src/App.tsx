@@ -69,18 +69,25 @@ export default function App() {
         setUser(session.user)
         const prof = await fetchProfile(session.user.id)
         
-        // Handle Redirections after login (Step 4 Fix)
-        if (prof) {
-          const isVerified = prof.identity_verified && prof.id_verification_status === 'approved'
-          if (prof.onboarding_completed && isVerified) {
-             // Already fully verified
-          } else if (!prof.onboarding_completed) {
-            window.location.href = '/onboarding'
-          } else if (!isVerified) {
-            window.location.href = '/onboarding?step=5'
-          }
+        // BUG 2: Google Auth Redirect Logic
+        const path = window.location.pathname
+        const isAuthPage = path === '/auth' || path === '/'
+        const isOnboarding = path.includes('/onboarding')
+
+        if (!prof) {
+          if (!isOnboarding) window.location.href = '/onboarding'
         } else {
-          window.location.href = '/onboarding'
+          const isVerified = prof.identity_verified && prof.id_verification_status === 'approved'
+          
+          if (!prof.onboarding_completed) {
+            if (!isOnboarding) window.location.href = '/onboarding'
+          } else if (!isVerified) {
+            if (path !== '/onboarding' || !window.location.search.includes('step=5')) {
+              window.location.href = '/onboarding?step=5'
+            }
+          } else if (isAuthPage || isOnboarding) {
+            window.location.href = '/discover'
+          }
         }
       } else {
         setUser(null)

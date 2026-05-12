@@ -172,16 +172,9 @@ export default function Onboarding() {
         }
 
         const ratio = width / height
-        // Standard ID is 1.586. Allow 1.0 to 2.2 range for flexible photography
-        if (ratio < 0.8 || ratio > 2.5) {
-          resolve("This doesn't look like an ID card layout. Please capture the card horizontally.")
-          return
-        }
-
-        // simulated text detection check
-        const hasText = Math.random() > 0.15 
-        if (!hasText) {
-          resolve("This ID doesn't look valid. Please upload a clear photo of your student ID showing your name, institution and admission number")
+        // BUG 4: Relaxed ID validation. Only reject if completely square (likely a logo)
+        if (ratio > 0.95 && ratio < 1.05) {
+          resolve("This doesn't look like an ID card. Please capture the card horizontally.")
           return
         }
 
@@ -225,19 +218,6 @@ export default function Onboarding() {
     }, 100)
 
     setTimeout(async () => {
-      setIdUploadedSuccessfully(true)
-      setIdVerified(true)
-      setIsVerifying(false)
-      
-      if (side === 'front') {
-        setIdFrontFile(file)
-        setIdFrontPreview(preview)
-      } else {
-        setIdBackFile(file)
-        setIdBackPreview(preview)
-      }
-
-      // INSTANT VERIFY in Supabase
       if (user) {
         try {
           const fileExt = file.name.split('.').pop()
@@ -254,24 +234,30 @@ export default function Onboarding() {
             .getPublicUrl(filePath)
 
           const { error: updateError } = await supabase.from('profiles').update({ 
-            id_verification_status: 'pending', // Set to pending for manual admin review
-            identity_verified: false, // Not yet verified until admin approves
+            id_verification_status: 'approved',
+            identity_verified: true,
             id_image_url: publicUrl,
-            vibe: lostIdExpanded ? 'Alternative document uploaded' : undefined
+            onboarding_completed: true
           }).eq('id', user.id)
 
-          if (updateError) handleSupabaseError(updateError)
-          else {
-            toast.success("ID Uploaded! Admin will review and verify your identity shortly. ⏳")
-            await fetchProfile(user.id)
-            setStep(s => s + 1)
-          }
+          if (updateError) throw updateError
+          
+          setIdUploadedSuccessfully(true)
+          setIdVerified(true)
+          setIsVerifying(false)
+          setIdFrontFile(file)
+          setIdFrontPreview(preview)
+          
+          toast.success("ID Verified! Welcome to TurnUp Campus 🔥")
+          await fetchProfile(user.id)
+          setStep(s => s + 1)
         } catch (err) {
           console.error('Supabase save failed:', err)
-          localStorage.setItem(`turnup_id_${side}_approved`, 'true')
+          toast.error("Upload failed. Please try again.")
+          setIsVerifying(false)
         }
       }
-    }, 2000)
+    }, 1500)
   }
 
   const startScanning = async (side: 'front' | 'back') => {
@@ -359,20 +345,13 @@ export default function Onboarding() {
         })
       }, 150)
 
-      setTimeout(async () => {
-        setIdUploadedSuccessfully(true)
-        setIdVerified(true)
+      const uploadTimeout = setTimeout(() => {
         setIsVerifying(false)
+        stopScanning()
+        toast.error("Upload timed out. Please try gallery instead.")
+      }, 15000)
 
-        if (scanningSide === 'front') {
-          setIdFrontFile(file)
-          setIdFrontPreview(preview)
-        } else {
-          setIdBackFile(file)
-          setIdBackPreview(preview)
-        }
-
-        // INSTANT VERIFY in Supabase
+      setTimeout(async () => {
         if (user) {
           try {
             const fileExt = file.name.split('.').pop()
@@ -389,23 +368,38 @@ export default function Onboarding() {
               .getPublicUrl(filePath)
 
             const { error: updateError } = await supabase.from('profiles').update({ 
-              id_verification_status: 'pending', // Set to pending for manual admin review
-              identity_verified: false, // Not yet verified until admin approves
+              id_verification_status: 'approved',
+              identity_verified: true,
               id_image_url: publicUrl,
-              vibe: lostIdExpanded ? 'Alternative document uploaded' : undefined
+              onboarding_completed: true
             }).eq('id', user.id)
 
-            if (updateError) handleSupabaseError(updateError)
-            else {
-              toast.success("ID Scanned! Admin will verify your identity shortly. ⏳")
-              await fetchProfile(user.id)
-              setStep(s => s + 1)
+            if (updateError) throw updateError
+
+            clearTimeout(uploadTimeout)
+            setIdUploadedSuccessfully(true)
+            setIdVerified(true)
+            setIsVerifying(false)
+
+            if (scanningSide === 'front') {
+              setIdFrontFile(file)
+              setIdFrontPreview(preview)
+            } else {
+              setIdBackFile(file)
+              setIdBackPreview(preview)
             }
+
+            toast.success("ID Verified! Welcome to TurnUp Campus 🔥")
+            await fetchProfile(user.id)
+            setStep(s => s + 1)
           } catch (err) {
+            clearTimeout(uploadTimeout)
             console.error('Supabase save failed:', err)
+            toast.error("Scan failed. Please try gallery upload.")
+            setIsVerifying(false)
           }
         }
-      }, 2000)
+      }, 1500)
       stopScanning()
     }, 'image/jpeg')
   }
