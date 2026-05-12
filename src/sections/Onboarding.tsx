@@ -178,10 +178,10 @@ export default function Onboarding() {
           return
         }
 
-        // Random check to simulate a non-ID image (Landscape, screenshot, etc.)
-        const isRandomDoc = Math.random() < 0.05 
-        if (isRandomDoc) {
-          resolve("Our AI couldn't detect a student ID in this photo. Please try again with a clearer shot.")
+        // simulated text detection check
+        const hasText = Math.random() > 0.15 
+        if (!hasText) {
+          resolve("This ID doesn't look valid. Please upload a clear photo of your student ID showing your name, institution and admission number")
           return
         }
 
@@ -254,15 +254,15 @@ export default function Onboarding() {
             .getPublicUrl(filePath)
 
           const { error: updateError } = await supabase.from('profiles').update({ 
-            id_verification_status: 'approved',
-            identity_verified: true,
+            id_verification_status: 'pending', // Set to pending for manual admin review
+            identity_verified: false, // Not yet verified until admin approves
             id_image_url: publicUrl,
             vibe: lostIdExpanded ? 'Alternative document uploaded' : undefined
           }).eq('id', user.id)
 
           if (updateError) handleSupabaseError(updateError)
           else {
-            toast.success("Identity Verified Instantly! ✅")
+            toast.success("ID Uploaded! Admin will review and verify your identity shortly. ⏳")
             await fetchProfile(user.id)
             setStep(s => s + 1)
           }
@@ -389,15 +389,15 @@ export default function Onboarding() {
               .getPublicUrl(filePath)
 
             const { error: updateError } = await supabase.from('profiles').update({ 
-              id_verification_status: 'approved',
-              identity_verified: true,
+              id_verification_status: 'pending', // Set to pending for manual admin review
+              identity_verified: false, // Not yet verified until admin approves
               id_image_url: publicUrl,
               vibe: lostIdExpanded ? 'Alternative document uploaded' : undefined
             }).eq('id', user.id)
 
             if (updateError) handleSupabaseError(updateError)
             else {
-              toast.success("Identity Verified! 🔥")
+              toast.success("ID Scanned! Admin will verify your identity shortly. ⏳")
               await fetchProfile(user.id)
               setStep(s => s + 1)
             }
@@ -802,10 +802,16 @@ export default function Onboarding() {
                             <CheckCircle className="w-3 h-3" /> Looks good! ✓
                           </div>
                           <button 
-                            onClick={() => { setIdFrontPreview(null); setIdFrontFile(null); setIdVerified(null); setIdUploadedSuccessfully(false); }}
-                            className="absolute bottom-2 right-2 bg-black/60 text-white text-[9px] font-black px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                            onClick={() => { 
+                              setIdFrontPreview(null); 
+                              setIdFrontFile(null); 
+                              setIdVerified(null); 
+                              setIdUploadedSuccessfully(false); 
+                              setIdError(null);
+                            }}
+                            className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md text-white text-[10px] font-black px-4 py-2 rounded-full border border-white/20 shadow-xl opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 hover:bg-purple-600 active:scale-95"
                           >
-                            Try again
+                            <Camera className="w-3 h-3" /> Re-upload front of ID
                           </button>
                         </div>
                       )}
