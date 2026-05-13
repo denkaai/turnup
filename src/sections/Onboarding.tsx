@@ -174,13 +174,13 @@ export default function Onboarding() {
     setVerificationProgress(0)
 
     try {
-      const fileExt = 'jpg'
+      const fileExt = file.name.split('.').pop() || 'jpg'
       const filePath = `${user.id}/student-id-${Date.now()}.${fileExt}`
       
       // BUG 1: Add 30s timeout to storage upload
       const uploadPromise = supabase.storage
         .from('student-ids')
-        .upload(filePath, file)
+        .upload(filePath, file, { upsert: true })
 
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('TIMEOUT')), 30000)
@@ -194,11 +194,12 @@ export default function Onboarding() {
         .from('student-ids')
         .getPublicUrl(filePath)
 
+      // BUG Fix: Save as pending for manual admin review
       const { error: updateError } = await supabase.from('profiles').update({ 
         identity_verified: true,
         id_verified: true,
         student_id_url: publicUrl,
-        id_verification_status: 'approved',
+        id_verification_status: 'pending',
         onboarding_completed: true
       } as any).eq('id', user.id)
 
@@ -214,7 +215,8 @@ export default function Onboarding() {
     } catch (err: any) {
       console.error('Upload failed:', err)
       const isTimeout = err.message === 'TIMEOUT'
-      toast.error(isTimeout ? "Upload timed out. Please try a smaller image or a better connection." : "Upload failed. Please try again.")
+      setIdError(isTimeout ? "Upload timed out. Please try a smaller image or a better connection." : "Upload failed. Please try again.")
+      toast.error(isTimeout ? "Upload timed out." : "Upload failed. Please try again.")
       setIsVerifying(false)
     }
   }
@@ -298,7 +300,7 @@ export default function Onboarding() {
         // BUG 1: Add 30s timeout to storage upload
         const uploadPromise = supabase.storage
           .from('student-ids')
-          .upload(filePath, file)
+          .upload(filePath, file, { upsert: true })
 
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('TIMEOUT')), 30000)
@@ -312,11 +314,12 @@ export default function Onboarding() {
           .from('student-ids')
           .getPublicUrl(filePath)
 
+        // BUG Fix: Save as pending for manual admin review
         const { error: updateError } = await supabase.from('profiles').update({ 
           identity_verified: true,
           id_verified: true,
           student_id_url: publicUrl,
-          id_verification_status: 'approved',
+          id_verification_status: 'pending',
           onboarding_completed: true
         } as any).eq('id', user.id)
 
@@ -332,7 +335,8 @@ export default function Onboarding() {
       } catch (err: any) {
         console.error('Upload failed:', err)
         const isTimeout = err.message === 'TIMEOUT'
-        toast.error(isTimeout ? "Upload timed out. Please try gallery instead." : "Upload failed. Please try again.")
+        setIdError(isTimeout ? "Upload timed out. Please try gallery instead." : "Upload failed. Please try again.")
+        toast.error(isTimeout ? "Upload timed out." : "Upload failed. Please try again.")
         setIsVerifying(false)
       }
     }, 'image/jpeg')
