@@ -177,9 +177,16 @@ export default function Onboarding() {
       const fileExt = 'jpg'
       const filePath = `${user.id}/student-id-${Date.now()}.${fileExt}`
       
-      const { error: uploadError } = await supabase.storage
+      // BUG 1: Add 30s timeout to storage upload
+      const uploadPromise = supabase.storage
         .from('student-ids')
         .upload(filePath, file)
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('TIMEOUT')), 30000)
+      )
+
+      const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]) as any
 
       if (uploadError) throw uploadError
 
@@ -204,9 +211,10 @@ export default function Onboarding() {
         await fetchProfile(user.id)
         setStep(s => s + 1)
       }, 1500)
-    } catch (err) {
+    } catch (err: any) {
       console.error('Upload failed:', err)
-      toast.error("Upload failed. Please try again.")
+      const isTimeout = err.message === 'TIMEOUT'
+      toast.error(isTimeout ? "Upload timed out. Please try a smaller image or a better connection." : "Upload failed. Please try again.")
       setIsVerifying(false)
     }
   }
@@ -287,9 +295,16 @@ export default function Onboarding() {
       try {
         const filePath = `${user.id}/student-id-${Date.now()}.jpg`
         
-        const { error: uploadError } = await supabase.storage
+        // BUG 1: Add 30s timeout to storage upload
+        const uploadPromise = supabase.storage
           .from('student-ids')
           .upload(filePath, file)
+
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('TIMEOUT')), 30000)
+        )
+
+        const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]) as any
 
         if (uploadError) throw uploadError
 
@@ -314,9 +329,10 @@ export default function Onboarding() {
           await fetchProfile(user.id)
           setStep(s => s + 1)
         }, 1500)
-      } catch (err) {
+      } catch (err: any) {
         console.error('Upload failed:', err)
-        toast.error("Upload failed. Please try again.")
+        const isTimeout = err.message === 'TIMEOUT'
+        toast.error(isTimeout ? "Upload timed out. Please try gallery instead." : "Upload failed. Please try again.")
         setIsVerifying(false)
       }
     }, 'image/jpeg')

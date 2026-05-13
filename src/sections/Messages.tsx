@@ -54,6 +54,7 @@ export default function Messages() {
   useEffect(() => {
     if (selected && user) {
       fetchMessages()
+      // BUG 2: Ensure realtime is robust and logs status
       const channel = supabase
         .channel(`chat:${user.id}:${selected}`)
         .on('postgres_changes', { 
@@ -64,10 +65,19 @@ export default function Messages() {
         }, (payload) => {
           const msg = payload.new as Message
           if (msg.sender_id === selected) {
-            setMessages(prev => [...prev, msg])
+            setMessages(prev => {
+              // Avoid duplicates
+              if (prev.some(m => m.id === msg.id)) return prev
+              return [...prev, msg]
+            })
           }
         })
-        .subscribe()
+        .subscribe((status) => {
+          if (status === 'CHANNEL_ERROR') {
+            console.error('Realtime channel error - Check Supabase publication settings')
+            toast.error('Messaging connection issue. Trying to reconnect...')
+          }
+        })
 
       return () => { supabase.removeChannel(channel) }
     }
@@ -106,13 +116,27 @@ export default function Messages() {
 
   const fetchMessages = async () => {
     if (!user || !selected) return
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selected}),and(sender_id.eq.${selected},receiver_id.eq.${user.id})`)
-      .order('created_at', { ascending: true })
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selected}),and(sender_id.eq.${selected},receiver_id.eq.${user.id})`)
+        .order('created_at', { ascending: true })
 
-    if (data) setMessages(data)
+      if (error) {
+        console.error('Failed to fetch messages:', error)
+        if (error.code === '42501') {
+          toast.error('Messaging permission denied (RLS block)')
+        } else {
+          toast.error('Failed to load messages')
+        }
+        return
+      }
+
+      if (data) setMessages(data)
+    } catch (err) {
+      console.error('Fetch messages catch:', err)
+    }
   }
 
   const send = async (type: 'text' | 'image' | 'audio' = 'text', content: string = '') => {
@@ -130,14 +154,24 @@ export default function Messages() {
 
     try {
       const { data, error } = await supabase.from('messages').insert(newMsgObj).select().single()
-      if (error) throw error
+      
+      if (error) {
+        console.error('Message send error:', error)
+        if (error.code === '42501') {
+          toast.error('Cannot send: Permission denied (Check RLS)')
+        } else {
+          toast.error('Failed to send message')
+        }
+        throw error
+      }
+
       if (data) {
         setMessages(prev => [...prev, data])
         setNewMsg('')
         setShowEmojis(false)
       }
     } catch (err) {
-      toast.error('Failed to send message')
+      console.error('Send catch:', err)
     } finally {
       setSending(false)
     }

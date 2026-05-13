@@ -72,7 +72,8 @@ export default function Squads() {
   const { user, profile } = useAuthStore()
   const [params] = useSearchParams()
   const [activeTab, setActiveTab] = useState<'discover' | 'mine'>('discover')
-  const [squads, setSquads] = useState<Squad[]>(DEMO_SQUADS)
+  const [squads, setSquads] = useState<Squad[]>([])
+  const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [campusFilter, setCampusFilter] = useState('')
   const [selectedSquad, setSelectedSquad] = useState<Squad | null>(null)
@@ -88,6 +89,8 @@ export default function Squads() {
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    fetchSquads()
+    
     const eventParam = params.get('event')
     if (eventParam) {
       setShowCreate(true)
@@ -98,28 +101,92 @@ export default function Squads() {
       setVibeMeter(v => v + Math.floor(Math.random() * 5) - 2)
     }, 3000)
     return () => clearInterval(interval)
-  }, [params])
+  }, [params, activeTab, campusFilter])
+
+  const fetchSquads = async () => {
+    try {
+      setLoading(true)
+      let query = supabase
+        .from('squads')
+        .select(`
+          *,
+          leader:profiles!leader_id(id, name, photos)
+        `)
+      
+      if (activeTab === 'mine' && user) {
+        query = query.or(`leader_id.eq.${user.id},member_ids.cs.{${user.id}}`)
+      } else if (campusFilter) {
+        query = query.ilike('campus', `%${campusFilter}%`)
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(20)
+
+      if (error) {
+        console.error('Error fetching squads:', error)
+        // Fallback to demo data if table doesn't exist yet or RLS fails
+        setSquads(DEMO_SQUADS)
+      } else if (data) {
+        const mappedSquads: Squad[] = data.map((s: any) => ({
+          ...s,
+          leader: {
+            id: s.leader?.id,
+            name: s.leader?.name || 'Comrade',
+            photo: s.leader?.photos?.[0] || 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop'
+          },
+          joined: s.member_ids?.includes(user?.id) || s.leader_id === user?.id
+        }))
+        setSquads(mappedSquads)
+      }
+    } catch (err) {
+      console.error('Squad fetch catch:', err)
+      setSquads(DEMO_SQUADS)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleJoinToggle = async (squad: Squad) => {
     if (!user) return toast.error('Sign in to join squads!')
     
-    const isJoining = !squad.joined
-    const newCount = isJoining ? squad.members + 1 : Math.max(1, squad.members - 1)
-    
-    setSquads(prev => prev.map(s => s.id === squad.id ? { ...s, joined: isJoining, members: newCount } : s))
-    if (isJoining) toast.success('Joined Squad! 🚀')
-    else toast.success('Left Squad.')
-
-    if (!isValidUUID(user.id) || !isValidUUID(squad.id)) {
-      console.log('Invalid UUID or demo squad, skipping Supabase call')
+    // Check if it's a demo squad
+    if (!isValidUUID(squad.id)) {
+      const isJoining = !squad.joined
+      const newCount = isJoining ? squad.members + 1 : Math.max(1, squad.members - 1)
+      setSquads(prev => prev.map(s => s.id === squad.id ? { ...s, joined: isJoining, members: newCount } : s))
+      if (isJoining) toast.success('Joined Demo Squad! 🚀')
       return
     }
 
     try {
-      const { error } = await supabase.from('squads').update({ members: newCount }).eq('id', squad.id)
-      if (error) console.warn('Supabase squad update failed, fallback active', error)
+      const isJoining = !squad.joined
+      const { data: currentSquad, error: fetchErr } = await supabase.from('squads').select('member_ids, members').eq('id', squad.id).single()
+      
+      if (fetchErr) throw fetchErr
+
+      let newMemberIds = currentSquad.member_ids || []
+      if (isJoining) {
+        if (!newMemberIds.includes(user.id)) newMemberIds.push(user.id)
+      } else {
+        newMemberIds = newMemberIds.filter((id: string) => id !== user.id)
+      }
+
+      const { error: updateErr } = await supabase.from('squads').update({ 
+        member_ids: newMemberIds,
+        members: newMemberIds.length + 1 // +1 for leader
+      }).eq('id', squad.id)
+
+      if (updateErr) throw updateErr
+
+      setSquads(prev => prev.map(s => s.id === squad.id ? { 
+        ...s, 
+        joined: isJoining, 
+        members: newMemberIds.length + 1 
+      } : s))
+      
+      toast.success(isJoining ? 'Joined Squad! 🚀' : 'Left Squad.')
     } catch (err) {
-      console.warn('Error joining squad:', err)
+      console.error('Error joining squad:', err)
+      toast.error('Failed to update squad membership')
     }
   }
 
@@ -148,9 +215,7 @@ export default function Squads() {
     toast.success('Broadcast sent to all squad members! 📢')
   }
 
-  const filteredSquads = activeTab === 'mine' 
-    ? squads.filter(s => s.joined || s.leader.id === 'me') // Simulating mine
-    : squads.filter(s => !campusFilter || s.campus.includes(campusFilter))
+  const filteredSquads = squads
 
   if (selectedSquad) {
     return (
@@ -372,58 +437,65 @@ export default function Squads() {
         )}
 
         {/* Squad List */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSquads.map(s => (
-            <div key={s.id} onClick={() => s.joined && setSelectedSquad(s)} className="card p-5 group hover:border-purple-500/30 transition-all cursor-pointer relative overflow-hidden">
-              {s.joined && <div className="absolute top-0 right-0 p-2 bg-purple-500/20 text-purple-400 rounded-bl-xl"><MessageSquare className="w-3.5 h-3.5" /></div>}
-              
-              <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <img src={s.leader.photo} className="w-10 h-10 rounded-full object-cover border-2 border-white/5" alt={s.leader.name} />
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#111128] flex items-center justify-center">
-                        <CheckCircle className="w-2.5 h-2.5 text-white" />
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="w-10 h-10 animate-spin text-purple-500 mb-4" />
+            <p className="text-gray-500 text-sm font-black uppercase tracking-widest">Finding squads...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredSquads.map(s => (
+              <div key={s.id} onClick={() => s.joined && setSelectedSquad(s)} className="card p-5 group hover:border-purple-500/30 transition-all cursor-pointer relative overflow-hidden">
+                {s.joined && <div className="absolute top-0 right-0 p-2 bg-purple-500/20 text-purple-400 rounded-bl-xl"><MessageSquare className="w-3.5 h-3.5" /></div>}
+                
+                <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <img src={s.leader.photo} className="w-10 h-10 rounded-full object-cover border-2 border-white/5" alt={s.leader.name} />
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#111128] flex items-center justify-center">
+                          <CheckCircle className="w-2.5 h-2.5 text-white" />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-white font-bold text-sm group-hover:text-purple-400 transition-colors">{s.title}</h3>
+                          <FollowButton targetId={s.leader.id} className="scale-75 origin-left" />
+                        </div>
+                        <div className="flex flex-col">
+                          <p className="text-gray-500 text-[10px] uppercase tracking-wider">Led by {s.leader.name}</p>
+                          <UserFollowStats userId={s.leader.id} />
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-white font-bold text-sm group-hover:text-purple-400 transition-colors">{s.title}</h3>
-                        <FollowButton targetId={s.leader.id} className="scale-75 origin-left" />
-                      </div>
-                      <div className="flex flex-col">
-                        <p className="text-gray-500 text-[10px] uppercase tracking-wider">Led by {s.leader.name}</p>
-                        <UserFollowStats userId={s.leader.id} />
-                      </div>
-                    </div>
-                  </div>
-                <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-[10px] font-bold">{s.vibe}</span>
-              </div>
-
-              <p className="text-gray-400 text-xs mb-4 leading-relaxed">{s.description}</p>
-
-              <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5 text-gray-600 text-[10px] font-bold uppercase"><MapPin className="w-3 h-3" /> {s.campus}</div>
-                  <div className="flex items-center gap-1.5 text-purple-400 text-[10px] font-bold"><Users className="w-3 h-3" /> {s.members}/{s.max_members}</div>
+                  <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-[10px] font-bold">{s.vibe}</span>
                 </div>
-                {s.joined ? (
-                  <div className="flex gap-2">
-                    <button onClick={(e) => { e.stopPropagation(); handleJoinToggle(s); }} className="px-3 py-2 rounded-xl bg-purple-500/10 text-purple-400 text-xs font-bold transition-all flex items-center gap-1 border border-purple-500/20">
-                      Joined ✓
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); setSelectedSquad(s); }} className="px-4 py-2 rounded-xl grad-bg text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-purple-500/20">
-                      Open Chat <ChevronRight className="w-3 h-3" />
-                    </button>
+
+                <p className="text-gray-400 text-xs mb-4 leading-relaxed">{s.description}</p>
+
+                <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 text-gray-600 text-[10px] font-bold uppercase"><MapPin className="w-3 h-3" /> {s.campus}</div>
+                    <div className="flex items-center gap-1.5 text-purple-400 text-[10px] font-bold"><Users className="w-3 h-3" /> {s.members}/{s.max_members}</div>
                   </div>
-                ) : (
-                  <button onClick={(e) => { e.stopPropagation(); handleJoinToggle(s); }} className="px-4 py-2 rounded-xl bg-white/5 text-white text-xs font-bold hover:bg-white/10 transition-all flex items-center gap-2">
-                    Join Squad <Plus className="w-3 h-3" />
-                  </button>
-                )}
+                  {s.joined ? (
+                    <div className="flex gap-2">
+                      <button onClick={(e) => { e.stopPropagation(); handleJoinToggle(s); }} className="px-3 py-2 rounded-xl bg-purple-500/10 text-purple-400 text-xs font-bold transition-all flex items-center gap-1 border border-purple-500/20">
+                        Joined ✓
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setSelectedSquad(s); }} className="px-4 py-2 rounded-xl grad-bg text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-purple-500/20">
+                        Open Chat <ChevronRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={(e) => { e.stopPropagation(); handleJoinToggle(s); }} className="px-4 py-2 rounded-xl bg-white/5 text-white text-xs font-bold hover:bg-white/10 transition-all flex items-center gap-2">
+                      Join Squad <Plus className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {filteredSquads.length === 0 && (
           <div className="text-center py-20 bg-white/5 rounded-[32px] border border-dashed border-white/10">
