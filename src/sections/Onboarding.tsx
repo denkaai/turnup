@@ -398,10 +398,9 @@ export default function Onboarding() {
     if (step === 2) return form.campus && form.course && form.year
     if (step === 3) return form.bio.length >= 20
     if (step === 4) return form.interests.length >= 3
-    if (step === 5) return idVerified === true && failedAttempts < 3
-    if (step === 6) return form.vibe !== ''
-    if (step === 7) return form.weekend_plan !== ''
-    if (step === 8) return form.relationship_goal !== ''
+    if (step === 5) return form.vibe !== ''
+    if (step === 6) return form.weekend_plan !== ''
+    if (step === 7) return form.relationship_goal !== ''
     return true
   }
 
@@ -456,7 +455,7 @@ export default function Onboarding() {
     }
   }
 
-  const steps = ['About You', 'Campus Info', 'Your Bio', 'Interests', 'Verify Identity', 'Introvert Mode', 'Weekend Plans', 'Looking for', 'Ready!']
+  const steps = ['About You', 'Campus Info', 'Your Bio', 'Interests', 'Introvert Mode', 'Weekend Plans', 'Looking for', 'Ready!']
 
   return (
     <main className="min-h-screen flex items-center justify-center px-4 py-12 bg-[#080810]">
@@ -480,19 +479,18 @@ export default function Onboarding() {
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
           {/* Header */}
           <div className="mb-6">
-            <h2 className={`font-syne font-black text-white mb-1 leading-tight ${step === 6 ? 'text-3xl sm:text-4xl' : 'text-2xl'}`}>
-              {step === 6 ? "What's your vibe this weekend? 🔥" : steps[step - 1]}
+            <h2 className={`font-syne font-black text-white mb-1 leading-tight ${step === 5 ? 'text-3xl sm:text-4xl' : 'text-2xl'}`}>
+              {step === 5 ? "What's your vibe this weekend? 🔥" : steps[step - 1]}
             </h2>
             <p className="text-gray-500 text-sm font-medium">
               {step === 1 && 'Tell us a bit about yourself'}
               {step === 2 && 'Where do you study?'}
               {step === 3 && 'Write a bio that shows your vibe'}
               {step === 4 && 'Pick up to 6 interests'}
-              {step === 5 && "We need to verify you're a student"}
-              {step === 6 && "We'll match you with your people"}
-              {step === 7 && 'Friday night arrives. What are you doing?'}
-              {step === 8 && 'What are you hoping to find on TurnUp?'}
-              {step === 9 && "You're all set to turn up!"}
+              {step === 5 && "We'll match you with your people"}
+              {step === 6 && 'Friday night arrives. What are you doing?'}
+              {step === 7 && 'What are you hoping to find on TurnUp?'}
+              {step === 8 && "You're all set to turn up!"}
             </p>
           </div>
 
@@ -650,136 +648,6 @@ export default function Onboarding() {
           )}
 
           {step === 5 && (
-            <div className="space-y-6">
-              {/* Security Block Check (Section E) */}
-              {failedAttempts >= 3 ? (
-                <div className="p-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-center space-y-4 animate-fade-in">
-                  <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
-                  <div className="space-y-2">
-                    <h3 className="text-white font-black text-lg uppercase tracking-tight">Verification Blocked 🚫</h3>
-                    <p className="text-gray-400 text-sm leading-relaxed">
-                      Too many failed attempts. Please contact support at <br/>
-                      <span className="text-red-400 font-bold">support@turnupcampus.com</span>
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* Visual Guide (Section D) */}
-                  <div className="space-y-4">
-                    <h3 className="text-white font-black text-base flex items-center gap-2">
-                      <ImageIcon className="w-4 h-4 text-purple-400" /> Upload Your Student ID 📸
-                    </h3>
-                    
-                    {/* Card Outline Diagram */}
-                    <div className="w-full aspect-[1.586/1] rounded-2xl border-2 border-white/5 bg-white/[0.02] flex items-center justify-center relative overflow-hidden group">
-                      <div className="absolute inset-4 border border-dashed border-purple-500/30 rounded-xl flex items-center justify-center">
-                         <div className="text-center space-y-2">
-                            <div className="w-12 h-1 rounded-full bg-purple-500/20 mx-auto" />
-                            <div className="w-20 h-1 rounded-full bg-purple-500/10 mx-auto" />
-                            <div className="w-16 h-1 rounded-full bg-purple-500/20 mx-auto" />
-                         </div>
-                      </div>
-                      <div className="absolute top-8 left-8 w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/20" />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-2 text-[10px] font-bold uppercase tracking-tight text-gray-500">
-                      <p className="flex items-center gap-2"><CheckCircle className="w-3 h-3 text-green-500" /> Must show: Name, Institution, Adm Number</p>
-                      <p className="flex items-center gap-2"><CheckCircle className="w-3 h-3 text-green-500" /> Place ID on a flat dark surface</p>
-                      <p className="flex items-center gap-2"><CheckCircle className="w-3 h-3 text-green-500" /> Avoid glare, shadows, blurry shots</p>
-                    </div>
-                  </div>
-
-                  {/* Success UI */}
-                  {idUploadedSuccessfully ? (
-                    <div className="text-center py-8 animate-fade-in">
-                      <div className="w-20 h-20 rounded-full bg-green-500/20 border-2 border-green-500 flex items-center justify-center mx-auto mb-4 animate-pulse">
-                        <CheckCircle className="text-green-400" size={40} />
-                      </div>
-                      <h3 className="text-white font-bold text-xl mb-2">
-                        ID Uploaded! ✅
-                      </h3>
-                      <p className="text-gray-400 text-sm">
-                        Redirecting you in...
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Front of ID */}
-                      <div className="space-y-2">
-                        {isCameraBlocked && (
-                          <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 flex gap-2 animate-fade-in mb-2">
-                            <Camera className="w-4 h-4 text-orange-400 flex-shrink-0" />
-                            <p className="text-[10px] text-orange-200/80 font-bold">📷 Camera blocked? Upload from gallery instead.</p>
-                          </div>
-                        )}
-
-                        <div className="flex flex-col gap-3">
-                          {/* Gallery Upload */}
-                          <label className={`flex items-center justify-center gap-3 p-5 rounded-2xl border-2 border-dashed cursor-pointer transition-all border-purple-500/30 bg-purple-500/5 hover:border-purple-500 hover:bg-purple-500/10 shadow-lg shadow-purple-500/10`}>
-                            <Upload className="text-purple-400 w-6 h-6" />
-                            <div className="text-left">
-                              <span className="block text-xs font-black uppercase tracking-widest text-white">Upload from Gallery</span>
-                              <span className="block text-[9px] text-gray-500 font-bold uppercase">Fastest way to verify ⚡</span>
-                            </div>
-                            <input type="file" className="hidden" accept="image/*" onChange={(e) => handleIDSelect(e, 'front')} />
-                          </label>
-
-                          {/* Camera Button */}
-                          <button 
-                            onClick={() => startScanning('front')}
-                            className="flex items-center justify-center gap-3 p-4 rounded-2xl border-2 border-dashed border-white/10 bg-white/5 hover:bg-white/8 transition-all"
-                          >
-                            <Camera className="text-gray-400 w-5 h-5" />
-                            <div className="text-left">
-                              <span className="block text-[10px] font-black uppercase tracking-tight text-gray-400">Scan with Camera</span>
-                              <span className="block text-[8px] text-gray-600 font-bold">Open in Chrome for best experience</span>
-                            </div>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Uploading Progress */}
-                      {isVerifying && (
-                        <div className="p-5 rounded-2xl bg-purple-500/10 border border-purple-500/20 space-y-3 animate-fade-in">
-                          <div className="flex items-center gap-2 text-xs text-purple-200 font-black uppercase tracking-widest">
-                            <Loader2 className="w-4 h-4 animate-spin" /> Uploading ID...
-                          </div>
-                          <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                            <div className="h-full grad-bg animate-pulse w-full" />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Lost ID Policy (Section F) */}
-                  <div className="pt-2">
-                    <button 
-                      onClick={() => setLostIdExpanded(!lostIdExpanded)}
-                      className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-purple-400 hover:text-purple-300 transition-all"
-                    >
-                      Lost your ID or don't have it yet? {lostIdExpanded ? '👆' : '👇'}
-                    </button>
-                    {lostIdExpanded && (
-                      <div className="mt-3 p-4 rounded-xl bg-purple-500/5 border border-purple-500/10 space-y-3 animate-fade-in">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-purple-300">You can upload any ONE of these instead:</p>
-                        <div className="space-y-2 text-xs text-purple-200/70 font-medium">
-                          <p className="flex items-center gap-2">✓ Admission letter from your institution</p>
-                          <p className="flex items-center gap-2">✓ Fee statement with your name and school</p>
-                          <p className="flex items-center gap-2">✓ Student portal screenshot with your details</p>
-                          <p className="flex items-center gap-2">✓ Letter from Student Affairs office</p>
-                        </div>
-                        <p className="text-[10px] text-purple-400/60 italic leading-relaxed">Identity is verified instantly upon upload. ⚡</p>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {step === 6 && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4">
                 {[
@@ -820,7 +688,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 7 && (
+          {step === 6 && (
             <div className="space-y-3">
               {['Clubbing 🥂', 'House party 🏠', 'Netflix & chill 🛋️', 'Nyama choma 🍖', 'Still deciding 😂'].map(w => (
                 <button
@@ -838,7 +706,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 8 && (
+          {step === 7 && (
             <div className="space-y-3">
               {['Something serious 💍', 'Just vibing 😎', 'Study partner 📖', 'Weekend plans only 🗓️', 'New friends 👥', 'Smoking weed & feeling the buzz 💨'].map(r => (
                 <button
@@ -856,7 +724,7 @@ export default function Onboarding() {
             </div>
           )}
 
-          {step === 9 && (
+          {step === 8 && (
             <div className="text-center py-6">
               <div className="w-24 h-24 rounded-full grad-bg flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-purple-500/30">
                 <CheckCircle className="w-12 h-12 text-white" />
@@ -888,7 +756,7 @@ export default function Onboarding() {
           )}
 
           <div className="flex flex-col gap-3 mt-8">
-            {step < 9 ? (
+            {step < 8 ? (
               <button
                 onClick={() => setStep(s => s + 1)}
                 disabled={!canNext()}
@@ -919,49 +787,7 @@ export default function Onboarding() {
         </div>
       </div>
 
-      {/* Camera Modal Overlay (Section A) */}
-      {isScanning && (
-        <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-4 sm:p-8 animate-fade-in">
-          <div className="relative w-full max-w-2xl aspect-[1.586/1] border-4 border-white/20 rounded-[32px] overflow-hidden shadow-2xl">
-            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-            
-            {/* Overlay Frame */}
-            <div className={`absolute inset-6 border-4 border-dashed rounded-2xl flex flex-col items-center justify-center pointer-events-none transition-all duration-500 ${isAutoCapturing ? 'border-green-500 scale-95' : 'border-white/40'}`}>
-              <div className={`px-6 py-3 rounded-full bg-black/60 text-white text-xs font-black uppercase tracking-widest mb-4 transition-all ${isAutoCapturing ? 'bg-green-600 scale-110' : ''}`}>
-                {isAutoCapturing ? 'Capturing ID... Hold steady! ⚡' : 'Hold ID steady inside the frame...'}
-              </div>
-              
-              {/* Corner markers */}
-              <div className="absolute top-0 left-0 w-12 h-12 border-t-8 border-l-8 border-purple-500 rounded-tl-xl" />
-              <div className="absolute top-0 right-0 w-12 h-12 border-t-8 border-r-8 border-purple-500 rounded-tr-xl" />
-              <div className="absolute bottom-0 left-0 w-12 h-12 border-b-8 border-l-8 border-purple-500 rounded-bl-xl" />
-              <div className="absolute bottom-0 right-0 w-12 h-12 border-b-8 border-r-8 border-purple-500 rounded-br-xl" />
-            </div>
 
-            {/* Camera Progress Bar (Simplified) */}
-            <div className="absolute bottom-0 left-0 right-0 h-2 bg-white/10">
-              <div className={`h-full grad-bg transition-all duration-[1000ms] ease-linear ${isScanning ? 'w-full' : 'w-0'}`} />
-            </div>
-
-            {/* Controls */}
-            <div className="absolute bottom-8 left-0 right-0 flex items-center justify-center gap-8">
-              <button onClick={stopScanning} className="w-16 h-16 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white hover:bg-black/60 transition-all border border-white/10">
-                <X className="w-8 h-8" />
-              </button>
-              <button onClick={captureFrame} className="w-24 h-24 rounded-full border-4 border-white flex items-center justify-center hover:scale-105 transition-all shadow-2xl">
-                <div className="w-18 h-18 rounded-full bg-white shadow-inner" />
-              </button>
-            </div>
-          </div>
-          <div className="mt-10 flex items-center gap-3">
-             <div className="flex gap-1">
-                {[1,2,3].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" style={{ animationDelay: `${i*0.2}s` }} />)}
-             </div>
-             <p className="text-purple-400 text-[10px] font-black uppercase tracking-[0.3em] text-center">AI Smart ID Scan Active</p>
-          </div>
-        </div>
-      )}
-      <canvas ref={canvasRef} className="hidden" />
     </main>
   )
 }
