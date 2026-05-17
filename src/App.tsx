@@ -26,13 +26,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (!user) return <Navigate to="/auth" replace />
   
   // Verification Gate
-  const isComplete = profile?.onboarding_completed && 
-                    profile?.identity_verified && 
-                    profile?.id_verification_status === 'approved'
+  const isComplete = profile?.onboarding_completed
 
   if (!isComplete) {
-    // If they haven't finished onboarding or verification, send to onboarding step 5
-    return <Navigate to="/onboarding?step=5" replace />
+    // If they haven't finished onboarding, send to onboarding
+    return <Navigate to="/onboarding" replace />
   }
 
   return <>{children}</>
@@ -77,14 +75,8 @@ export default function App() {
         if (!prof) {
           if (!isOnboarding) window.location.href = '/onboarding'
         } else {
-          const isVerified = prof.identity_verified && prof.id_verification_status === 'approved'
-          
           if (!prof.onboarding_completed) {
             if (!isOnboarding) window.location.href = '/onboarding'
-          } else if (!isVerified) {
-            if (path !== '/onboarding' || !window.location.search.includes('step=5')) {
-              window.location.href = '/onboarding?step=5'
-            }
           } else if (isAuthPage || isOnboarding) {
             window.location.href = '/discover'
           }

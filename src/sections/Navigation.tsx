@@ -85,8 +85,6 @@ export default function Navigation() {
       {/* Bottom Tab Bar (Mobile Only) */}
       {user && 
        profile?.onboarding_completed && 
-       profile?.identity_verified && 
-       profile?.id_verification_status === 'approved' &&
        !['/', '/auth', '/onboarding'].includes(location.pathname) && (
         <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/5 px-2 pb-safe-area shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
           <div className="flex items-center justify-around h-16">

@@ -72,7 +72,7 @@ export default function Landing() {
           </h1>
 
           <p className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto mb-12 leading-relaxed">
-            The exclusive social & vibe hub for verified comrades across Thika Road. 
+            The exclusive social & vibe hub for comrades across Thika Road. 
             <span className="text-white"> Match, chat, and hit the best events together.</span>
           </p>
 
@@ -197,14 +197,14 @@ export default function Landing() {
           <div className="card p-12 sm:p-20 border-white/5 bg-gradient-to-br from-white/[0.03] to-transparent backdrop-blur-2xl">
             <Zap className="w-16 h-16 text-purple-500 mx-auto mb-8" />
             <h2 className="font-syne font-bold text-4xl sm:text-6xl text-white mb-6">Ready to Turn Up?</h2>
-            <p className="text-gray-400 text-lg mb-12 max-w-xl mx-auto">Join 10,000+ verified comrades and start your next campus adventure today.</p>
+            <p className="text-gray-400 text-lg mb-12 max-w-xl mx-auto">Join 10,000+ comrades and start your next campus adventure today.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/auth?mode=signup" className="btn-grad text-lg px-12 py-4">
                 Join Free Today
               </Link>
             </div>
             <div className="flex items-center justify-center gap-6 mt-10">
-              {['No Fees', 'Comrades Only', 'Safe & Verified'].map((t) => (
+              {['No Fees', 'Comrades Only', 'Safe Community'].map((t) => (
                 <span key={t} className="flex items-center gap-2 text-[10px] text-gray-500 font-black uppercase tracking-widest">
                   <CheckCircle className="w-4 h-4 text-green-500" /> {t}
                 </span>

@@ -142,8 +142,6 @@ export default function Profile() {
       interests: form.interests,
       whatsapp_number: wa,
       now_playing: form.now_playing,
-      identity_verified: profile?.identity_verified || false,
-      id_verification_status: profile?.id_verification_status || 'unverified',
       onboarding_completed: true
     })
 

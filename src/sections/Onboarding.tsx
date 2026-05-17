@@ -33,43 +33,17 @@ export default function Onboarding() {
     const s = params.get('step')
     if (s) {
       setStep(parseInt(s))
-      toast.error("Complete your identity verification to access TurnUp Campus 🔐", {
-        id: 'verification-gate'
-      })
     }
   }, [])
 
   // If profile is fully verified and onboarding complete, redirect to discover
-  if (profile?.onboarding_completed && profile?.identity_verified && profile?.id_verification_status === 'approved') {
+  if (profile?.onboarding_completed) {
     navigate('/discover')
     return null
   }
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [idUploading, setIdUploading] = useState(false)
-  const [idVerified, setIdVerified] = useState<boolean | null>(
-    profile?.id_verification_status === 'pending' || profile?.id_verification_status === 'approved' ? true : null
-  )
-  
-  // ID Verification states
-  const [idFrontPreview, setIdFrontPreview] = useState<string | null>(null)
-  const [idBackPreview, setIdBackPreview] = useState<string | null>(null)
-  const [idFrontFile, setIdFrontFile] = useState<File | null>(null)
-  const [idBackFile, setIdBackFile] = useState<File | null>(null)
-  const [isScanning, setIsScanning] = useState(false)
-  const [scanningSide, setScanningSide] = useState<'front' | 'back'>('front')
-  const [failedAttempts, setFailedAttempts] = useState(0)
-  const [lostIdExpanded, setLostIdExpanded] = useState(false)
-  const [idError, setIdError] = useState<string | null>(null)
-  const [isAutoCapturing, setIsAutoCapturing] = useState(false)
-  const [isCameraBlocked, setIsCameraBlocked] = useState(false)
-  const [idUploadedSuccessfully, setIdUploadedSuccessfully] = useState(false)
-  const [isVerifying, setIsVerifying] = useState(false)
-  const [verificationProgress, setVerificationProgress] = useState(0)
-  
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const autoCaptureTimeout = useRef<any>(null)
+
 
   const [form, setForm] = useState({
     name: '', age: '', gender: '', campus: '',
@@ -135,222 +109,7 @@ export default function Onboarding() {
 
   const update = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }))
 
-  // Section C: AI Validation (Simulated client-side)
-  const validateID = (file: File): Promise<string | null> => {
-    return new Promise((resolve) => {
-      const validTypes = ['image/jpeg', 'image/png', 'image/webp']
-      if (!validTypes.includes(file.type)) {
-        resolve("Please upload a clear photo of your student ID (JPG, PNG, or WEBP only)")
-        return
-      }
 
-      // 50KB to 15MB
-      if (file.size > 15 * 1024 * 1024) { 
-        resolve("File too large (Max 15MB). Please upload a smaller photo.")
-        return 
-      }
-      if (file.size < 50 * 1024) { 
-        resolve("Please upload a clear photo of your student ID (too small or blurry)")
-        return 
-      }
-
-      resolve(null)
-    })
-  }
-
-  const handleIDSelect = async (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
-    const file = e.target.files?.[0]
-    if (!file || !user) return
-
-    setIdError(null)
-    const error = await validateID(file)
-    if (error) {
-      setIdError(error)
-      toast.error(error)
-      return
-    }
-
-    setIsVerifying(true)
-    setVerificationProgress(0)
-
-    try {
-      const fileExt = file.name.split('.').pop() || 'jpg'
-      const filePath = `${user.id}/student-id-${Date.now()}.${fileExt}`
-      
-      // BUG 1: Add 30s timeout to storage upload
-      const uploadPromise = supabase.storage
-        .from('student-ids')
-        .upload(filePath, file, { upsert: true })
-
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('TIMEOUT')), 30000)
-      )
-
-      const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]) as any
-
-      if (uploadError) throw uploadError
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('student-ids')
-        .getPublicUrl(filePath)
-
-      // BUG Fix: Save as pending for manual admin review
-      const { error: updateError } = await supabase.from('profiles').update({ 
-        identity_verified: true,
-        id_verified: true,
-        student_id_url: publicUrl,
-        id_verification_status: 'pending',
-        onboarding_completed: true
-      } as any).eq('id', user.id)
-
-      if (updateError) throw updateError
-      
-      setIdUploadedSuccessfully(true)
-      setIsVerifying(false)
-      
-      setTimeout(async () => {
-        await fetchProfile(user.id)
-        setStep(s => s + 1)
-      }, 1500)
-    } catch (err: any) {
-      console.error('Upload failed:', err)
-      const isTimeout = err.message === 'TIMEOUT'
-      setIdError(isTimeout ? "Upload timed out. Please try a smaller image or a better connection." : "Upload failed. Please try again.")
-      toast.error(isTimeout ? "Upload timed out." : "Upload failed. Please try again.")
-      setIsVerifying(false)
-    }
-  }
-
-  const startScanning = async (side: 'front' | 'back') => {
-    if (failedAttempts >= 3) return
-    
-    // BUG 2: Check for mediaDevices support
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setIsCameraBlocked(true)
-      toast.error("Camera access unavailable. Use Upload from Gallery instead.")
-      return
-    }
-
-    setScanningSide(side)
-    setIsScanning(true)
-    setIsAutoCapturing(false)
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      })
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        
-        // Start auto-capture countdown after 2 seconds of "holding steady"
-        autoCaptureTimeout.current = setTimeout(() => {
-          setIsAutoCapturing(true)
-          setTimeout(() => {
-            captureFrame()
-          }, 1500)
-        }, 2000)
-      }
-    } catch (err) {
-      setIsCameraBlocked(true)
-      setIsScanning(false)
-      toast.error("Camera access denied. Please upload from gallery.")
-    }
-  }
-
-  // Detect iOS Safari or Brave
-  useEffect(() => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
-    const isBrave = (navigator as any).brave !== undefined
-    
-    if ((isIOS && isSafari) || isBrave) {
-      setIsCameraBlocked(true)
-    }
-  }, [])
-
-  const captureFrame = () => {
-    if (!videoRef.current || !canvasRef.current || !user) return
-    const context = canvasRef.current.getContext('2d')
-    if (!context) return
-
-    canvasRef.current.width = videoRef.current.videoWidth
-    canvasRef.current.height = videoRef.current.videoHeight
-    context.drawImage(videoRef.current, 0, 0)
-    
-    canvasRef.current.toBlob(async (blob) => {
-      if (!blob) return
-      const file = new File([blob], `scan-${scanningSide}.jpg`, { type: 'image/jpeg' })
-      
-      const error = await validateID(file)
-      if (error) {
-        toast.error(error)
-        stopScanning()
-        return
-      }
-
-      setIsVerifying(true)
-      stopScanning()
-
-      try {
-        const filePath = `${user.id}/student-id-${Date.now()}.jpg`
-        
-        // BUG 1: Add 30s timeout to storage upload
-        const uploadPromise = supabase.storage
-          .from('student-ids')
-          .upload(filePath, file, { upsert: true })
-
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('TIMEOUT')), 30000)
-        )
-
-        const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]) as any
-
-        if (uploadError) throw uploadError
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('student-ids')
-          .getPublicUrl(filePath)
-
-        // BUG Fix: Save as pending for manual admin review
-        const { error: updateError } = await supabase.from('profiles').update({ 
-          identity_verified: true,
-          id_verified: true,
-          student_id_url: publicUrl,
-          id_verification_status: 'pending',
-          onboarding_completed: true
-        } as any).eq('id', user.id)
-
-        if (updateError) throw updateError
-
-        setIdUploadedSuccessfully(true)
-        setIsVerifying(false)
-
-        setTimeout(async () => {
-          await fetchProfile(user.id)
-          setStep(s => s + 1)
-        }, 1500)
-      } catch (err: any) {
-        console.error('Upload failed:', err)
-        const isTimeout = err.message === 'TIMEOUT'
-        setIdError(isTimeout ? "Upload timed out. Please try gallery instead." : "Upload failed. Please try again.")
-        toast.error(isTimeout ? "Upload timed out." : "Upload failed. Please try again.")
-        setIsVerifying(false)
-      }
-    }, 'image/jpeg')
-  }
-
-  const stopScanning = () => {
-    if (autoCaptureTimeout.current) clearTimeout(autoCaptureTimeout.current)
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream
-      stream.getTracks().forEach(track => track.stop())
-    }
-    setIsScanning(false)
-    setIsAutoCapturing(false)
-  }
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -434,9 +193,6 @@ export default function Onboarding() {
         whatsapp_number: form.whatsapp_number,
         photos: [form.photo_url],
         verified: true,
-        identity_verified: true,
-        id_verification_status: 'approved',
-        id_image_url: profile?.id_image_url || null,
         onboarding_completed: true,
         premium: false,
         premium_until: null,

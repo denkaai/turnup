@@ -16,9 +16,6 @@ export type Profile = {
   photos: string[]
   interests: string[]
   verified: boolean
-  identity_verified: boolean
-  id_verification_status: 'unverified' | 'pending' | 'approved' | 'rejected'
-  id_image_url?: string
   onboarding_completed: boolean
   premium: boolean
   premium_until: string | null
