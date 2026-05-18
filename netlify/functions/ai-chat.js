@@ -34,7 +34,7 @@ exports.handler = async (event) => {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "meta/llama3-70b-instruct",
+        model: "meta/llama-3.1-8b-instruct",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           ...messages,

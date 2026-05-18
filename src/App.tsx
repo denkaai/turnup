@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
+import { AnimatePresence, motion } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
 import { handleSupabaseError } from '@/lib/safe-supabase'
@@ -20,6 +21,25 @@ import Terms from '@/sections/legal/Terms'
 import Safety from '@/sections/legal/Safety'
 import Support from '@/sections/legal/Support'
 
+const pageVariants = {
+  initial: { opacity: 0, y: 15, filter: 'blur(8px)' },
+  animate: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: "easeOut" as const } },
+  exit: { opacity: 0, filter: 'blur(4px)', transition: { duration: 0.3 } }
+}
+
+function PageWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <motion.div
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageVariants}
+      className="w-full h-full"
+    >
+      {children}
+    </motion.div>
+  )
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuthStore()
@@ -34,12 +54,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/onboarding" replace />
   }
 
-  return <>{children}</>
+  return <PageWrapper>{children}</PageWrapper>
 }
 
 export default function App() {
   const { setUser, fetchProfile, setProfile } = useAuthStore()
   const [ready, setReady] = useState(false)
+  const location = useLocation()
 
   useEffect(() => {
     // Safety timeout to prevent getting stuck on "Loading vibes..."
@@ -94,44 +115,51 @@ export default function App() {
 
   if (!ready) {
     return (
-      <div className="min-h-screen bg-[#080810] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-[24px] grad-bg flex items-center justify-center mx-auto mb-6 animate-pulse shadow-[0_0_30px_rgba(139,92,246,0.3)] relative">
+      <div className="min-h-screen bg-[#030305] flex items-center justify-center">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="text-center"
+        >
+          <div className="w-16 h-16 rounded-[24px] grad-bg flex items-center justify-center mx-auto mb-6 animate-pulse shadow-[0_0_40px_rgba(159,122,234,0.4)] relative">
             <span className="text-white font-syne font-black text-3xl">T</span>
-            <div className="absolute -top-2 -right-2 bg-white text-black text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-[#080810]">V3</div>
+            <div className="absolute -top-2 -right-2 bg-white text-black text-[8px] font-black px-1.5 py-0.5 rounded-full border-2 border-[#030305]">V3</div>
           </div>
           <h2 className="text-white font-syne font-black text-xl mb-1 tracking-tight">TURNUP</h2>
-          <p className="text-gray-600 text-[10px] font-black uppercase tracking-[0.3em]">Loading Vibes...</p>
-        </div>
+          <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em]">Loading Cinematic Vibes...</p>
+        </motion.div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#080810]">
+    <div className="min-h-screen bg-[#030305]">
       <Navigation />
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="/onboarding" element={<Onboarding />} />
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<PageWrapper><Landing /></PageWrapper>} />
+          <Route path="/auth" element={<PageWrapper><AuthPage /></PageWrapper>} />
+          <Route path="/onboarding" element={<PageWrapper><Onboarding /></PageWrapper>} />
 
-        <Route path="/discover" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
-        <Route path="/squads" element={<ProtectedRoute><Squads /></ProtectedRoute>} />
-        <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-        <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="/terms" element={<Terms />} />
-        <Route path="/safety" element={<Safety />} />
-        <Route path="/support" element={<Support />} />
+          <Route path="/discover" element={<ProtectedRoute><Discover /></ProtectedRoute>} />
+          <Route path="/squads" element={<ProtectedRoute><Squads /></ProtectedRoute>} />
+          <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+          <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          
+          <Route path="/privacy" element={<PageWrapper><Privacy /></PageWrapper>} />
+          <Route path="/terms" element={<PageWrapper><Terms /></PageWrapper>} />
+          <Route path="/safety" element={<PageWrapper><Safety /></PageWrapper>} />
+          <Route path="/support" element={<PageWrapper><Support /></PageWrapper>} />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AnimatePresence>
       <Toaster
         position="top-center"
         toastOptions={{
-          style: { background: '#13131f', color: '#fff', border: '1px solid rgba(255,255,255,0.07)' }
+          style: { background: '#0a0a0f', color: '#fff', border: '1px solid rgba(255,255,255,0.08)' }
         }}
       />
       <InstallBanner />

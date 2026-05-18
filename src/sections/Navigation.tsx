@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Flame, Search, MessageCircle, Calendar, User, Menu, X, LogOut, Crown, Shield } from 'lucide-react'
+import { Flame, Search, MessageCircle, Calendar, User, LogOut, Shield } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
 
@@ -42,21 +43,29 @@ export default function Navigation() {
 
           {/* Desktop Nav Items - ONLY show if logged in and on desktop */}
           {user ? (
-            <div className="hidden sm:flex items-center gap-1">
-              {navItems.map(({ path, label, icon: Icon }) => (
-                <Link
-                  key={path}
-                  to={path}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all min-h-[44px] ${
-                    location.pathname === path
-                      ? 'bg-purple-500/15 text-purple-300'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {label}
-                </Link>
-              ))}
+            <div className="hidden sm:flex items-center gap-1 relative">
+              {navItems.map(({ path, label, icon: Icon }) => {
+                const isActive = location.pathname === path
+                return (
+                  <Link
+                    key={path}
+                    to={path}
+                    className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all min-h-[44px] ${
+                      isActive ? 'text-white' : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="desktop-nav-indicator"
+                        className="absolute inset-0 bg-white/10 rounded-xl"
+                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                      />
+                    )}
+                    <Icon className="w-4 h-4 relative z-10" />
+                    <span className="relative z-10">{label}</span>
+                  </Link>
+                )
+              })}
             </div>
           ) : null}
 
@@ -64,7 +73,7 @@ export default function Navigation() {
             {user ? (
               <div className="flex items-center gap-2 sm:gap-3">
                 {profile?.verified && (
-                  <span className="verified-badge hidden md:flex">
+                  <span className="verified-badge hidden md:flex shadow-[0_0_15px_rgba(74,222,128,0.2)]">
                     <Shield className="w-3 h-3" /> Verified
                   </span>
                 )}
@@ -86,23 +95,30 @@ export default function Navigation() {
       {user && 
        profile?.onboarding_completed && 
        !['/', '/auth', '/onboarding'].includes(location.pathname) && (
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 glass border-t border-white/5 px-2 pb-safe-area shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-          <div className="flex items-center justify-around h-16">
-            {navItems.map(({ path, label, icon: Icon }) => (
-              <Link
-                key={path}
-                to={path}
-                className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all relative ${
-                  location.pathname === path ? 'text-purple-400' : 'text-gray-500'
-                }`}
-              >
-                {location.pathname === path && (
-                  <div className="absolute top-0 w-8 h-1 grad-bg rounded-b-full shadow-[0_5px_15px_rgba(168,85,247,0.4)]" />
-                )}
-                <Icon className={`w-5 h-5 transition-transform ${location.pathname === path ? 'scale-110' : ''}`} />
-                <span className="text-[9px] font-black uppercase tracking-widest leading-none">{label}</span>
-              </Link>
-            ))}
+        <div className="sm:hidden fixed bottom-6 left-4 right-4 z-50 glass rounded-2xl border border-white/10 px-2 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.4)] pb-safe-area">
+          <div className="flex items-center justify-around h-14">
+            {navItems.map(({ path, label, icon: Icon }) => {
+              const isActive = location.pathname === path
+              return (
+                <Link
+                  key={path}
+                  to={path}
+                  className={`flex flex-col items-center justify-center flex-1 h-full gap-1 relative ${
+                    isActive ? 'text-white' : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="mobile-nav-indicator"
+                      className="absolute inset-0 bg-white/10 rounded-xl"
+                      transition={{ type: "spring", bounce: 0.25, duration: 0.5 }}
+                    />
+                  )}
+                  <Icon className={`w-5 h-5 relative z-10 transition-transform ${isActive ? 'scale-110 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]' : ''}`} />
+                  <span className="text-[9px] font-black uppercase tracking-widest leading-none relative z-10">{label}</span>
+                </Link>
+              )
+            })}
           </div>
         </div>
       )}

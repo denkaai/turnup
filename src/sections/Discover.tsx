@@ -18,6 +18,18 @@ const DEMO_USERS: Profile[] = [
   { id: 'd6', name: 'Frank', age: 22, campus: 'Thika Technical Training Institute (TTTI)', course: 'Automotive', year: 2, bio: 'Mechanic life 🔧 Good vibes only. Always ready to link up', photos: ['https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=500&fit=crop'], interests: ['Cars', 'Music', 'Dancing', 'Socializing'], verified: true, online: true, gender: 'male', looking_for: 'everyone', vibe: '🎵 Music Head', created_at: new Date().toISOString() } as any,
 ]
 
+import { motion } from 'framer-motion'
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 30, scale: 0.95 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1, 
+    transition: { stiffness: 100, damping: 15 } 
+  }
+}
+
 const DiscoverCard = ({ userProfile }: { userProfile: Profile }) => {
   const { user } = useAuthStore()
   const [photoIdx, setPhotoIdx] = useState(0)
@@ -48,11 +60,15 @@ const DiscoverCard = ({ userProfile }: { userProfile: Profile }) => {
   }
 
   return (
-    <div className="discover-card card-hover group h-[450px] relative overflow-hidden rounded-[32px] bg-[#0F0F1A]">
+    <motion.div 
+      variants={cardVariants}
+      className="discover-card card-hover group h-[450px] sm:h-[500px] relative overflow-hidden rounded-[32px] bg-[#0A0A0F]"
+    >
+      <div className="cinematic-glow opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       <img
         src={userProfile.photos?.[photoIdx] || userProfile.photos?.[0]}
         alt={userProfile.name}
-        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+        className="w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-[1.05]"
       />
 
       {/* Photo nav */}
@@ -71,42 +87,42 @@ const DiscoverCard = ({ userProfile }: { userProfile: Profile }) => {
       </div>
 
       {/* Gradient overlay */}
-      <div className="absolute bottom-0 left-0 right-0 h-2/3 bg-gradient-to-t from-[#08080F] via-[#08080F]/90 to-transparent p-6 flex flex-col justify-end pointer-events-none">
-        <div className="relative z-20 pointer-events-auto">
+      <div className="absolute bottom-0 left-0 right-0 h-3/4 bg-gradient-to-t from-[#030305] via-[#030305]/80 to-transparent p-6 flex flex-col justify-end pointer-events-none">
+        <div className="relative z-20 pointer-events-auto transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <h2 className="text-white font-syne font-black text-2xl truncate">{userProfile.name}, {userProfile.age}</h2>
-              {userProfile.verified && <CheckCircle className="w-5 h-5 text-purple-400" />}
+              <h2 className="text-white font-syne font-black text-3xl tracking-tight truncate drop-shadow-md">{userProfile.name}, {userProfile.age}</h2>
+              {userProfile.verified && <CheckCircle className="w-6 h-6 text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]" />}
             </div>
-            <div className={`w-3 h-3 rounded-full border-2 border-[#08080F] ${(userProfile as any).online ? 'bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]' : 'bg-gray-600'}`} />
+            <div className={`w-3.5 h-3.5 rounded-full border-2 border-[#030305] ${(userProfile as any).online ? 'bg-green-400 shadow-[0_0_12px_rgba(74,222,128,0.6)]' : 'bg-gray-600'}`} />
           </div>
           
-          <div className="flex flex-col gap-1.5 mb-4">
-            <div className="flex items-center gap-2 text-gray-400 text-[10px] font-black uppercase tracking-widest">
-              <MapPin className="w-3.5 h-3.5 text-purple-500" /> {userProfile.campus}
+          <div className="flex flex-col gap-2 mb-4">
+            <div className="flex items-center gap-2 text-purple-200/90 text-xs font-black uppercase tracking-widest bg-white/5 w-fit px-3 py-1.5 rounded-lg border border-white/10 backdrop-blur-md">
+              <MapPin className="w-3.5 h-3.5 text-purple-400" /> {userProfile.campus}
             </div>
-            <div className="flex items-center gap-2 text-gray-500 text-[10px] font-bold">
-              <BookOpen className="w-3.5 h-3.5 text-purple-500/50" /> {userProfile.course}
+            <div className="flex items-center gap-2 text-gray-400 text-xs font-bold px-1">
+              <BookOpen className="w-3.5 h-3.5 text-pink-400/80" /> {userProfile.course}
             </div>
           </div>
 
-          <p className="text-gray-300 text-xs leading-relaxed line-clamp-2 mb-6 italic font-medium opacity-90">"{userProfile.bio}"</p>
+          <p className="text-gray-300 text-sm leading-relaxed line-clamp-2 mb-6 font-medium">"{userProfile.bio}"</p>
           
           <div className="flex items-center gap-3">
             <div className="flex-1">
-              <FollowButton targetId={userProfile.id} className="w-full py-3 rounded-2xl text-[10px]" />
+              <FollowButton targetId={userProfile.id} className="w-full py-3.5 rounded-xl text-xs font-bold shadow-lg" />
             </div>
             <button
               onClick={handleSendVibe}
               disabled={sendingVibe}
-              className={`flex-1 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-1.5 border border-white/10 text-white hover:bg-white/5 active:scale-95 ${vibeSent ? 'bg-purple-500/20 border-purple-500/50 text-purple-400' : ''}`}
+              className={`flex-1 py-3.5 rounded-xl text-xs font-black uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-2 border border-white/10 text-white hover:bg-white/10 active:scale-95 ${vibeSent ? 'bg-purple-500/20 border-purple-500/50 text-purple-300 shadow-[0_0_20px_rgba(168,85,247,0.2)]' : 'glass'}`}
             >
-              {sendingVibe ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : vibeSent ? '🔥 Sent' : '🔥 Vibe'}
+              {sendingVibe ? <Loader2 className="w-4 h-4 animate-spin" /> : vibeSent ? '🔥 Sent' : '🔥 Vibe'}
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -298,11 +314,19 @@ export default function Discover() {
         )}
 
         {filteredUsers.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <motion.div 
+            variants={{
+              hidden: { opacity: 0 },
+              visible: { opacity: 1, transition: { staggerChildren: 0.15 } }
+            }}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
+          >
             {filteredUsers.map(userProfile => (
               <DiscoverCard key={userProfile.id} userProfile={userProfile} />
             ))}
-          </div>
+          </motion.div>
         ) : (
           <div className="text-center py-20 bg-white/5 rounded-[40px] border border-dashed border-white/10">
             <div className="w-20 h-20 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-6">

@@ -41,7 +41,7 @@ export default function AIAssistant() {
 
     const callAI = async (currentMessages: Message[], retryCount = 1): Promise<any> => {
       try {
-        const response = await fetch('/api/ai-chat', {
+        const response = await fetch('/.netlify/functions/ai-chat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
