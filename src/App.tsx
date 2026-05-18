@@ -85,6 +85,7 @@ export default function App() {
       } else {
         setUser(null)
         setProfile(null)
+        useAuthStore.setState({ loading: false })
       }
     })
 
