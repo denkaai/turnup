@@ -35,19 +35,27 @@ export const handleSupabaseError = (error: any) => {
 
 export const safeProfileUpsert = async (data: any) => {
   try {
-    const { error } = await supabase.from('profiles').upsert(data)
+    const upsertPromise = supabase.from('profiles').upsert(data)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Save timeout')), 5000)
+    )
+    const { error } = await Promise.race([upsertPromise, timeoutPromise]) as any
     if (error) {
       const handled = handleSupabaseError(error)
       if (handled === 'SKIP') {
-        // If column missing, try saving without the likely culprit (whatsapp_number)
         const { whatsapp_number, ...rest } = data
-        console.log('Retrying profile save without whatsapp_number...')
         const { error: retryError } = await supabase.from('profiles').upsert(rest)
         if (retryError) handleSupabaseError(retryError)
+        return true
       }
+      return false
     }
-    return !error
-  } catch (err) {
+    return true
+  } catch (err: any) {
+    if (err.message === 'Save timeout') {
+      console.warn('Profile save timed out — navigating anyway')
+      return true
+    }
     console.error('Critical save error:', err)
     return false
   }

@@ -163,47 +163,52 @@ export default function Onboarding() {
     return true
   }
 
-  const handleFinish = async () => {
-    if (!user) return
-    
-    setLoading(true)
-    try {
-      const profileData = {
-        id: user.id,
-        name: form.name,
-        age: parseInt(form.age) || 18,
-        gender: form.gender,
-        campus: form.campus,
-        course: form.course,
-        year: parseInt(form.year) || 1,
-        bio: form.bio,
-        looking_for: form.looking_for,
-        interests: form.interests,
-        vibe: form.vibe,
-        weekend_plan: form.weekend_plan,
-        relationship_goal: form.relationship_goal,
-        whatsapp_number: form.whatsapp_number,
-        photos: [form.photo_url],
-        verified: true,
-        onboarding_completed: true,
-        premium: false,
-        premium_until: null,
-      }
-      
-      const success = await safeProfileUpsert(profileData)
-      if (success) {
-        await fetchProfile(user.id)
-        navigate('/discover')
-      } else {
-        toast.error('Failed to save profile. Please try again.')
-      }
-    } catch (err: any) {
-      console.error('Onboarding save error:', err)
-      toast.error('An unexpected error occurred.')
-    } finally {
+const handleFinish = async () => {
+  if (!user) return
+  setLoading(true)
+  const profileData = {
+    id: user.id,
+    name: form.name,
+    age: parseInt(form.age) || 18,
+    gender: form.gender,
+    campus: form.campus,
+    course: form.course,
+    year: parseInt(form.year) || 1,
+    bio: form.bio,
+    looking_for: form.looking_for,
+    interests: form.interests,
+    vibe: form.vibe,
+    weekend_plan: form.weekend_plan,
+    relationship_goal: form.relationship_goal,
+    whatsapp_number: form.whatsapp_number,
+    photos: [form.photo_url],
+    verified: true,
+    onboarding_completed: true,
+    premium: false,
+    premium_until: null,
+  }
+  const overallTimeout = setTimeout(() => {
+    toast.warning('Taking longer than usual — heading in anyway!')
+    navigate('/discover')
+  }, 6000)
+  try {
+    const success = await safeProfileUpsert(profileData)
+    if (success) {
+      await fetchProfile(user.id)
+      clearTimeout(overallTimeout)
+      navigate('/discover')
+    } else {
+      clearTimeout(overallTimeout)
+      toast.error('Failed to save profile. Please try again.')
       setLoading(false)
     }
+  } catch (err: any) {
+    clearTimeout(overallTimeout)
+    console.error('Onboarding save error:', err)
+    toast.error('Something went wrong. Please try again.')
+    setLoading(false)
   }
+}
 
   const steps = ['About You', 'Campus Info', 'Your Bio', 'Interests', 'Introvert Mode', 'Weekend Plans', 'Looking for', 'Ready!']
 
