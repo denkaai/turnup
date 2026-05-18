@@ -22,8 +22,9 @@ import Support from '@/sections/legal/Support'
 
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile } = useAuthStore()
+  const { user, profile, loading } = useAuthStore()
   if (!user) return <Navigate to="/auth" replace />
+  if (loading) return null
   
   // Verification Gate
   const isComplete = profile?.onboarding_completed

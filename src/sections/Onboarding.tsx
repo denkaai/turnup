@@ -166,15 +166,7 @@ export default function Onboarding() {
   const handleFinish = async () => {
     if (!user) return
     
-    // BUG 1: Remove spinner immediately and navigate non-blocking
-    setLoading(false)
-    navigate('/discover')
-
-    // BUG 4 Safety Fallback (from previous fix) - still useful but now in background
-    const safetyTimeout = setTimeout(() => {
-      console.warn('Onboarding background save timed out')
-    }, 5000)
-
+    setLoading(true)
     try {
       const profileData = {
         id: user.id,
@@ -198,16 +190,18 @@ export default function Onboarding() {
         premium_until: null,
       }
       
-      // Perform save in background
-      safeProfileUpsert(profileData).then((success) => {
-        clearTimeout(safetyTimeout)
-        if (success) {
-          fetchProfile(user.id)
-        }
-      })
+      const success = await safeProfileUpsert(profileData)
+      if (success) {
+        await fetchProfile(user.id)
+        navigate('/discover')
+      } else {
+        toast.error('Failed to save profile. Please try again.')
+      }
     } catch (err: any) {
-      clearTimeout(safetyTimeout)
-      console.error('Onboarding background save error:', err)
+      console.error('Onboarding save error:', err)
+      toast.error('An unexpected error occurred.')
+    } finally {
+      setLoading(false)
     }
   }
 

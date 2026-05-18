@@ -23,6 +23,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user: null, profile: null })
   },
   fetchProfile: async (userId: string) => {
+    set({ loading: true })
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -31,7 +32,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     
     if (error) console.error('fetchProfile error:', error.message)
     const prof = data || null
-    set({ profile: prof })
+    set({ profile: prof, loading: false })
     return prof
   },
 }))
