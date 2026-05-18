@@ -25,18 +25,25 @@ export const useAuthStore = create<AuthState>((set) => ({
   fetchProfile: async (userId: string) => {
     set({ loading: true })
     try {
-      const { data, error } = await supabase
+      const fetchPromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle()
       
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Fetch timeout')), 5000)
+      )
+
+      const res = await Promise.race([fetchPromise, timeoutPromise]) as any
+      const { data, error } = res
+      
       if (error) console.error('fetchProfile error:', error.message)
       const prof = data || null
       set({ profile: prof })
       return prof
-    } catch (err) {
-      console.error('fetchProfile exception:', err)
+    } catch (err: any) {
+      console.error('fetchProfile exception or timeout:', err.message || err)
       return null
     } finally {
       set({ loading: false })
