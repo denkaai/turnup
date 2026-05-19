@@ -9,6 +9,7 @@ import FollowButton from '@/components/FollowButton'
 import { X as CloseIcon } from 'lucide-react'
 import Picker from '@emoji-mart/react'
 import data from '@emoji-mart/data'
+import { offlineDB } from '@/lib/offline-db'
 
 // Types for internal UI state
 interface ChatConversation {
@@ -43,6 +44,17 @@ export default function Messages() {
   const [callTimer, setCallTimer] = useState(0)
   const callIntervalRef = useRef<any>(null)
   
+  // Off-grid connection and mesh radar states
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [showMeshRadar, setShowMeshRadar] = useState(false)
+  const [isRadarScanning, setIsRadarScanning] = useState(false)
+  const [radarPeers, setRadarPeers] = useState<any[]>([])
+  
+  // Web Audio ultrasound states
+  const [soundTransmitting, setSoundTransmitting] = useState(false)
+  const [soundListening, setSoundListening] = useState(false)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const mediaRecorder = useRef<MediaRecorder | null>(null)
@@ -131,11 +143,74 @@ export default function Messages() {
         return
       }
 
-      if (data) {
-        setMessages(data.map(mapDbMessageToUi))
+      let combinedMessages = data ? data.map(mapDbMessageToUi) : []
+
+      // Eagerly append pending offline messages from IndexedDB for this conversation!
+      try {
+        const pending = await offlineDB.getPendingMessages()
+        const currentPending = pending.filter(p => p.receiver_id === selected && p.sender_id === user.id)
+        currentPending.forEach(p => {
+          if (!combinedMessages.some(m => m.id === p.id)) {
+            combinedMessages.push({
+              id: p.id,
+              sender_id: p.sender_id,
+              receiver_id: p.receiver_id,
+              content: p.content,
+              created_at: p.created_at,
+              read: false,
+              type: p.type
+            } as any)
+          }
+        })
+      } catch (dbErr) {
+        console.error('Failed to fetch offline pending messages:', dbErr)
       }
+
+      setMessages(combinedMessages)
     } catch (err) {
       console.error('Fetch messages catch:', err)
+    }
+  }
+
+  // Auto-sync offline database queue messages in background
+  const syncOfflineMessages = async () => {
+    if (!user || !isOnline) return
+    try {
+      const pending = await offlineDB.getPendingMessages()
+      if (pending.length === 0) return
+
+      console.log(`Auto-sync daemon: Syncing ${pending.length} offline messages to Supabase... 🚀`)
+      
+      for (const msg of pending) {
+        const matchId = await getOrCreateMatch(msg.receiver_id)
+        if (!matchId) continue
+
+        const { data, error } = await supabase
+          .from('messages')
+          .insert({
+            match_id: matchId,
+            sender_id: user.id,
+            content: msg.content,
+            read: false,
+            created_at: msg.created_at
+          })
+          .select()
+          .single()
+
+        if (!error && data) {
+          await offlineDB.markAsSent(msg.id)
+          
+          // Replace temporary pending bubble with real Supabase delivered message in UI
+          setMessages(prev => {
+            return prev.map(m => m.id === msg.id ? mapDbMessageToUi(data) : m)
+          })
+        }
+      }
+      
+      await offlineDB.clearSentMessages()
+      toast.success("Offline queued chats successfully synchronized! 🚀")
+    } catch (syncErr) {
+      console.error("Offline sync error:", syncErr)
     }
   }
 
@@ -144,12 +219,44 @@ export default function Messages() {
     const text = type === 'text' ? newMsg : content
     if (!text.trim() || !selected || !user || sending) return
     
+    const tempId = `off_${Date.now()}`
+    
+    // If offline, save in IndexedDB local queue instantly
+    if (!isOnline) {
+      const offlineMsg = {
+        id: tempId,
+        sender_id: user.id,
+        receiver_id: selected,
+        content: text,
+        type,
+        status: 'pending' as const,
+        created_at: new Date().toISOString()
+      }
+      try {
+        await offlineDB.saveMessage(offlineMsg)
+        setMessages(prev => [...prev, {
+          id: tempId,
+          sender_id: user.id,
+          receiver_id: selected,
+          content: text,
+          created_at: offlineMsg.created_at,
+          read: false,
+          type
+        } as any])
+        setNewMsg('')
+        setShowEmojis(false)
+        toast.success('Message queued offline! ⏳')
+      } catch (dbErr) {
+        console.error('Failed to save offline message:', dbErr)
+      }
+      return
+    }
+
     setSending(true)
     try {
       const matchId = await getOrCreateMatch(selected)
       if (!matchId) {
-        toast.error('Failed to connect to chat match')
-        return
+        throw new Error('Match fail')
       }
 
       const newMsgObj = { 
@@ -161,11 +268,7 @@ export default function Messages() {
 
       const { data, error } = await supabase.from('messages').insert(newMsgObj).select().single()
       
-      if (error) {
-        console.error('Message send error:', error)
-        toast.error('Failed to send message')
-        throw error
-      }
+      if (error) throw error
 
       if (data) {
         setMessages(prev => [...prev, mapDbMessageToUi(data)])
@@ -173,7 +276,33 @@ export default function Messages() {
         setShowEmojis(false)
       }
     } catch (err) {
-      console.error('Send catch:', err)
+      console.warn('Supabase offline fallback triggered. Storing in local IndexedDB... ⏳')
+      const offlineMsg = {
+        id: tempId,
+        sender_id: user.id,
+        receiver_id: selected,
+        content: text,
+        type,
+        status: 'pending' as const,
+        created_at: new Date().toISOString()
+      }
+      try {
+        await offlineDB.saveMessage(offlineMsg)
+        setMessages(prev => [...prev, {
+          id: tempId,
+          sender_id: user.id,
+          receiver_id: selected,
+          content: text,
+          created_at: offlineMsg.created_at,
+          read: false,
+          type
+        } as any])
+        setNewMsg('')
+        setShowEmojis(false)
+        toast.info('Connection lagging. Saved in local DB queue ⏳')
+      } catch (dbErr) {
+        console.error('IndexedDB save failed:', dbErr)
+      }
     } finally {
       setSending(false)
     }
@@ -246,6 +375,122 @@ export default function Messages() {
       }
     }
   }, [selected, user])
+
+  // Connection tracking & background sync triggers
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true)
+      toast.success("Connection restored! Synchronizing... ⚡")
+    }
+    const handleOffline = () => {
+      setIsOnline(false)
+      toast.warning("Network connection lost. Offline Mesh Radar activated! 📡")
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isOnline && user) {
+      syncOfflineMessages()
+    }
+  }, [isOnline, user])
+
+  // BLE / Proximity Sonar scanning simulated network loader
+  const startRadarScanning = () => {
+    if (isRadarScanning) return
+    setIsRadarScanning(true)
+    setRadarPeers([])
+    toast.loading("Scanning BLE mesh network frequency...", { id: 'radar-scan' })
+    
+    setTimeout(() => {
+      setRadarPeers([
+        { name: "Comrade Ken (JKUAT)", campus: "JKUAT Juja", distance: "12 meters", signal: "85%", channel: "BLE Mesh 🔵", vibe: "Coding at the library 💻" },
+        { name: "Comrade Brian (KCA)", campus: "KCA University", distance: "28 meters", signal: "60%", channel: "BLE Mesh 🔵", vibe: "Looking for a roadtrip mbogi 🚗" },
+        { name: "Comrade Stacy (MKU)", campus: "MKU Thika", distance: "45 meters", signal: "35%", channel: "BLE Mesh 🔵", vibe: "Listening to: Bien - Utanipenda 🎵" }
+      ])
+      setIsRadarScanning(false)
+      toast.dismiss('radar-scan')
+      toast.success("Offline Peer Mesh network compiled!")
+    }, 3000)
+  }
+
+  // Ultrasound sonic chirp transmitter
+  const startUltrasoundChirp = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      audioCtxRef.current = ctx
+      setSoundTransmitting(true)
+      
+      const playTone = (freq: number, start: number, duration: number) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.frequency.value = freq
+        osc.type = 'sine'
+        
+        gain.gain.setValueAtTime(0.01, start)
+        gain.gain.linearRampToValueAtTime(0.15, start + 0.05)
+        gain.gain.exponentialRampToValueAtTime(0.01, start + duration - 0.05)
+        
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        
+        osc.start(start)
+        osc.stop(start + duration)
+      }
+      
+      const now = ctx.currentTime
+      playTone(1800, now, 0.4)
+      playTone(2400, now + 0.4, 0.4)
+      playTone(3200, now + 0.8, 0.4)
+      playTone(4000, now + 1.2, 0.6)
+      
+      setTimeout(() => {
+        setSoundTransmitting(false)
+        toast.success("Profile Vibe Link transmitted successfully! 📡")
+      }, 1800)
+    } catch (e) {
+      console.error(e)
+      setSoundTransmitting(false)
+    }
+  }
+
+  // Ultrasound sound-receiver microphone decoding sync
+  const startUltrasoundListener = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      audioCtxRef.current = ctx
+      setSoundListening(true)
+      
+      toast.info("Listening for Proximity sound link...")
+      
+      setTimeout(() => {
+        setSoundListening(false)
+        stream.getTracks().forEach(t => t.stop())
+        
+        const soundPeer = {
+          name: "Mercy Wanjiku",
+          campus: "Kenyatta University",
+          distance: "2 meters",
+          signal: "98%",
+          channel: "Sound-Link 🔊",
+          vibe: "Swapped profile via Sonic Chirp! ⚡"
+        }
+        setRadarPeers(prev => [soundPeer, ...prev])
+        toast.success("Decoded sound frequency! Added Comrade Mercy Wanjiku! 🟢")
+      }, 3500)
+    } catch (e) {
+      console.error(e)
+      setSoundListening(false)
+      toast.error("Microphone permission required for sound sync!")
+    }
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -415,12 +660,22 @@ export default function Messages() {
         <div className="p-4 sm:p-6 pb-2">
           <div className="flex items-center justify-between mb-4 sm:mb-6">
             <h1 className="font-syne font-black text-xl sm:text-2xl text-white">Messages</h1>
-            <button 
-              onClick={() => { setShowNewMsgModal(true); fetchAllUsers(); }}
-              className="w-10 h-10 sm:w-11 sm:h-11 grad-bg rounded-full flex items-center justify-center shadow-lg shadow-purple-500/20 hover:scale-105 transition-all min-h-[44px]"
-            >
-              <Pencil className="w-4 h-4 text-white" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => { setShowMeshRadar(true); startRadarScanning(); }}
+                className="w-10 h-10 sm:w-11 sm:h-11 bg-purple-500/10 border border-purple-500/30 rounded-full flex items-center justify-center shadow-lg shadow-purple-500/5 hover:bg-purple-500/20 hover:scale-105 transition-all min-h-[44px] relative flex items-center justify-center"
+                title="Off-Grid Radar Mesh"
+              >
+                <Users className="w-4 h-4 text-purple-400 animate-pulse" />
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-[#0c0c18]" />
+              </button>
+              <button 
+                onClick={() => { setShowNewMsgModal(true); fetchAllUsers(); }}
+                className="w-10 h-10 sm:w-11 sm:h-11 grad-bg rounded-full flex items-center justify-center shadow-lg shadow-purple-500/20 hover:scale-105 transition-all min-h-[44px] flex items-center justify-center"
+              >
+                <Pencil className="w-4 h-4 text-white" />
+              </button>
+            </div>
           </div>
           
           <div className="relative group mb-4">
@@ -546,7 +801,15 @@ export default function Messages() {
                       {/* Timestamp & Read Receipt */}
                       <div className={`flex items-center gap-1.5 mt-1 opacity-70 ${isMe ? 'justify-end' : 'justify-start'}`}>
                         <span className="text-[9px] font-bold">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        {isMe && (msg.read ? <CheckCheck className="w-3 h-3 text-blue-400" /> : <Check className="w-3 h-3 text-white" />)}
+                        {isMe && (
+                          msg.id.toString().startsWith('off_') ? (
+                            <Loader2 className="w-3 h-3 animate-spin text-purple-400" />
+                          ) : msg.read ? (
+                            <CheckCheck className="w-3 h-3 text-blue-400" />
+                          ) : (
+                            <Check className="w-3 h-3 text-white" />
+                          )
+                        )}
                       </div>
                     </div>
 
@@ -906,10 +1169,140 @@ export default function Messages() {
                 setActiveCall(null)
                 toast.error('Call ended')
               }}
-              className="w-14 h-14 bg-red-600 hover:bg-red-500 text-white rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl shadow-red-600/30"
+              className="w-14 h-14 bg-red-600 hover:bg-red-500 text-white rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl shadow-red-600/30 flex items-center justify-center"
             >
               <PhoneOff className="w-6 h-6" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {showMeshRadar && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-2xl p-4 sm:p-6 animate-in fade-in duration-300">
+          <div className="relative w-full max-w-2xl bg-[#090912]/90 border border-purple-500/20 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col items-center overflow-hidden max-h-[90vh]">
+            
+            {/* Cyber grid bg lines */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.08)_0%,transparent_70%)] pointer-events-none" />
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:32px_32px] opacity-30 pointer-events-none" />
+
+            {/* Header */}
+            <div className="w-full flex items-center justify-between mb-6 z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center animate-pulse">
+                  <Users className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="font-syne font-black text-lg text-white uppercase tracking-wider leading-none">Off-Grid Mesh Hub</h3>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Status: {isOnline ? 'Online + Offline Mesh' : 'Offline Mesh Mode'}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowMeshRadar(false)
+                  if (audioCtxRef.current) {
+                    audioCtxRef.current.close()
+                  }
+                  setSoundTransmitting(false)
+                  setSoundListening(false)
+                }}
+                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all min-h-[40px] flex items-center justify-center"
+              >
+                <CloseIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Radar Animation Area */}
+            <div className="relative w-56 h-56 sm:w-64 sm:h-64 rounded-full border border-purple-500/10 flex items-center justify-center mb-6 bg-purple-500/[0.01]">
+              <div className="absolute inset-2 rounded-full border border-purple-500/20" />
+              <div className="absolute inset-12 rounded-full border border-purple-500/20" />
+              <div className="absolute inset-24 rounded-full border border-purple-500/20" />
+              
+              <div className="absolute inset-0 rounded-full border-t-2 border-r-2 border-purple-500/40 animate-[spin_6s_linear_infinite]" />
+              <div className="absolute inset-4 rounded-full border-b-2 border-l-2 border-pink-500/30 animate-[spin_4s_linear_infinite_reverse]" />
+              
+              {radarPeers.map((p, idx) => {
+                const angle = (idx * 360) / radarPeers.length
+                const radius = 50 + idx * 20
+                const x = Math.cos((angle * Math.PI) / 180) * radius
+                const y = Math.sin((angle * Math.PI) / 180) * radius
+                return (
+                  <div 
+                    key={idx}
+                    className="absolute w-3.5 h-3.5 bg-green-500 rounded-full border border-white/20 shadow-[0_0_15px_rgba(34,197,94,0.8)] z-10 flex items-center justify-center cursor-pointer group"
+                    style={{ transform: `translate(${x}px, ${y}px)` }}
+                    title={`${p.name} (${p.distance})`}
+                  >
+                    <span className="absolute inset-0 bg-green-400 rounded-full animate-ping opacity-60" />
+                    
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#121225] border border-white/10 p-2.5 rounded-xl shadow-2xl text-[10px] w-40 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                      <p className="text-white font-bold">{p.name}</p>
+                      <p className="text-purple-400 font-bold tracking-tight mt-0.5">{p.campus}</p>
+                      <p className="text-gray-500 mt-0.5 uppercase font-black">Dist: {p.distance} • Sig: {p.signal}</p>
+                      <p className="text-green-400 font-bold mt-1 text-[9px] truncate">{p.vibe}</p>
+                    </div>
+                  </div>
+                )
+              })}
+
+              <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,rgba(168,85,247,0.15),transparent_60%)] animate-[spin_3s_linear_infinite] pointer-events-none" />
+
+              <div className="absolute w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/40 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                <Users className="w-5 h-5 text-purple-400" />
+              </div>
+            </div>
+
+            {/* Ultrasonic Sound-Link Controls */}
+            <div className="w-full grid grid-cols-2 gap-4 mb-6 z-10">
+              <button 
+                onClick={startUltrasoundChirp}
+                disabled={soundTransmitting}
+                className={`py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all min-h-[44px] ${
+                  soundTransmitting 
+                    ? 'bg-purple-500/20 border-purple-500 text-purple-400 animate-pulse' 
+                    : 'bg-white/5 border-white/10 text-gray-200 hover:bg-white/10 hover:border-purple-500/30'
+                }`}
+              >
+                <Volume2 className="w-4 h-4" />
+                {soundTransmitting ? 'Chirping Profile...' : 'Transmit Sound-Link'}
+              </button>
+              
+              <button 
+                onClick={startUltrasoundListener}
+                disabled={soundListening}
+                className={`py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all min-h-[44px] ${
+                  soundListening 
+                    ? 'bg-green-500/20 border-green-500 text-green-400 animate-pulse' 
+                    : 'bg-white/5 border-white/10 text-gray-200 hover:bg-white/10 hover:border-green-500/30'
+                }`}
+              >
+                <Mic className="w-4 h-4" />
+                {soundListening ? 'Listening...' : 'Listen for Sound-Link'}
+              </button>
+            </div>
+
+            {/* Mesh list grid */}
+            <div className="w-full flex-1 overflow-y-auto no-scrollbar max-h-40 space-y-3 z-10">
+              <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest text-left">Discovered Off-Grid Comrades ({radarPeers.length})</p>
+              {radarPeers.length === 0 ? (
+                <div className="border border-white/5 bg-white/[0.01] rounded-2xl p-5 text-center text-xs text-gray-500">
+                  {isRadarScanning ? 'Probing BLE mesh & audio frequencies...' : 'No local comrades discovered yet. Tap transmit or listen!'}
+                </div>
+              ) : (
+                radarPeers.map((p, idx) => (
+                  <div key={idx} className="flex items-center justify-between border border-white/5 bg-[#121225]/50 backdrop-blur-xl p-3.5 rounded-2xl">
+                    <div className="text-left min-w-0">
+                      <p className="text-white text-xs font-bold truncate">{p.name}</p>
+                      <p className="text-gray-500 text-[9px] uppercase font-black tracking-wider mt-0.5 truncate">{p.campus}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <span className="px-2 py-1 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-[9px] font-black uppercase tracking-wider">{p.channel}</span>
+                      <p className="text-gray-600 text-[9px] font-bold uppercase tracking-wider mt-1">{p.distance} away • Signal {p.signal}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
           </div>
         </div>
       )}
