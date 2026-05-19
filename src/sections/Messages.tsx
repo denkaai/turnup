@@ -49,124 +49,121 @@ export default function Messages() {
 
   useEffect(() => {
     loadConversations()
-  }, [user])
-
-  useEffect(() => {
-    if (selected && user) {
-      fetchMessages()
-      // BUG 2: Ensure realtime is robust and logs status
-      const channel = supabase
-        .channel(`chat:${user.id}:${selected}`)
-        .on('postgres_changes', { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'messages',
-          filter: `receiver_id=eq.${user.id}`
-        }, (payload) => {
-          const msg = payload.new as Message
-          if (msg.sender_id === selected) {
-            setMessages(prev => {
-              // Avoid duplicates
-              if (prev.some(m => m.id === msg.id)) return prev
-              return [...prev, msg]
-            })
-          }
-        })
-        .subscribe((status) => {
-          if (status === 'CHANNEL_ERROR') {
-            console.error('Realtime channel error - Check Supabase publication settings')
-            toast.error('Messaging connection issue. Trying to reconnect...')
-          }
-        })
-
-      return () => { supabase.removeChannel(channel) }
-    }
-  }, [selected, user])
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isTyping])
-
-  useEffect(() => {
-    if (selected) {
-      setIsTyping(true)
-      const timer = setTimeout(() => setIsTyping(false), 3000 + Math.random() * 2000)
-      return () => clearTimeout(timer)
-    }
-  }, [selected])
-
-  const loadConversations = async () => {
-    if (!user) return
-    try {
-      // In a real app, we'd have a conversations view or query last messages
-      // For now, let's fetch all profiles we've matched or followed
-      const { data: profiles } = await supabase.from('profiles').select('*').neq('id', user.id).limit(10)
-      if (profiles) {
-        setConversations(profiles.map(p => ({
-          id: p.id,
-          other: p,
-          lastMsg: 'Tap to chat',
-          time: 'Active'
-        })))
+  }, [user])  // Helper to map DB message back to UI-friendly representation (resolves column mismatch)
+  const mapDbMessageToUi = (dbMsg: any): Message => {
+    let type: 'text' | 'image' | 'audio' = 'text'
+    if (dbMsg.content && dbMsg.content.startsWith('https://') && dbMsg.content.includes('/chat/')) {
+      if (dbMsg.content.includes('.webm') || dbMsg.content.includes('.ogg') || dbMsg.content.includes('.mp3')) {
+        type = 'audio'
+      } else {
+        type = 'image'
       }
-    } catch (err) {
-      console.error(err)
+    }
+    return {
+      ...dbMsg,
+      type
     }
   }
 
+  // Get or Create Match record between current user and other selected user
+  const getOrCreateMatch = async (otherId: string): Promise<string | null> => {
+    if (!user) return null
+    try {
+      // Fetch match where either user1 is current and user2 is selected, or vice versa
+      const { data: existingMatch, error: selectError } = await supabase
+        .from('matches')
+        .select('id')
+        .or(`and(user1_id.eq.${user.id},user2_id.eq.${otherId}),and(user1_id.eq.${otherId},user2_id.eq.${user.id})`)
+        .maybeSingle()
+
+      if (selectError) {
+        console.error('Error selecting match:', selectError)
+        return null
+      }
+
+      if (existingMatch) {
+        return existingMatch.id
+      }
+
+      // Create new match if none exists (user1 is initiator)
+      const { data: newMatch, error: insertError } = await supabase
+        .from('matches')
+        .insert({ user1_id: user.id, user2_id: otherId })
+        .select('id')
+        .single()
+
+      if (insertError) {
+        console.error('Error inserting match:', insertError)
+        return null
+      }
+
+      return newMatch?.id || null
+    } catch (err) {
+      console.error('getOrCreateMatch catch:', err)
+      return null
+    }
+  }
+
+  // Fetch messages belonging to current match
   const fetchMessages = async () => {
     if (!user || !selected) return
     try {
+      const matchId = await getOrCreateMatch(selected)
+      if (!matchId) {
+        toast.error('Failed to establish a secure connection')
+        return
+      }
+
       const { data, error } = await supabase
         .from('messages')
         .select('*')
-        .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selected}),and(sender_id.eq.${selected},receiver_id.eq.${user.id})`)
+        .eq('match_id', matchId)
         .order('created_at', { ascending: true })
 
       if (error) {
         console.error('Failed to fetch messages:', error)
-        if (error.code === '42501') {
-          toast.error('Messaging permission denied (RLS block)')
-        } else {
-          toast.error('Failed to load messages')
-        }
+        toast.error('Failed to load messages')
         return
       }
 
-      if (data) setMessages(data)
+      if (data) {
+        setMessages(data.map(mapDbMessageToUi))
+      }
     } catch (err) {
       console.error('Fetch messages catch:', err)
     }
   }
 
+  // Send a message
   const send = async (type: 'text' | 'image' | 'audio' = 'text', content: string = '') => {
     const text = type === 'text' ? newMsg : content
     if (!text.trim() || !selected || !user || sending) return
     
     setSending(true)
-    const newMsgObj = { 
-      sender_id: user.id,
-      receiver_id: selected,
-      content: text,
-      type,
-      read: false
-    }
-
     try {
+      const matchId = await getOrCreateMatch(selected)
+      if (!matchId) {
+        toast.error('Failed to connect to chat match')
+        return
+      }
+
+      const newMsgObj = { 
+        match_id: matchId,
+        sender_id: user.id,
+        content: text,
+        read: false
+      }
+
       const { data, error } = await supabase.from('messages').insert(newMsgObj).select().single()
       
       if (error) {
         console.error('Message send error:', error)
-        if (error.code === '42501') {
-          toast.error('Cannot send: Permission denied (Check RLS)')
-        } else {
-          toast.error('Failed to send message')
-        }
+        toast.error('Failed to send message')
         throw error
       }
 
       if (data) {
-        setMessages(prev => [...prev, data])
+        setMessages(prev => [...prev, mapDbMessageToUi(data)])
         setNewMsg('')
         setShowEmojis(false)
       }
@@ -205,6 +202,76 @@ export default function Messages() {
     }
   }
 
+  // Subscribe to real-time updates for active match
+  useEffect(() => {
+    let activeChannel: any = null
+
+    const setupRealtime = async () => {
+      if (selected && user) {
+        await fetchMessages()
+        
+        const matchId = await getOrCreateMatch(selected)
+        if (!matchId) return
+
+        activeChannel = supabase
+          .channel(`chat:${matchId}`)
+          .on('postgres_changes', { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'messages',
+            filter: `match_id=eq.${matchId}`
+          }, (payload) => {
+            const msg = payload.new as any
+            if (msg.sender_id !== user.id) {
+              setMessages(prev => {
+                if (prev.some(m => m.id === msg.id)) return prev
+                return [...prev, mapDbMessageToUi(msg)]
+              })
+            }
+          })
+          .subscribe()
+      }
+    }
+
+    setupRealtime()
+
+    return () => {
+      if (activeChannel) {
+        supabase.removeChannel(activeChannel)
+      }
+    }
+  }, [selected, user])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, isTyping])
+
+  useEffect(() => {
+    if (selected) {
+      setIsTyping(true)
+      const timer = setTimeout(() => setIsTyping(false), 3000 + Math.random() * 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [selected])
+
+  const loadConversations = async () => {
+    if (!user) return
+    try {
+      // Fetch matching/active chats
+      const { data: profiles } = await supabase.from('profiles').select('*').neq('id', user.id).limit(20)
+      if (profiles) {
+        setConversations(profiles.map(p => ({
+          id: p.id,
+          other: p,
+          lastMsg: 'Tap to chat',
+          time: 'Active'
+        })))
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   const handleCall = (type: 'audio' | 'video') => {
     toast(`${type === 'audio' ? 'Calling' : 'Video call'} feature coming soon 🔥`, {
       className: 'bg-[#13131f] border-purple-500/50 text-white font-bold',
@@ -212,7 +279,6 @@ export default function Messages() {
       position: 'top-center'
     })
   }
-
   const fetchAllUsers = async (query: string = '') => {
     if (!user) return
     setLoadingUsers(true)
@@ -431,6 +497,23 @@ export default function Messages() {
                           <img src={msg.content} className="max-w-[200px] sm:max-w-[300px] rounded-xl cursor-pointer hover:opacity-90 transition-opacity" alt="Sent photo" onClick={() => window.open(msg.content, '_blank')} />
                         </div>
                       )}
+                      {msg.type === 'audio' && (
+                        <div className="p-1 flex items-center gap-3 min-w-[200px]">
+                          <button 
+                            onClick={() => {
+                              const audio = new Audio(msg.content)
+                              audio.play()
+                            }}
+                            className="w-10 h-10 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-all text-purple-400"
+                          >
+                            <Play className="w-4 h-4 text-purple-400 fill-purple-400/20" />
+                          </button>
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-gray-400 uppercase font-black tracking-widest">Voice Note</span>
+                            <span className="text-xs text-white/80">Tap to Listen</span>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Timestamp & Read Receipt */}
                       <div className={`flex items-center gap-1.5 mt-1 opacity-70 ${isMe ? 'justify-end' : 'justify-start'}`}>
@@ -451,7 +534,7 @@ export default function Messages() {
                       <div className={`absolute -top-12 ${isMe ? 'right-0' : 'left-0'} flex items-center gap-1 p-1.5 bg-[#121225] border border-white/10 rounded-full shadow-2xl z-50 animate-fade-in`}>
                         {['🔥', '❤️', '😂', '💯', '👀'].map(emoji => (
                           <button 
-                            key={emoji} 
+                            key={emoji}
                             className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full text-base transition-all"
                             onClick={() => {
                               setMsgReactions(prev => ({ ...prev, [msg.id]: emoji }))
