@@ -278,11 +278,12 @@ export default function Messages() {
     }
   }, [activeCall])
 
-  const loadConversations = async () => {
+  const loadConversations = async (retries = 3, delay = 1000) => {
     if (!user) return
     try {
       // Fetch matching/active chats
-      const { data: profiles } = await supabase.from('profiles').select('*').neq('id', user.id).limit(20)
+      const { data: profiles, error } = await supabase.from('profiles').select('*').neq('id', user.id).limit(20)
+      if (error) throw error
       if (profiles) {
         setConversations(profiles.map(p => ({
           id: p.id,
@@ -292,7 +293,11 @@ export default function Messages() {
         })))
       }
     } catch (err) {
-      console.error(err)
+      console.error('loadConversations error:', err)
+      if (retries > 0) {
+        console.warn(`Retrying loadConversations in ${delay}ms... (${retries} attempts left)`)
+        setTimeout(() => loadConversations(retries - 1, delay * 2), delay)
+      }
     }
   }
 
