@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { 
   Calendar, 
   MapPin, 
@@ -12,7 +12,8 @@ import {
   Loader2,
   ChevronRight,
   Flame,
-  AlertCircle
+  AlertCircle,
+  Image as ImageIcon
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
@@ -31,11 +32,22 @@ const CATEGORIES = [
 ]
 
 const SPOTS = [
-  { id: '1', name: 'Westlands', image: 'https://images.unsplash.com/photo-1613395034114-f06b9b1d1f05?w=500', area: 'Nairobi', attendees: 12 },
-  { id: '2', name: 'Karen', image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=500', area: 'Nairobi', attendees: 8 },
-  { id: '3', name: 'Ngong Hills', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=500', area: 'Kajiado', attendees: 15 },
-  { id: '4', name: 'Nairobi CBD', image: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=500', area: 'Nairobi', attendees: 20 },
+  { id: '1', name: 'Westlands', image: 'https://images.unsplash.com/photo-1611348586804-61bf6c080437?w=600&q=80', area: 'Nairobi', attendees: 12 },
+  { id: '2', name: 'Karen', image: 'https://images.unsplash.com/photo-1596005554384-d293674c91d7?w=600&q=80', area: 'Nairobi', attendees: 8 },
+  { id: '3', name: 'Ngong Hills', image: 'https://images.unsplash.com/photo-1489392191049-fc10c97e64b6?w=600&q=80', area: 'Kajiado', attendees: 15 },
+  { id: '4', name: 'Nairobi CBD', image: 'https://images.unsplash.com/photo-1611348524140-53c9a25263d6?w=600&q=80', area: 'Nairobi', attendees: 20 },
 ]
+
+// Smart category-based fallback images (always reliable)
+const CATEGORY_IMAGES: Record<string, string> = {
+  party: 'https://images.unsplash.com/photo-1514525253361-bee8a19740c1?w=800&q=80',
+  food: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&q=80',
+  study: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&q=80',
+  sports: 'https://images.unsplash.com/photo-1461896836934-bd45ba8fcf9d?w=800&q=80',
+  career: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=80',
+  gaming: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80',
+  social: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80',
+}
 
 interface Event {
   id: string
@@ -76,6 +88,10 @@ export default function Events() {
     max_attendees: '',
     description: ''
   })
+  const [eventImage, setEventImage] = useState<File | null>(null)
+  const [eventImagePreview, setEventImagePreview] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const eventFileRef = useRef<HTMLInputElement>(null)
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -197,7 +213,35 @@ export default function Events() {
       return
     }
 
+    setUploading(true)
     try {
+      let imageUrl: string | null = null
+
+      // Upload user's custom photo to Supabase Storage if provided
+      if (eventImage) {
+        const fileExt = eventImage.name.split('.').pop()
+        const fileName = `${user.id}_${Date.now()}.${fileExt}`
+        const filePath = `events/${fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('chat-images')
+          .upload(filePath, eventImage)
+
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('chat-images')
+            .getPublicUrl(filePath)
+          imageUrl = publicUrl
+        } else {
+          console.warn('Event image upload failed, using category fallback:', uploadError.message)
+        }
+      }
+
+      // Fall back to category default image if no upload
+      if (!imageUrl) {
+        imageUrl = CATEGORY_IMAGES[form.category] || CATEGORY_IMAGES.social
+      }
+
       const { error } = await supabase
         .from('events')
         .insert({
@@ -209,7 +253,7 @@ export default function Events() {
           price: form.price,
           max_attendees: form.max_attendees ? parseInt(form.max_attendees) : null,
           description: form.description,
-          image_url: `https://images.unsplash.com/photo-${Math.floor(Math.random() * 1000000)}?w=800` // Placeholder
+          image_url: imageUrl
         })
 
       if (error) throw error
@@ -225,10 +269,14 @@ export default function Events() {
         max_attendees: '',
         description: ''
       })
+      setEventImage(null)
+      setEventImagePreview(null)
       fetchEvents()
     } catch (err: any) {
       console.error('Create event error:', err.message)
       toast.error('Failed to create event')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -353,9 +401,10 @@ export default function Events() {
                     {/* Image Thumbnail */}
                     <div className="w-full sm:w-32 h-32 rounded-xl overflow-hidden bg-white/5 flex-shrink-0">
                       <img 
-                        src={event.image_url || 'https://images.unsplash.com/photo-1514525253361-bee8a19740c1?w=400'} 
+                        src={event.image_url || CATEGORY_IMAGES[event.category] || CATEGORY_IMAGES.social} 
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
                         alt={event.title}
+                        onError={(e) => { (e.target as HTMLImageElement).src = CATEGORY_IMAGES[event.category] || CATEGORY_IMAGES.social }}
                       />
                     </div>
                     
@@ -532,11 +581,45 @@ export default function Events() {
                 />
               </div>
 
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Event Photo</label>
+                <input type="file" ref={eventFileRef} className="hidden" accept="image/*" onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setEventImage(file)
+                    setEventImagePreview(URL.createObjectURL(file))
+                  }
+                }} />
+                {eventImagePreview ? (
+                  <div className="relative w-full h-40 rounded-2xl overflow-hidden border border-white/10">
+                    <img src={eventImagePreview} className="w-full h-full object-cover" alt="Preview" />
+                    <button 
+                      type="button" 
+                      onClick={() => { setEventImage(null); setEventImagePreview(null); }}
+                      className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md flex items-center justify-center text-white hover:bg-red-500/60 transition-all"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button 
+                    type="button" 
+                    onClick={() => eventFileRef.current?.click()}
+                    className="w-full h-32 rounded-2xl border-2 border-dashed border-white/10 bg-[#13131f] flex flex-col items-center justify-center gap-2 text-white/30 hover:text-purple-400 hover:border-purple-500/30 transition-all"
+                  >
+                    <ImageIcon className="w-8 h-8" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Tap to upload photo</span>
+                    <span className="text-[9px] text-white/20 font-bold">Optional — category default used if skipped</span>
+                  </button>
+                )}
+              </div>
+
               <button 
                 type="submit"
-                className="w-full btn-grad py-5 rounded-2xl text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-purple-500/20 active:scale-[0.98] transition-all"
+                disabled={uploading}
+                className="w-full btn-grad py-5 rounded-2xl text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-purple-500/20 active:scale-[0.98] transition-all disabled:opacity-50"
               >
-                Create Event
+                {uploading ? 'Uploading...' : 'Create Event'}
               </button>
             </form>
           </div>
@@ -553,9 +636,10 @@ export default function Events() {
             {/* Cover Image */}
             <div className="relative h-64 sm:h-80 w-full overflow-hidden">
               <img 
-                src={selectedEvent.image_url || 'https://images.unsplash.com/photo-1514525253361-bee8a19740c1?w=800'} 
+                src={selectedEvent.image_url || CATEGORY_IMAGES[selectedEvent.category] || CATEGORY_IMAGES.social} 
                 className="w-full h-full object-cover" 
                 alt={selectedEvent.title}
+                onError={(e) => { (e.target as HTMLImageElement).src = CATEGORY_IMAGES[selectedEvent.category] || CATEGORY_IMAGES.social }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0F0F1A] via-[#0F0F1A]/20 to-transparent" />
               <button onClick={() => setSelectedEvent(null)} className="absolute top-6 right-6 w-12 h-12 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/10">
