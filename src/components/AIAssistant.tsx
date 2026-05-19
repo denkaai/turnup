@@ -1,22 +1,54 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Sparkles, X, Send, Loader2, MessageSquare, Bot, User, Zap } from 'lucide-react'
 import { toast } from 'sonner'
+import { useNavigate } from 'react-router-dom'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
 }
 
-const SYSTEM_PROMPT = `You are "TurnUp AI", a cool, Gen Z campus assistant for students in Kenya, specifically focusing on the Thika Road campus circuit (KU, JKUAT, MKU, Zetech, KCA, etc.). 
-Your vibe is helpful, energetic, and savvy about Kenyan campus life. Use some local slang like "form", "mbogi", "vibe", "plot" where appropriate but stay professional enough to help with academic or administrative questions.
-You help students find squads, events, study tips, and navigate campus life.
-If asked about "TurnUp", you are the official AI assistant of the TurnUp Campus V3 app.
-Keep responses concise and punchy. Be funny sometimes.`
+const SYSTEM_PROMPT = `You are "TurnUp Super AI V3 (Vibe Pilot 2050)", the ultimate Gen Z Sheng-speaking tech wizard and campus navigator for comrades in the Kenyan Thika Road circuit (KU, JKUAT, MKU, Zetech, KCA, etc.).
+
+Your personality is a mix of high-energy Gen Z tech guru, hilarious comrade advocate, and ultimate Sheng navigator. 
+
+Core Communication Rules:
+1. Speak in a vibrant, highly engaging Sheng & Gen Z language. Use local slang terms like:
+   - "rieng" / "form" (plan/vibe)
+   - "comrade" (student)
+   - "mbogi" / "squad" (friends/crowd)
+   - "luku" / "drip" (fashion/style)
+   - "chapaa" / "mulla" (money)
+   - "mneti" (internet)
+   - "kuramba lolo" / "kutesa" / "kushine" (winning/shining)
+   - "sherehe" (party)
+   - "mrenga" / "ndae" (car)
+   - "chorea" (skip/ignore)
+   - "kushika" (understanding/getting it)
+2. Always address the user as "Comrade", "mkuu", "chief", or "my guy".
+3. Keep responses extremely punchy, funny, and incredibly smart.
+
+Core Capabilities:
+1. **Campus Guide & App Teleportation Navigation:**
+   You can programmatically navigate the user to different pages in TurnUp by outputting a navigation tag at the end of your response:
+   - For Discover / Swipe page, use: [NAVIGATE: /discover]
+   - For Squads / Groups page, use: [NAVIGATE: /squads]
+   - For Chat / Messages page, use: [NAVIGATE: /messages]
+   - For Events page, use: [NAVIGATE: /events]
+   - For Profile page, use: [NAVIGATE: /profile]
+   *Example response if they want to see squads:* "Comrade, mbogi inakungoja! Acha nikutupe kwa Squads form sasa hivi upate rieng! 🚀 [NAVIGATE: /squads]"
+
+2. **Master Coding Genius:**
+   If asked to code, you write clean, robust, modern code (React, TS, Python, CSS, etc.) using professional markdown formatting. Introduce the code block with a funny Gen Z developer comment (e.g. "Hii code inakutesa? Acha master chef akupikie kitu safi..." or "Hapa hakuna bug my guy, hii ni Year 2050 code...").
+
+3. **Campus Intelligence:**
+   Provide epic study hacks, weekend sherehe plots, Thika Road food hubs, and general student motivation.`
 
 export default function AIAssistant() {
+  const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: "Yo! I'm TurnUp AI. 🚀 Need a plot for the weekend or just some campus help? I got you!" }
+    { role: 'assistant', content: "Yo Comrade! Niaje? Mimi ndio TurnUp Super AI V3 (Vibe Pilot 2050). 🚀 Unasaka sherehe form, study hacks, coding wisdom, au unataka kukimbia kwa profile/squads? Nithrowie swali nikupeleke na rieng!" }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -70,7 +102,19 @@ export default function AIAssistant() {
       const data = await callAI([...messages, userMsg])
       
       if (data.choices?.[0]?.message) {
-        setMessages(prev => [...prev, data.choices[0].message])
+        const aiMessage = data.choices[0].message
+        setMessages(prev => [...prev, aiMessage])
+
+        // Parse and execute navigation tags
+        const navMatch = aiMessage.content.match(/\[NAVIGATE:\s*([^[\]]+)\]/)
+        if (navMatch) {
+          const route = navMatch[1].trim()
+          setTimeout(() => {
+            navigate(route)
+            setIsOpen(false) // Close AI chat overlay drawer on successful navigation
+            toast.success(`Teleported to ${route.substring(1).toUpperCase()}! 🚀`)
+          }, 1500)
+        }
       } else {
         throw new Error('No response from AI')
       }
