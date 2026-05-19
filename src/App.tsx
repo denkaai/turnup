@@ -136,6 +136,15 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user)
+        
+        // Eagerly load profile from cache to render instantly
+        const cached = localStorage.getItem(`turnup_profile_${session.user.id}`)
+        if (cached) {
+          try {
+            setProfile(JSON.parse(cached))
+          } catch (e) {}
+        }
+
         fetchProfile(session.user.id)
           .catch(err => console.error('App: Profile fetch error', err))
           .finally(() => {
@@ -151,6 +160,15 @@ export default function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setUser(session.user)
+        
+        // Eagerly load profile from cache
+        const cached = localStorage.getItem(`turnup_profile_${session.user.id}`)
+        if (cached) {
+          try {
+            setProfile(JSON.parse(cached))
+          } catch (e) {}
+        }
+
         try {
           const prof = await fetchProfile(session.user.id)
           

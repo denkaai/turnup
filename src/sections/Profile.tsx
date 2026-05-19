@@ -32,6 +32,14 @@ export default function Profile() {
     now_playing: profile?.now_playing || '',
   })
 
+  const [editingStatus, setEditingStatus] = useState(false)
+  const [savingStatus, setSavingStatus] = useState(false)
+  const [formStatus, setFormStatus] = useState({
+    now_playing: profile?.now_playing || '',
+    vibe_status: profile?.vibe || '',
+    whatsapp_number: profile?.whatsapp_number || ''
+  })
+
   const [privacy, setPrivacy] = useState({
     showUni: true,
     showWhatsAppMatches: true,
@@ -152,6 +160,47 @@ export default function Profile() {
       setExpandedSection(null)
     }
     setSaving(false)
+  }
+
+  const saveStatusUpdate = async () => {
+    if (!user) return
+    setSavingStatus(true)
+    
+    let wa = formStatus.whatsapp_number
+    if (wa && !wa.startsWith('+')) {
+      if (wa.startsWith('0')) wa = '+254' + wa.substring(1)
+      else if (!wa.startsWith('254')) wa = '+254' + wa
+      else wa = '+' + wa
+    }
+
+    const success = await safeProfileUpsert({ 
+      id: user.id,
+      name: profile?.name || '',
+      bio: profile?.bio || '', 
+      course: profile?.course || '', 
+      year: profile?.year || 1,
+      campus: profile?.campus || '',
+      interests: profile?.interests || [],
+      whatsapp_number: wa,
+      now_playing: formStatus.now_playing,
+      vibe: formStatus.vibe_status,
+      onboarding_completed: true
+    })
+
+    if (success) {
+      await fetchProfile(user.id)
+      toast.success('Live vibe and status updated! ⚡')
+      
+      // Update general form state to stay in sync
+      setForm(f => ({
+        ...f,
+        whatsapp_number: wa,
+        now_playing: formStatus.now_playing
+      }))
+      
+      setEditingStatus(false)
+    }
+    setSavingStatus(false)
   }
 
   const handleSignOut = async () => {
@@ -306,22 +355,142 @@ export default function Profile() {
 
         {/* Stats Section Removed - Integrated into cards below */}
 
-        {/* Now Playing */}
-        <div className="card p-5 mb-4 border-white/5 bg-white/[0.02]">
-          <h3 className="text-[9px] text-gray-500 mb-2.5 font-black uppercase tracking-[0.2em] flex items-center gap-1.5">
-            <Music className="w-3 h-3 text-purple-400" /> Now Playing
-          </h3>
-          {editing ? (
-            <input
-              type="text"
-              className="input-dark w-full text-sm"
-              placeholder="E.g. Listening to: Bien - Utanipenda 🎵"
-              value={form.now_playing}
-              onChange={e => setForm({...form, now_playing: e.target.value})}
-              maxLength={100}
-            />
+        {/* Now Playing & Vibe Status Station */}
+        <div className="card p-5 mb-4 border-white/5 bg-[#0f0f1a]/60 backdrop-blur-xl relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500" />
+          
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em] flex items-center gap-1.5">
+              <Music className="w-3.5 h-3.5 text-purple-400 animate-pulse" /> Live Status & Vibe
+            </h3>
+            {!editingStatus && (
+              <button 
+                onClick={() => {
+                  setEditingStatus(true)
+                  setFormStatus({
+                    now_playing: profile.now_playing || '',
+                    vibe_status: profile.vibe || '',
+                    whatsapp_number: profile.whatsapp_number || ''
+                  })
+                }} 
+                className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-purple-400 hover:text-purple-300 hover:bg-white/10 transition-all text-[9px] font-black uppercase tracking-wider flex items-center gap-1 min-h-[24px]"
+              >
+                <Edit2 className="w-2.5 h-2.5" /> Update
+              </button>
+            )}
+          </div>
+
+          {editingStatus ? (
+            <div className="space-y-4 pt-2 animate-fade-in">
+              <div>
+                <label className="text-[8px] text-gray-500 uppercase font-black tracking-widest block mb-1">Status Vibe Song</label>
+                <input
+                  type="text"
+                  className="input-dark w-full text-xs min-h-[38px] px-3 rounded-xl"
+                  placeholder="Bien - Utanipenda 🎵"
+                  value={formStatus.now_playing}
+                  onChange={e => setFormStatus({ ...formStatus, now_playing: e.target.value })}
+                  maxLength={100}
+                />
+              </div>
+
+              <div>
+                <label className="text-[8px] text-gray-500 uppercase font-black tracking-widest block mb-1">Vibe Description Status</label>
+                <input
+                  type="text"
+                  className="input-dark w-full text-xs min-h-[38px] px-3 rounded-xl"
+                  placeholder="Feeling lucky 🍀"
+                  value={formStatus.vibe_status}
+                  onChange={e => setFormStatus({ ...formStatus, vibe_status: e.target.value })}
+                  maxLength={60}
+                />
+              </div>
+
+              <div>
+                <label className="text-[8px] text-gray-500 uppercase font-black tracking-widest block mb-1">WhatsApp Status Contact</label>
+                <input
+                  type="text"
+                  className="input-dark w-full text-xs min-h-[38px] px-3 rounded-xl"
+                  placeholder="e.g. 0712345678"
+                  value={formStatus.whatsapp_number}
+                  onChange={e => setFormStatus({ ...formStatus, whatsapp_number: e.target.value })}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-1.5">
+                <button 
+                  onClick={saveStatusUpdate}
+                  disabled={savingStatus}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white text-[10px] font-black uppercase tracking-widest hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 min-h-[36px] flex items-center justify-center"
+                >
+                  {savingStatus ? 'Saving...' : 'Save Vibe'}
+                </button>
+                <button 
+                  onClick={() => setEditingStatus(false)}
+                  className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition-all min-h-[36px] flex items-center justify-center"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           ) : (
-            <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">{profile.now_playing || <span className="text-gray-600 italic">No song playing...</span>}</p>
+            <div className="space-y-3">
+              {/* Vibe Song */}
+              <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-2xl p-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
+                    <Music className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[8px] text-gray-500 font-black uppercase tracking-wider leading-none">Song Vibe</p>
+                    <p className="text-white text-xs font-bold mt-1">
+                      {profile.now_playing || <span className="text-gray-600 italic">No song playing...</span>}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Text Vibe Status */}
+              <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-2xl p-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-pink-500/10 flex items-center justify-center border border-pink-500/20">
+                    <Zap className="w-4 h-4 text-pink-400 animate-pulse" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[8px] text-gray-500 font-black uppercase tracking-wider leading-none">Vibe Status</p>
+                    <p className="text-white text-xs font-bold mt-1">
+                      {profile.vibe || <span className="text-gray-600 italic">No custom status set...</span>}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* WhatsApp Connection */}
+              <div className="flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-2xl p-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
+                    <span className="text-base">💬</span>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-[8px] text-gray-500 font-black uppercase tracking-wider leading-none">WhatsApp Link</p>
+                    <p className="text-white text-xs font-bold mt-1">
+                      {profile.whatsapp_number ? (
+                        <a 
+                          href={`https://wa.me/${profile.whatsapp_number.replace('+', '')}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-green-400 hover:text-green-300 font-bold transition-colors flex items-center gap-1"
+                        >
+                          {profile.whatsapp_number} ⚡
+                        </a>
+                      ) : (
+                        <span className="text-gray-600 italic">Not set. Tap Update to add!</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
@@ -462,7 +631,7 @@ export default function Profile() {
 
         <div className="text-center mt-12 pb-8">
           <p className="text-gray-700 text-[10px] font-black uppercase tracking-[0.3em]">TurnUp v3.0.0</p>
-          <p className="text-gray-800 text-[9px] mt-1.5 font-bold uppercase tracking-widest opacity-50">Kenyatta University · Thika Road</p>
+          <p className="text-gray-800 text-[9px] mt-1.5 font-bold uppercase tracking-widest opacity-50">{profile?.campus || 'TurnUp Campus Network'} · active vibe link</p>
         </div>
       </div>
 
