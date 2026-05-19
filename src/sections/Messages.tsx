@@ -23,12 +23,17 @@ export default function Messages() {
   const { user, setActiveChatId } = useAuthStore()
   const [selected, setSelected] = useState<string | null>(null)
   const [conversations, setConversations] = useState<ChatConversation[]>([])
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<(Message & { sender_name?: string })[]>([])
   const [newMsg, setNewMsg] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [sending, setSending] = useState(false)
   const [showEmojis, setShowEmojis] = useState(false)
   const [showAttachments, setShowAttachments] = useState(false)
+  
+  // Custom V3 Group Chats state
+  const [sidebarTab, setSidebarTab] = useState<'dm' | 'groups'>('dm')
+  const [eventChats, setEventChats] = useState<any[]>([])
+
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
   const [showNewMsgModal, setShowNewMsgModal] = useState(false)
@@ -219,6 +224,56 @@ export default function Messages() {
     const text = type === 'text' ? newMsg : content
     if (!text.trim() || !selected || !user || sending) return
     
+    // Group Chat path
+    if (selected.startsWith('event_group_')) {
+      const eventId = selected.replace('event_group_', '')
+      const eventMsg = {
+        id: `evmsg_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        event_id: eventId,
+        sender_id: user.id,
+        sender_name: user.name || user.email?.split('@')[0] || 'Comrade',
+        content: text,
+        created_at: new Date().toISOString()
+      }
+
+      try {
+        await offlineDB.saveEventMessage(eventMsg)
+        
+        // Append locally instantly
+        setMessages(prev => [...prev, {
+          id: eventMsg.id,
+          sender_id: user.id,
+          content: eventMsg.content,
+          created_at: eventMsg.created_at,
+          read: true,
+          type: 'text',
+          sender_name: eventMsg.sender_name
+        } as any])
+        setNewMsg('')
+        setShowEmojis(false)
+
+        // Broadcast if online
+        if (isOnline) {
+          const ch = supabase.channel(`broadcast:event_group_${eventId}`)
+          await ch.subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+              await ch.send({
+                type: 'broadcast',
+                event: 'shout',
+                payload: eventMsg
+              })
+              supabase.removeChannel(ch)
+            }
+          })
+        } else {
+          toast.success("Broadcast queued offline! 📡")
+        }
+      } catch (dbErr) {
+        console.error('Failed to save event group message:', dbErr)
+      }
+      return
+    }
+
     const tempId = `off_${Date.now()}`
     
     // If offline, save in IndexedDB local queue instantly
@@ -336,34 +391,85 @@ export default function Messages() {
     }
   }
 
-  // Subscribe to real-time updates for active match
+  // Subscribe to real-time updates for active match or group broadcast
   useEffect(() => {
     let activeChannel: any = null
 
     const setupRealtime = async () => {
       if (selected && user) {
-        await fetchMessages()
-        
-        const matchId = await getOrCreateMatch(selected)
-        if (!matchId) return
+        if (selected.startsWith('event_group_')) {
+          const eventId = selected.replace('event_group_', '')
+          
+          // Clear active unread count for this group chat
+          setEventChats(prev => prev.map(c => c.eventId === eventId ? { ...c, unread: 0 } : c))
 
-        activeChannel = supabase
-          .channel(`chat:${matchId}`)
-          .on('postgres_changes', { 
-            event: 'INSERT', 
-            schema: 'public', 
-            table: 'messages',
-            filter: `match_id=eq.${matchId}`
-          }, (payload) => {
-            const msg = payload.new as any
-            if (msg.sender_id !== user.id) {
+          // Fetch message history from local database
+          try {
+            const msgs = await offlineDB.getEventMessages(eventId)
+            setMessages(msgs.map(m => ({
+              id: m.id,
+              sender_id: m.sender_id,
+              content: m.content,
+              created_at: m.created_at,
+              read: true,
+              type: 'text',
+              sender_name: m.sender_name
+            } as any)))
+          } catch (err) {
+            console.error("Failed to load local group messages:", err)
+          }
+
+          // Subscribe to live broadcast channel
+          activeChannel = supabase
+            .channel(`broadcast:event_group_${eventId}`, {
+              config: {
+                broadcast: { self: false }
+              }
+            })
+            .on('broadcast', { event: 'shout' }, async ({ payload }) => {
+              // Save to IndexedDB
+              await offlineDB.saveEventMessage(payload)
+              // Add to state
               setMessages(prev => {
-                if (prev.some(m => m.id === msg.id)) return prev
-                return [...prev, mapDbMessageToUi(msg)]
+                if (prev.some(m => m.id === payload.id)) return prev
+                return [...prev, {
+                  id: payload.id,
+                  sender_id: payload.sender_id,
+                  content: payload.content,
+                  created_at: payload.created_at,
+                  read: true,
+                  type: 'text',
+                  sender_name: payload.sender_name
+                } as any]
               })
-            }
-          })
-          .subscribe()
+            })
+            .subscribe()
+
+        } else {
+          // Direct Message (DM) path
+          await fetchMessages()
+          
+          const matchId = await getOrCreateMatch(selected)
+          if (!matchId) return
+
+          activeChannel = supabase
+            .channel(`chat:${matchId}`)
+            .on('postgres_changes', { 
+              event: 'INSERT', 
+              schema: 'public', 
+              table: 'messages',
+              filter: `match_id=eq.${matchId}`
+            }, (payload) => {
+              const msg = payload.new as any
+              if (msg.sender_id !== user.id) {
+                setMessages(prev => {
+                  if (prev.some(m => m.id === msg.id)) return prev
+                  return [...prev, mapDbMessageToUi(msg)]
+                })
+              }
+            })
+            .subscribe()
+        }
       }
     }
 
@@ -400,6 +506,57 @@ export default function Messages() {
       syncOfflineMessages()
     }
   }, [isOnline, user])
+
+  // Background broadcast synchronization listener for all joined event group chats
+  useEffect(() => {
+    if (!user || eventChats.length === 0) return
+    const channels: any[] = []
+
+    eventChats.forEach(chat => {
+      const eventId = chat.eventId
+      const ch = supabase
+        .channel(`bg_broadcast:event_group_${eventId}`, {
+          config: {
+            broadcast: { self: false }
+          }
+        })
+        .on('broadcast', { event: 'shout' }, async ({ payload }) => {
+          // Store in IndexedDB for persistent history
+          await offlineDB.saveEventMessage(payload)
+          
+          // Increment unread count if we are not actively viewing this group chat
+          if (selected !== `event_group_${eventId}`) {
+            setEventChats(prev => prev.map(c => 
+              c.eventId === eventId 
+                ? { ...c, unread: (c.unread || 0) + 1, lastMsg: `${payload.sender_name}: ${payload.content}` } 
+                : c
+            ))
+            toast.info(`New broadcast in ${chat.title}: "${payload.content.substring(0, 30)}..."`)
+          } else {
+            // Actively viewing: append directly to active messages list
+            setMessages(prev => {
+              if (prev.some(m => m.id === payload.id)) return prev
+              return [...prev, {
+                id: payload.id,
+                sender_id: payload.sender_id,
+                content: payload.content,
+                created_at: payload.created_at,
+                read: true,
+                type: 'text',
+                sender_name: payload.sender_name
+              } as any]
+            })
+          }
+        })
+        .subscribe()
+      
+      channels.push(ch)
+    })
+
+    return () => {
+      channels.forEach(ch => supabase.removeChannel(ch))
+    }
+  }, [eventChats, user, selected])
 
   // BLE / Proximity Sonar scanning simulated network loader
   const startRadarScanning = () => {
@@ -523,10 +680,52 @@ export default function Messages() {
     }
   }, [activeCall])
 
+  const fetchJoinedEvents = async () => {
+    if (!user) return
+    try {
+      const { data, error } = await supabase
+        .from('event_attendees')
+        .select(`
+          event_id,
+          events (
+            id,
+            title,
+            location,
+            category,
+            image_url,
+            event_date,
+            creator_id
+          )
+        `)
+        .eq('user_id', user.id)
+
+      if (error) throw error
+      if (data) {
+        const formatted = data.map((d: any) => {
+          const ev = d.events
+          if (!ev) return null
+          return {
+            id: `event_group_${ev.id}`,
+            eventId: ev.id,
+            title: ev.title,
+            location: ev.location,
+            image_url: ev.image_url,
+            category: ev.category,
+            lastMsg: 'Broadcast chat active 📡',
+            time: 'Live group'
+          }
+        }).filter(Boolean)
+        setEventChats(formatted)
+      }
+    } catch (err: any) {
+      console.warn("Failed to load joined event chats:", err.message)
+    }
+  }
+
   const loadConversations = async (retries = 3, delay = 1000) => {
     if (!user) return
     try {
-      // Fetch matching/active chats
+      // Fetch direct message chats
       const { data: profiles, error } = await supabase.from('profiles').select('*').neq('id', user.id).limit(20)
       if (error) throw error
       if (profiles) {
@@ -537,6 +736,8 @@ export default function Messages() {
           time: 'Active'
         })))
       }
+      // Eagerly fetch joined event group chats
+      await fetchJoinedEvents()
     } catch (err) {
       console.error('loadConversations error:', err)
       if (retries > 0) {
@@ -645,7 +846,23 @@ export default function Messages() {
     toast.success(`Chatting with ${u.name}! 🔥`)
   }
 
-  const selectedConv = conversations.find(c => c.id === selected)
+  const selectedConv = selected?.startsWith('event_group_')
+    ? (() => {
+        const ec = eventChats.find(c => c.id === selected)
+        if (!ec) return null
+        return {
+          id: ec.id,
+          other: {
+            id: ec.id,
+            name: `${ec.title}`,
+            photos: [ec.image_url || ''],
+            campus: `${ec.location}`
+          } as unknown as Profile,
+          lastMsg: ec.lastMsg,
+          time: ec.time
+        }
+      })()
+    : conversations.find(c => c.id === selected)
 
   return (
     <main className="h-screen pt-14 flex bg-[#090912] overflow-hidden relative">
@@ -690,6 +907,30 @@ export default function Messages() {
           </div>
         </div>
 
+        {/* Sidebar Tabs */}
+        <div className="flex px-4 sm:px-6 mb-4 gap-2">
+          <button
+            onClick={() => setSidebarTab('dm')}
+            className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
+              sidebarTab === 'dm'
+                ? 'grad-bg border-transparent text-white shadow-lg shadow-purple-500/20'
+                : 'bg-white/5 border-white/5 text-white/40 hover:text-white/70'
+            }`}
+          >
+            Direct Messages
+          </button>
+          <button
+            onClick={() => setSidebarTab('groups')}
+            className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border ${
+              sidebarTab === 'groups'
+                ? 'grad-bg border-transparent text-white shadow-lg shadow-purple-500/20'
+                : 'bg-white/5 border-white/5 text-white/40 hover:text-white/70'
+            }`}
+          >
+            Group Chats ({eventChats.length})
+          </button>
+        </div>
+
         {/* Offline Warning Banner */}
         {!isOnline && (
           <div className="mx-4 sm:mx-6 mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl animate-pulse text-left flex items-start gap-3 shadow-lg shadow-red-500/5 z-10">
@@ -704,36 +945,79 @@ export default function Messages() {
         )}
 
         <div className="flex-1 overflow-y-auto no-scrollbar">
-          {filteredConversations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full p-8 text-center opacity-40">
-              <MessageCircle className="w-12 h-12 mb-3" />
-              <p className="text-sm font-medium">No conversations found</p>
-            </div>
+          {sidebarTab === 'dm' ? (
+            filteredConversations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full p-8 text-center opacity-40">
+                <MessageCircle className="w-12 h-12 mb-3" />
+                <p className="text-sm font-medium">No conversations found</p>
+              </div>
+            ) : (
+              filteredConversations.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => setSelected(c.id)}
+                  className={`w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-all border-l-2 min-h-[70px] ${selected === c.id ? 'bg-purple-500/10 border-purple-500' : 'border-transparent hover:bg-white/[0.02]'}`}
+                >
+                  <div className="relative flex-shrink-0">
+                    <img src={c.other.photos?.[0]} alt={c.other.name} className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover ring-2 ring-white/5" />
+                    <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-[3px] border-[#0c0c18]" />
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p className="text-white text-sm font-bold truncate">{c.other.name}</p>
+                      <span className="text-gray-600 text-[9px] uppercase font-black tracking-widest">{c.time}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className={`text-xs truncate max-w-[140px] sm:max-w-[180px] text-gray-500`}>{c.lastMsg}</p>
+                      {c.unread ? (
+                        <span className="w-4 h-4 sm:w-5 sm:h-5 grad-bg rounded-full text-white text-[9px] flex items-center justify-center font-black shadow-lg shadow-purple-500/20">{c.unread}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                </button>
+              ))
+            )
           ) : (
-            filteredConversations.map(c => (
-              <button
-                key={c.id}
-                onClick={() => setSelected(c.id)}
-                className={`w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-all border-l-2 min-h-[70px] ${selected === c.id ? 'bg-purple-500/10 border-purple-500' : 'border-transparent hover:bg-white/[0.02]'}`}
-              >
-                <div className="relative flex-shrink-0">
-                  <img src={c.other.photos?.[0]} alt={c.other.name} className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl object-cover ring-2 ring-white/5" />
-                  <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-[3px] border-[#0c0c18]" />
+            (() => {
+              const queryGroups = eventChats.filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()))
+              return queryGroups.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full p-8 text-center opacity-40">
+                  <Users className="w-12 h-12 mb-3" />
+                  <p className="text-sm font-medium">No event group chats joined</p>
                 </div>
-                <div className="flex-1 min-w-0 text-left">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <p className="text-white text-sm font-bold truncate">{c.other.name}</p>
-                    <span className="text-gray-600 text-[9px] uppercase font-black tracking-widest">{c.time}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className={`text-xs truncate max-w-[140px] sm:max-w-[180px] text-gray-500`}>{c.lastMsg}</p>
-                    {c.unread ? (
-                      <span className="w-4 h-4 sm:w-5 sm:h-5 grad-bg rounded-full text-white text-[9px] flex items-center justify-center font-black shadow-lg shadow-purple-500/20">{c.unread}</span>
-                    ) : null}
-                  </div>
-                </div>
-              </button>
-            ))
+              ) : (
+                queryGroups.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelected(c.id)}
+                    className={`w-full flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-4 transition-all border-l-2 min-h-[70px] ${selected === c.id ? 'bg-purple-500/10 border-purple-500' : 'border-transparent hover:bg-white/[0.02]'}`}
+                  >
+                    <div className="relative flex-shrink-0">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-600 flex items-center justify-center text-white text-xl font-bold ring-2 ring-white/5 overflow-hidden">
+                        {c.image_url ? (
+                          <img src={c.image_url} alt={c.title} className="w-full h-full object-cover" />
+                        ) : (
+                          "📢"
+                        )}
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-yellow-500 rounded-full border-[3px] border-[#0c0c18] animate-pulse" />
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <p className="text-white text-sm font-bold truncate">{c.title}</p>
+                        <span className="text-purple-400 text-[8px] uppercase font-black tracking-widest">{c.time}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className={`text-xs truncate max-w-[140px] sm:max-w-[180px] text-gray-500`}>{c.lastMsg}</p>
+                        {c.unread ? (
+                          <span className="w-4 h-4 sm:w-5 sm:h-5 bg-amber-500 rounded-full text-black text-[9px] flex items-center justify-center font-black shadow-lg shadow-amber-500/20">{c.unread}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </button>
+                ))
+              )
+            })()
           )}
         </div>
       </div>
@@ -775,12 +1059,25 @@ export default function Messages() {
 
               return (
                 <div key={msg.id} className={`flex gap-2 w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
-                  {!isMe && <img src={selectedConv?.other.photos?.[0]} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover flex-shrink-0 mt-1" alt="" />}
+                  {!isMe && (
+                    selected.startsWith('event_group_') ? (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500/20 to-pink-500/20 border border-purple-500/30 flex items-center justify-center text-[9px] font-black text-purple-300 uppercase flex-shrink-0 mt-1">
+                        {msg.sender_name ? msg.sender_name.slice(0, 2) : 'CM'}
+                      </div>
+                    ) : (
+                      <img src={selectedConv?.other.photos?.[0]} className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover flex-shrink-0 mt-1" alt="" />
+                    )
+                  )}
                   
                   <div 
                     className={`relative group max-w-[85%] sm:max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
                     onContextMenu={(e) => { e.preventDefault(); setActiveReactionMsg(msg.id); }}
                   >
+                    {!isMe && msg.sender_name && (
+                      <span className="text-[9px] text-[#fbbf24] font-black uppercase tracking-widest mb-1 ml-1 animate-fade-in">
+                        {msg.sender_name}
+                      </span>
+                    )}
                     {/* The bubble */}
                     <div className={`relative px-4 py-3 rounded-[24px] text-sm shadow-xl ${
                       isMe 

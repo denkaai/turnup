@@ -22,6 +22,7 @@ import { toast } from 'sonner'
 // Categories with their assigned colors
 const CATEGORIES = [
   { id: 'all', label: 'All', color: '#a78bfa', icon: Tag },
+  { id: 'flash', label: '⚡ Flash', color: '#fbbf24', icon: Clock },
   { id: 'party', label: '🎉 Parties', color: '#f472b6', icon: Flame },
   { id: 'food', label: '🍔 Food', color: '#fb923c', icon: Tag },
   { id: 'study', label: '📚 Study', color: '#34d399', icon: Clock },
@@ -47,6 +48,83 @@ const CATEGORY_IMAGES: Record<string, string> = {
   career: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?w=800&q=80',
   gaming: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=800&q=80',
   social: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=80',
+  flash: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&q=80',
+}
+
+export const CAMPUS_MAP_NODES = [
+  { id: 'cbd', name: 'Nairobi CBD', x: 120, y: 300, campus: 'CBD', color: '#f472b6' },
+  { id: 'pac', name: 'PAC University', x: 220, y: 240, campus: 'PAC University', color: '#38bdf8' },
+  { id: 'ku', name: 'Kenyatta Uni (KU)', x: 340, y: 180, campus: 'KU', color: '#a78bfa' },
+  { id: 'zetech', name: 'Zetech University', x: 420, y: 150, campus: 'Zetech', color: '#fb923c' },
+  { id: 'jkuat', name: 'JKUAT Main Campus', x: 500, y: 110, campus: 'JKUAT', color: '#34d399' },
+  { id: 'mku', name: 'MKU Main Campus', x: 620, y: 70, campus: 'MKU', color: '#c084fc' },
+  { id: 'gretsa', name: 'Gretsa University', x: 700, y: 50, campus: 'Gretsa', color: '#f87171' },
+  { id: 'karen', name: 'Karen Area', x: 80, y: 180, campus: 'Karen', color: '#fbbf24' }
+]
+
+function FlashCountdown({ expiry, createdAt }: { expiry: string, createdAt: string }) {
+  const [timeLeft, setTimeLeft] = useState('')
+  const [percent, setPercent] = useState(100)
+
+  useEffect(() => {
+    const expiryTime = new Date(expiry).getTime()
+    const createdTime = new Date(createdAt).getTime()
+    const totalDuration = Math.max(1000, expiryTime - createdTime)
+
+    const update = () => {
+      const now = Date.now()
+      const total = expiryTime - now
+      if (total <= 0) {
+        setTimeLeft('Expired')
+        setPercent(0)
+        return
+      }
+      
+      const hours = Math.floor(total / (3600 * 1000))
+      const minutes = Math.floor((total % (3600 * 1000)) / (60 * 1000))
+      const seconds = Math.floor((total % (60 * 1000)) / 1000)
+
+      let str = ''
+      if (hours > 0) str += `${hours}h `
+      str += `${minutes}m ${seconds}s`
+      setTimeLeft(str)
+
+      // Calculate percentage
+      const elapsed = expiryTime - now
+      const p = Math.max(0, Math.min(100, (elapsed / totalDuration) * 100))
+      setPercent(p)
+    }
+
+    update()
+    const timer = setInterval(update, 1000)
+    return () => clearInterval(timer)
+  }, [expiry, createdAt])
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative w-8 h-8 flex items-center justify-center">
+        <svg className="w-full h-full transform -rotate-90">
+          <circle cx="16" cy="16" r="12" stroke="rgba(251,191,36,0.1)" strokeWidth="2.5" fill="transparent" />
+          <circle 
+            cx="16" 
+            cy="16" 
+            r="12" 
+            stroke="#fbbf24" 
+            strokeWidth="2.5" 
+            fill="transparent"
+            strokeDasharray={75.3}
+            strokeDashoffset={75.3 - (75.3 * percent) / 100}
+            className="transition-all duration-1000"
+          />
+        </svg>
+        <span className="absolute text-[8px] font-black text-[#fbbf24] animate-pulse">⚡</span>
+      </div>
+      <div>
+        <p className="text-[7px] text-white/30 font-black uppercase tracking-widest leading-none mb-0.5">Flash Time Remaining</p>
+        <p className="text-[11px] font-black text-[#fbbf24] tracking-tight">{timeLeft}</p>
+      </div>
+    </div>
+  )
 }
 
 interface Event {
@@ -74,6 +152,10 @@ export default function Events() {
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   
+  // Custom V3 view toggles
+  const [viewMode, setViewMode] = useState<'feed' | 'map'>('feed')
+  const [selectedCampusFilter, setSelectedCampusFilter] = useState<string | null>(null)
+
   // Modals
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
@@ -86,7 +168,9 @@ export default function Events() {
     event_date: '',
     price: 0,
     max_attendees: '',
-    description: ''
+    description: '',
+    isFlash: false,
+    flashDuration: '2' // default 2 hours
   })
   const [eventImage, setEventImage] = useState<File | null>(null)
   const [eventImagePreview, setEventImagePreview] = useState<string | null>(null)
@@ -208,7 +292,12 @@ export default function Events() {
     e.preventDefault()
     if (!user) return
 
-    if (!form.title || !form.location || !form.event_date) {
+    const isFlash = form.isFlash
+    const eventDate = isFlash 
+      ? new Date(Date.now() + parseFloat(form.flashDuration) * 60 * 60 * 1000).toISOString() 
+      : form.event_date
+
+    if (!form.title || !form.location || (!isFlash && !form.event_date)) {
       toast.error('Please fill in all required fields')
       return
     }
@@ -238,8 +327,9 @@ export default function Events() {
       }
 
       // Fall back to category default image if no upload
+      const eventCategory = isFlash ? 'flash' : form.category
       if (!imageUrl) {
-        imageUrl = CATEGORY_IMAGES[form.category] || CATEGORY_IMAGES.social
+        imageUrl = CATEGORY_IMAGES[eventCategory] || CATEGORY_IMAGES.social
       }
 
       const { error } = await supabase
@@ -247,9 +337,9 @@ export default function Events() {
         .insert({
           creator_id: user.id,
           title: form.title,
-          category: form.category,
+          category: eventCategory,
           location: form.location,
-          event_date: form.event_date,
+          event_date: eventDate,
           price: form.price,
           max_attendees: form.max_attendees ? parseInt(form.max_attendees) : null,
           description: form.description,
@@ -258,7 +348,7 @@ export default function Events() {
 
       if (error) throw error
 
-      toast.success('Event created! 🎉')
+      toast.success(isFlash ? 'Flash Meetup launched! ⚡' : 'Event created! 🎉')
       setIsCreateModalOpen(false)
       setForm({
         title: '',
@@ -267,7 +357,9 @@ export default function Events() {
         event_date: '',
         price: 0,
         max_attendees: '',
-        description: ''
+        description: '',
+        isFlash: false,
+        flashDuration: '2'
       })
       setEventImage(null)
       setEventImagePreview(null)
@@ -281,10 +373,23 @@ export default function Events() {
   }
 
   const filteredEvents = events.filter(e => {
+    // Filter out expired flash events
+    if (e.category === 'flash' && new Date(e.event_date).getTime() < Date.now()) {
+      return false
+    }
+
     const matchesSearch = e.title.toLowerCase().includes(search.toLowerCase()) || 
-                          e.location.toLowerCase().includes(search.toLowerCase())
+                          e.location.toLowerCase().includes(search.toLowerCase()) ||
+                          e.description?.toLowerCase().includes(search.toLowerCase())
+
     const matchesCategory = activeCategory === 'all' || e.category === activeCategory
-    return matchesSearch && matchesCategory
+
+    const matchesCampus = !selectedCampusFilter || 
+                          e.location.toLowerCase().includes(selectedCampusFilter.toLowerCase()) ||
+                          e.title.toLowerCase().includes(selectedCampusFilter.toLowerCase()) ||
+                          e.description?.toLowerCase().includes(selectedCampusFilter.toLowerCase())
+
+    return matchesSearch && matchesCategory && matchesCampus
   })
 
   const formatDate = (dateStr: string) => {
@@ -310,17 +415,44 @@ export default function Events() {
     <main className="page-main relative min-h-screen bg-[#080810] text-white overflow-x-hidden">
       <div className="container-responsive pb-24">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 animate-fade-in">
           <div>
             <h1 className="font-syne font-black text-3xl grad-text tracking-tight">Events 🎉</h1>
             <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Discover your campus vibe</p>
           </div>
-          <button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="w-12 h-12 rounded-2xl grad-bg flex items-center justify-center shadow-lg shadow-purple-500/20 active:scale-95 transition-transform"
-          >
-            <Plus className="w-6 h-6 text-white" />
-          </button>
+          
+          <div className="flex items-center gap-3">
+            {/* View Switcher */}
+            <div className="bg-[#0F0F1A] border border-white/5 p-1 rounded-2xl flex items-center shadow-lg">
+              <button 
+                onClick={() => setViewMode('feed')} 
+                className={`px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                  viewMode === 'feed' 
+                    ? 'grad-bg text-white' 
+                    : 'text-white/40 hover:text-white/70'
+                }`}
+              >
+                Feed View
+              </button>
+              <button 
+                onClick={() => setViewMode('map')} 
+                className={`px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${
+                  viewMode === 'map' 
+                    ? 'grad-bg text-white' 
+                    : 'text-white/40 hover:text-white/70'
+                }`}
+              >
+                Radar Map
+              </button>
+            </div>
+
+            <button 
+              onClick={() => setIsCreateModalOpen(true)}
+              className="w-12 h-12 rounded-2xl grad-bg flex items-center justify-center shadow-lg shadow-purple-500/20 active:scale-95 transition-transform"
+            >
+              <Plus className="w-6 h-6 text-white" />
+            </button>
+          </div>
         </div>
 
         {/* Search */}
@@ -334,34 +466,242 @@ export default function Events() {
           />
         </div>
 
-        {/* Meetup Spots Scroller */}
-        <div className="mb-8 animate-fade-in">
-          <h2 className="text-[10px] text-white/40 font-black uppercase tracking-widest ml-1 mb-4">Trending Meetup Spots</h2>
-          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
-            {SPOTS.map(spot => (
-              <div key={spot.id} className="relative w-64 h-80 rounded-[2rem] overflow-hidden flex-shrink-0 border border-white/5 group card-hover bg-[#0A0A0F]">
-                <div className="cinematic-glow opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <img src={spot.image} alt={spot.name} className="w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-[1.05]" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#030305] via-[#030305]/60 to-transparent p-6 flex flex-col justify-end">
-                  <span className="px-3 py-1 rounded-full bg-white/5 text-purple-300 text-[9px] font-black uppercase tracking-widest border border-white/10 w-fit mb-2 backdrop-blur-md flex items-center gap-1">
-                    <MapPin className="w-3 h-3" /> {spot.area}
-                  </span>
-                  <h3 className="font-syne font-black text-2xl text-white mb-3">{spot.name}</h3>
-                  
-                  {/* Who's going */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex -space-x-1.5">
-                      <div className="w-6 h-6 rounded-full bg-purple-500 border-2 border-[#030305] flex items-center justify-center text-[9px] font-black text-white">JD</div>
-                      <div className="w-6 h-6 rounded-full bg-pink-500 border-2 border-[#030305] flex items-center justify-center text-[9px] font-black text-white">SK</div>
-                      <div className="w-6 h-6 rounded-full bg-amber-500 border-2 border-[#030305] flex items-center justify-center text-[9px] font-black text-white">MK</div>
+        {/* Styles for Radar Map View */}
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes radar-pulse {
+            0% { r: 6px; opacity: 1; stroke-width: 1px; }
+            50% { opacity: 0.6; }
+            100% { r: 28px; opacity: 0; stroke-width: 1.5px; }
+          }
+          @keyframes radar-sweep {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          .radar-pulsing-halo {
+            animation: radar-pulse 2.2s infinite ease-out;
+            transform-origin: center;
+          }
+          .radar-sweeper {
+            animation: radar-sweep 10s linear infinite;
+            transform-origin: 400px 220px;
+          }
+          .map-glow-filter {
+            filter: drop-shadow(0 0 8px currentColor);
+          }
+        `}} />
+
+        {viewMode === 'feed' ? (
+          /* Meetup Spots Scroller */
+          <div className="mb-8 animate-fade-in">
+            <h2 className="text-[10px] text-white/40 font-black uppercase tracking-widest ml-1 mb-4">Trending Meetup Spots</h2>
+            <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+              {SPOTS.map(spot => (
+                <div key={spot.id} className="relative w-64 h-80 rounded-[2rem] overflow-hidden flex-shrink-0 border border-white/5 group card-hover bg-[#0A0A0F]">
+                  <div className="cinematic-glow opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <img src={spot.image} alt={spot.name} className="w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-[1.05]" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#030305] via-[#030305]/60 to-transparent p-6 flex flex-col justify-end">
+                    <span className="px-3 py-1 rounded-full bg-white/5 text-purple-300 text-[9px] font-black uppercase tracking-widest border border-white/10 w-fit mb-2 backdrop-blur-md flex items-center gap-1">
+                      <MapPin className="w-3 h-3" /> {spot.area}
+                    </span>
+                    <h3 className="font-syne font-black text-2xl text-white mb-3">{spot.name}</h3>
+                    
+                    {/* Who's going */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex -space-x-1.5">
+                        <div className="w-6 h-6 rounded-full bg-purple-500 border-2 border-[#030305] flex items-center justify-center text-[9px] font-black text-white">JD</div>
+                        <div className="w-6 h-6 rounded-full bg-pink-500 border-2 border-[#030305] flex items-center justify-center text-[9px] font-black text-white">SK</div>
+                        <div className="w-6 h-6 rounded-full bg-amber-500 border-2 border-[#030305] flex items-center justify-center text-[9px] font-black text-white">MK</div>
+                      </div>
+                      <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">{spot.attendees}+ going</span>
                     </div>
-                    <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">{spot.attendees}+ going</span>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          /* SVG Cyberpunk Radar Map */
+          <div className="mb-8 animate-fade-in bg-[#0D0D19] border border-white/10 rounded-[2.5rem] p-6 shadow-2xl relative overflow-hidden">
+            {/* Grid Glow Overlay */}
+            <div className="absolute inset-0 bg-radial-gradient from-purple-500/5 to-transparent pointer-events-none" />
+
+            {/* Radar Panel Header */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-4 mb-4 text-white/40 text-[9px] font-black uppercase tracking-[0.2em]">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
+                <span className="text-green-400">Tactical Sonar Radar Active</span>
+              </div>
+              <div>THIKA ROAD CAMPUS NODES</div>
+              <div>FILTER: {selectedCampusFilter ? <span className="text-[#fbbf24]">{selectedCampusFilter}</span> : 'NONE (SHOW ALL)'}</div>
+            </div>
+
+            {/* SVG Interactive Map */}
+            <div className="relative w-full aspect-[800/440] bg-[#07070F] rounded-2xl border border-white/5 overflow-hidden">
+              <svg viewBox="0 0 800 440" className="w-full h-full select-none">
+                {/* Definitions */}
+                <defs>
+                  <pattern id="radar-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+                  </pattern>
+                  <linearGradient id="thika-road-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#c084fc" stopOpacity="0.8" />
+                    <stop offset="50%" stopColor="#a78bfa" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.8" />
+                  </linearGradient>
+                </defs>
+
+                {/* Grid Background */}
+                <rect width="100%" height="100%" fill="url(#radar-grid)" />
+
+                {/* Radar Scanning Concentric Circles */}
+                <circle cx="400" cy="220" r="100" fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="1" />
+                <circle cx="400" cy="220" r="200" fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="1" />
+                <circle cx="400" cy="220" r="300" fill="none" stroke="rgba(255,255,255,0.01)" strokeWidth="1" />
+
+                {/* Radar Sweep Rotating Line */}
+                <g className="radar-sweeper">
+                  <line x1="400" y1="220" x2="400" y2="20" stroke="rgba(167,139,250,0.15)" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M 400 220 L 400 20 A 200 200 0 0 1 540 80 Z" fill="rgba(167,139,250,0.02)" />
+                </g>
+
+                {/* Thika Road Highway Path */}
+                <path 
+                  d="M 120 300 L 220 240 L 340 180 L 420 150 L 500 110 L 620 70 L 700 50" 
+                  fill="none" 
+                  stroke="url(#thika-road-grad)" 
+                  strokeWidth="4" 
+                  strokeLinecap="round"
+                  className="map-glow-filter text-purple-500/20"
+                />
+                
+                {/* Dotted Inner Lane */}
+                <path 
+                  d="M 120 300 L 220 240 L 340 180 L 420 150 L 500 110 L 620 70 L 700 50" 
+                  fill="none" 
+                  stroke="#ffffff" 
+                  strokeWidth="1.2" 
+                  strokeDasharray="6, 6" 
+                  strokeLinecap="round"
+                  opacity="0.4"
+                />
+
+                {/* Karen Bypass Link */}
+                <path 
+                  d="M 120 300 L 80 180" 
+                  fill="none" 
+                  stroke="#fbbf24" 
+                  strokeWidth="2" 
+                  strokeDasharray="4, 4" 
+                  opacity="0.3"
+                />
+
+                {/* Campus Nodes */}
+                {CAMPUS_MAP_NODES.map(node => {
+                  const activeCount = events.filter(e => {
+                    if (e.category === 'flash' && new Date(e.event_date).getTime() < Date.now()) return false
+                    return e.location.toLowerCase().includes(node.campus.toLowerCase()) || 
+                           e.title.toLowerCase().includes(node.campus.toLowerCase()) ||
+                           e.description?.toLowerCase().includes(node.campus.toLowerCase())
+                  }).length
+
+                  const isSelected = selectedCampusFilter === node.campus
+
+                  return (
+                    <g 
+                      key={node.id} 
+                      transform={`translate(${node.x}, ${node.y})`}
+                      className="cursor-pointer group"
+                      onClick={() => {
+                        setSelectedCampusFilter(isSelected ? null : node.campus)
+                        toast.info(isSelected ? 'Cleared radar filter' : `Radar filtered to: ${node.name}`)
+                      }}
+                    >
+                      {/* Pulse Halo */}
+                      {activeCount > 0 && (
+                        <circle 
+                          cx="0" 
+                          cy="0" 
+                          r="12" 
+                          fill="none" 
+                          stroke={node.color} 
+                          className="radar-pulsing-halo" 
+                          style={{ transformOrigin: '0px 0px' }}
+                        />
+                      )}
+
+                      {/* Selected Node Glow */}
+                      {isSelected && (
+                        <circle cx="0" cy="0" r="14" fill="none" stroke="#fbbf24" strokeWidth="2" className="map-glow-filter text-[#fbbf24] animate-pulse" />
+                      )}
+
+                      {/* Center Pin */}
+                      <circle 
+                        cx="0" 
+                        cy="0" 
+                        r="6" 
+                        fill={isSelected ? '#fbbf24' : node.color} 
+                        className="transition-colors duration-300"
+                      />
+
+                      {/* Campus Label Card */}
+                      <g transform="translate(0, -18)">
+                        {/* Backdrop Rect */}
+                        <rect 
+                          x="-50" 
+                          y="-10" 
+                          width="100" 
+                          height="18" 
+                          rx="6" 
+                          fill="#0F0F1A" 
+                          stroke={isSelected ? '#fbbf24' : 'rgba(255,255,255,0.08)'} 
+                          strokeWidth="1"
+                          className="transition-all duration-300 group-hover:stroke-white/30"
+                        />
+                        {/* Text */}
+                        <text 
+                          x="0" 
+                          y="2" 
+                          textAnchor="middle" 
+                          fill={isSelected ? '#fbbf24' : '#ffffff'} 
+                          fontSize="7" 
+                          fontWeight="bold" 
+                          className="transition-all duration-300 select-none pointer-events-none"
+                        >
+                          {node.name}
+                        </text>
+                      </g>
+
+                      {/* Event Count Indicator Badge */}
+                      {activeCount > 0 && (
+                        <g transform="translate(14, 8)">
+                          <circle cx="0" cy="0" r="7" fill={node.color} />
+                          <text x="0" y="2.5" textAnchor="middle" fill="#000000" fontSize="7.5" fontWeight="900">
+                            {activeCount}
+                          </text>
+                        </g>
+                      )}
+                    </g>
+                  )
+                })}
+              </svg>
+            </div>
+
+            {/* Clear Filter Bar */}
+            {selectedCampusFilter && (
+              <div className="mt-4 flex items-center justify-between bg-white/[0.02] border border-white/5 rounded-2xl p-4 animate-fade-in">
+                <span className="text-[10px] text-white/50 font-black uppercase tracking-wider">
+                  Filtering {selectedCampusFilter} events ({filteredEvents.length} found)
+                </span>
+                <button 
+                  onClick={() => setSelectedCampusFilter(null)}
+                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-[9px] font-black uppercase tracking-widest text-white/80 active:scale-95 transition-all"
+                >
+                  Clear Map Filter
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Categories */}
         <div className="flex gap-3 mb-8 overflow-x-auto pb-2 no-scrollbar animate-fade-in">
@@ -413,12 +753,17 @@ export default function Events() {
                         <div className="space-y-1">
                           <h3 className="font-syne font-black text-xl text-white group-hover:grad-text transition-all">{event.title}</h3>
                           <div className="flex flex-wrap gap-2">
+                            {event.category === 'flash' && (
+                              <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-400 text-[9px] font-black uppercase tracking-widest border border-amber-500/20 flex items-center gap-1">
+                                ⚡ Flash Meetup
+                              </span>
+                            )}
                             {event.is_attending && (
                               <span className="px-2 py-0.5 rounded-lg bg-green-500/10 text-green-400 text-[9px] font-black uppercase tracking-widest border border-green-500/20 flex items-center gap-1">
                                 <CheckCircle className="w-2.5 h-2.5" /> Going
                               </span>
                             )}
-                            {isSoon(event.event_date) && (
+                            {event.category !== 'flash' && isSoon(event.event_date) && (
                               <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-400 text-[9px] font-black uppercase tracking-widest border border-amber-500/20">
                                 Soon 🔥
                               </span>
@@ -432,8 +777,16 @@ export default function Events() {
                         </div>
                       </div>
 
+                      {event.category === 'flash' ? (
+                        <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 my-2">
+                          <FlashCountdown expiry={event.event_date} createdAt={event.created_at} />
+                        </div>
+                      ) : null}
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-bold text-white/60">
-                        <div className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5 text-purple-400" /> {formatDate(event.event_date)}</div>
+                        {event.category !== 'flash' && (
+                          <div className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5 text-purple-400" /> {formatDate(event.event_date)}</div>
+                        )}
                         <div className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-purple-400" /> {event.location}</div>
                         <div className="flex items-center gap-2 col-span-full"><Users className="w-3.5 h-3.5 text-purple-400" /> {event.attendee_count} students going</div>
                       </div>
@@ -522,6 +875,43 @@ export default function Events() {
                 </div>
               </div>
 
+              {/* Flash Meetup Controls */}
+              <div className="bg-[#0D0D19]/40 border border-white/5 p-5 rounded-3xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-[11px] font-black uppercase tracking-widest text-[#fbbf24] flex items-center gap-1.5">⚡ Spontaneous Flash Meetup</h4>
+                    <p className="text-[9px] text-white/45 font-bold mt-0.5">Disappears automatically once the timer expires. Perfect for quick link-ups.</p>
+                  </div>
+                  <input 
+                    type="checkbox"
+                    checked={form.isFlash}
+                    onChange={e => setForm({...form, isFlash: e.target.checked})}
+                    className="w-5 h-5 rounded border-white/10 text-purple-500 bg-[#0F0F1A] focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                  />
+                </div>
+                {form.isFlash && (
+                  <div className="space-y-2 animate-fade-in">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-white/45 ml-1">Disappears In*</label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {['1', '2', '4', '6'].map(hours => (
+                        <button
+                          type="button"
+                          key={hours}
+                          onClick={() => setForm({...form, flashDuration: hours})}
+                          className={`py-3 rounded-xl border text-xs font-black transition-all ${
+                            form.flashDuration === hours 
+                              ? 'bg-amber-500/20 border-amber-500 text-amber-400' 
+                              : 'bg-[#13131f] border-white/5 text-white/40 hover:border-white/10'
+                          }`}
+                        >
+                          {hours} HR
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Location*</label>
@@ -536,12 +926,16 @@ export default function Events() {
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-white/40 ml-1">Date & Time*</label>
                   <input 
-                    required
+                    required={!form.isFlash}
+                    disabled={form.isFlash}
                     type="datetime-local" 
-                    className="w-full bg-[#13131f] border border-white/5 rounded-2xl py-4 px-6 text-sm text-white focus:outline-none focus:border-purple-500 transition-all shadow-inner [color-scheme:dark]"
-                    value={form.event_date}
+                    className="w-full bg-[#13131f] border border-white/5 rounded-2xl py-4 px-6 text-sm text-white focus:outline-none focus:border-purple-500 transition-all shadow-inner [color-scheme:dark] disabled:opacity-30 disabled:cursor-not-allowed"
+                    value={form.isFlash ? '' : form.event_date}
                     onChange={e => setForm({...form, event_date: e.target.value})}
                   />
+                  {form.isFlash && (
+                    <p className="text-[8px] text-[#fbbf24] font-black uppercase tracking-widest ml-1 animate-pulse">⚡ Auto-scheduled expiration</p>
+                  )}
                 </div>
               </div>
 
