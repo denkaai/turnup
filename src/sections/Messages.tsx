@@ -1225,7 +1225,7 @@ export default function Messages() {
             </div>
 
             {/* Radar Animation Area */}
-            <div className="relative w-56 h-56 sm:w-64 sm:h-64 rounded-full border border-purple-500/10 flex items-center justify-center mb-6 bg-purple-500/[0.01]">
+            <div className="relative w-56 h-56 sm:w-64 sm:h-64 rounded-full border border-purple-500/10 flex items-center justify-center mb-6 bg-purple-500/[0.01] overflow-hidden">
               <div className="absolute inset-2 rounded-full border border-purple-500/20" />
               <div className="absolute inset-12 rounded-full border border-purple-500/20" />
               <div className="absolute inset-24 rounded-full border border-purple-500/20" />
@@ -1234,8 +1234,8 @@ export default function Messages() {
               <div className="absolute inset-4 rounded-full border-b-2 border-l-2 border-pink-500/30 animate-[spin_4s_linear_infinite_reverse]" />
               
               {radarPeers.map((p, idx) => {
-                const angle = (idx * 360) / radarPeers.length
-                const radius = 50 + idx * 20
+                const angle = (idx * 120) + 30
+                const radius = 35 + idx * 18
                 const x = Math.cos((angle * Math.PI) / 180) * radius
                 const y = Math.sin((angle * Math.PI) / 180) * radius
                 return (
@@ -1294,7 +1294,7 @@ export default function Messages() {
             </div>
 
             {/* Mesh list grid */}
-            <div className="w-full flex-1 overflow-y-auto no-scrollbar max-h-40 space-y-3 z-10">
+            <div className="w-full flex-1 overflow-y-auto no-scrollbar max-h-60 space-y-3 z-10">
               <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest text-left">Discovered Off-Grid Comrades ({radarPeers.length})</p>
               {radarPeers.length === 0 ? (
                 <div className="border border-white/5 bg-white/[0.01] rounded-2xl p-5 text-center text-xs text-gray-500">
