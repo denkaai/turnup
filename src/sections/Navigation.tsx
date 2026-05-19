@@ -6,11 +6,12 @@ import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
 
 export default function Navigation() {
-  const { user, profile, signOut } = useAuthStore()
+  const { user, profile, signOut, activeChatId } = useAuthStore()
   const location = useLocation()
   const navigate = useNavigate()
   const isLanding = location.pathname === '/'
   const isOnboarding = location.pathname === '/onboarding'
+  const hideOnMobileChat = !!activeChatId && location.pathname === '/messages'
 
   const navItems = [
     { path: '/discover', label: 'Discover', icon: Search },
@@ -30,7 +31,9 @@ export default function Navigation() {
     <>
       {/* Top Navbar */}
       {!isOnboarding && (
-        <nav className={`fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 sm:px-6 transition-all ${isLanding ? 'bg-transparent' : 'glass border-b border-white/5 shadow-lg'}`}>
+        <nav className={`fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-4 sm:px-6 transition-all ${
+          hideOnMobileChat ? 'hidden md:flex' : 'flex'
+        } ${isLanding ? 'bg-transparent' : 'glass border-b border-white/5 shadow-lg'}`}>
           <Link to="/" className="flex items-center gap-2 min-h-[44px]">
             <div className="w-8 h-8 rounded-lg grad-bg flex items-center justify-center">
               <Flame className="w-4 h-4 text-white" />
@@ -94,6 +97,7 @@ export default function Navigation() {
       {/* Bottom Tab Bar (Mobile Only) */}
       {user && 
        profile?.onboarding_completed && 
+       !hideOnMobileChat &&
        !['/', '/auth', '/onboarding'].includes(location.pathname) && (
         <div className="sm:hidden fixed bottom-6 left-4 right-4 z-50 glass rounded-2xl border border-white/10 px-2 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.4)] pb-safe-area">
           <div className="flex items-center justify-around h-14">

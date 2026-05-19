@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Send, ArrowLeft, Shield, Loader2, MessageCircle, CheckCheck, Check, Smile, Plus, Mic, Image, MapPin, Play, Square, Trash2, Video, Phone, Search, Pencil, Users, ChevronRight } from 'lucide-react'
+import { Send, ArrowLeft, Shield, Loader2, MessageCircle, CheckCheck, Check, Smile, Plus, Mic, Image, MapPin, Play, Square, Trash2, Video, Phone, Search, Pencil, Users, ChevronRight, MicOff, VolumeX, Volume2, VideoOff, PhoneOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
@@ -18,9 +18,8 @@ interface ChatConversation {
   unread?: number
   time?: string
 }
-
 export default function Messages() {
-  const { user } = useAuthStore()
+  const { user, setActiveChatId } = useAuthStore()
   const [selected, setSelected] = useState<string | null>(null)
   const [conversations, setConversations] = useState<ChatConversation[]>([])
   const [messages, setMessages] = useState<Message[]>([])
@@ -37,6 +36,12 @@ export default function Messages() {
   const [activeReactionMsg, setActiveReactionMsg] = useState<string | null>(null)
   const [msgReactions, setMsgReactions] = useState<Record<string, string>>({})
   const [isTyping, setIsTyping] = useState(false)
+  const [activeCall, setActiveCall] = useState<{ type: 'audio' | 'video'; user: Profile } | null>(null)
+  const [callMuted, setCallMuted] = useState(false)
+  const [callSpeaker, setCallSpeaker] = useState(true)
+  const [callVideoEnabled, setCallVideoEnabled] = useState(true)
+  const [callTimer, setCallTimer] = useState(0)
+  const callIntervalRef = useRef<any>(null)
   
   const bottomRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -247,12 +252,31 @@ export default function Messages() {
   }, [messages, isTyping])
 
   useEffect(() => {
+    setActiveChatId(selected)
     if (selected) {
       setIsTyping(true)
       const timer = setTimeout(() => setIsTyping(false), 3000 + Math.random() * 2000)
-      return () => clearTimeout(timer)
+      return () => {
+        clearTimeout(timer)
+        setActiveChatId(null)
+      }
     }
+    return () => setActiveChatId(null)
   }, [selected])
+
+  useEffect(() => {
+    if (activeCall) {
+      setCallTimer(0)
+      callIntervalRef.current = setInterval(() => {
+        setCallTimer(prev => prev + 1)
+      }, 1000)
+    } else {
+      if (callIntervalRef.current) clearInterval(callIntervalRef.current)
+    }
+    return () => {
+      if (callIntervalRef.current) clearInterval(callIntervalRef.current)
+    }
+  }, [activeCall])
 
   const loadConversations = async () => {
     if (!user) return
@@ -273,11 +297,10 @@ export default function Messages() {
   }
 
   const handleCall = (type: 'audio' | 'video') => {
-    toast(`${type === 'audio' ? 'Calling' : 'Video call'} feature coming soon 🔥`, {
-      className: 'bg-[#13131f] border-purple-500/50 text-white font-bold',
-      duration: 3000,
-      position: 'top-center'
-    })
+    if (selectedConv?.other) {
+      setActiveCall({ type, user: selectedConv.other })
+      toast.success(`Initiating Year 2050 ${type === 'audio' ? 'Voice Link' : 'Holographic Stream'}... ⚡`)
+    }
   }
   const fetchAllUsers = async (query: string = '') => {
     if (!user) return
@@ -576,61 +599,92 @@ export default function Messages() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Input Area */}
-          <div className="p-4 sm:p-6 pt-2 bg-[#090912] pb-8 md:pb-6">
-            <div className="flex gap-2 sm:gap-3 items-center">
-              <div className="flex items-center gap-1 bg-[#121225] rounded-2xl p-1 border border-white/5">
+          {/* Input Area - Year 2050 Futuristic Glassmorphic Telegram Pill */}
+          <div className="p-3 bg-transparent pb-safe-area mb-2 md:mb-4 px-4 sm:px-6 z-[80] relative">
+            <div className="flex gap-2 sm:gap-3 items-center bg-[#121225]/85 backdrop-blur-2xl border border-white/10 p-2 rounded-[2rem] shadow-2xl relative shadow-purple-500/5 group focus-within:border-purple-500/30 transition-all">
+              
+              {/* Attachment Controls */}
+              <div className="flex items-center gap-1.5 pl-1">
                 <button 
                   onClick={() => setShowEmojis(!showEmojis)}
-                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all min-h-[40px] ${showEmojis ? 'bg-purple-500/10 text-purple-400' : 'text-gray-500 hover:text-white'}`}
+                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all min-h-[40px] ${showEmojis ? 'bg-purple-500/10 text-purple-400' : 'text-gray-400 hover:text-white'}`}
                 >
                   <Smile className="w-5 h-5" />
                 </button>
+                
+                {/* Paperclip Attachment button - fully visible on mobile! */}
                 <button 
                   onClick={() => fileInputRef.current?.click()}
-                  className="hidden sm:flex w-10 h-10 rounded-xl items-center justify-center text-gray-500 hover:text-white transition-all min-h-[40px]"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-gray-400 hover:text-white transition-all min-h-[40px]"
                 >
-                  <Image className="w-5 h-5" />
+                  <Plus className="w-5 h-5" />
                 </button>
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
               </div>
 
+              {/* Text Input / Recording HUD */}
               <div className="flex-1 relative flex items-center">
-                <input
-                  className="input-dark w-full text-xs sm:text-sm py-3 sm:py-4 px-4 sm:px-6 rounded-2xl border-none bg-[#121225] focus:ring-2 focus:ring-purple-500/50 min-h-[44px]"
-                  placeholder={isRecording ? 'Recording...' : 'Type message...'}
-                  value={newMsg}
-                  onChange={e => setNewMsg(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && send()}
-                  disabled={isRecording}
-                />
+                {isRecording ? (
+                  <div className="flex items-center justify-between w-full pr-4 animate-pulse">
+                    <div className="flex items-center gap-3">
+                      {/* Pulse Indicator */}
+                      <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
+                      {/* Bouncing Audio Soundwave */}
+                      <div className="flex items-center gap-0.5">
+                        <div className="w-0.5 h-3 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '0ms', animationDuration: '0.6s' }} />
+                        <div className="w-0.5 h-5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '100ms', animationDuration: '0.6s' }} />
+                        <div className="w-0.5 h-4 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '200ms', animationDuration: '0.6s' }} />
+                        <div className="w-0.5 h-6 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '300ms', animationDuration: '0.6s' }} />
+                        <div className="w-0.5 h-3 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '400ms', animationDuration: '0.6s' }} />
+                      </div>
+                      <span className="text-red-500 font-mono text-sm font-bold">
+                        {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                    <span className="text-gray-500 text-xs font-black uppercase tracking-widest animate-pulse">
+                      Slide to cancel
+                    </span>
+                  </div>
+                ) : (
+                  <input
+                    className="w-full text-xs sm:text-sm py-2 px-3 bg-transparent border-none text-white focus:outline-none placeholder:text-gray-500 min-h-[40px] focus:ring-0"
+                    placeholder="Type message..."
+                    value={newMsg}
+                    onChange={e => setNewMsg(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && send()}
+                    disabled={isRecording}
+                  />
+                )}
               </div>
 
-              <div className="flex items-center gap-2">
+              {/* Dynamic Send / Microphone Button */}
+              <div className="pr-1">
                 {newMsg.trim() ? (
                   <button
                     onClick={() => send()}
                     disabled={sending}
-                    className="w-11 h-11 sm:w-12 sm:h-12 grad-bg rounded-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl shadow-purple-500/20 min-h-[44px] min-w-[44px]"
+                    className="w-9 h-9 sm:w-10 sm:h-10 grad-bg rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl shadow-purple-500/30 min-h-[40px] min-w-[40px]"
                   >
-                    <Send className="w-5 h-5 text-white" />
+                    <Send className="w-4.5 h-4.5 text-white" />
                   </button>
                 ) : (
                   <button
                     onMouseDown={startRecording}
                     onMouseUp={stopRecording}
-                    className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all min-h-[44px] min-w-[44px] ${
-                      isRecording ? 'grad-bg animate-pulse text-white' : 'bg-[#121225] text-gray-500 hover:text-white'
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all min-h-[40px] min-w-[40px] ${
+                      isRecording 
+                        ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30' 
+                        : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'
                     }`}
                   >
-                    <Mic className="w-5 h-5" />
+                    <Mic className="w-4.5 h-4.5" />
                   </button>
                 )}
               </div>
             </div>
             
             {showEmojis && (
-              <div className="absolute bottom-full mb-2 right-4 z-[100] shadow-2xl">
+              <div className="absolute bottom-full mb-3 right-4 z-[100] shadow-2xl rounded-3xl overflow-hidden border border-white/10">
                 <Picker 
                   data={data} 
                   onEmojiSelect={(emoji: any) => {
@@ -716,6 +770,141 @@ export default function Messages() {
                 ))
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Year 2050 Futuristic Call Dashboard Overlay */}
+      {activeCall && (
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-between p-6 sm:p-12 bg-[#030305]/95 backdrop-blur-xl text-white overflow-hidden select-none animate-fade-in">
+          {/* Futuristic Grid Backdrop Pattern */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
+          {/* Cybernetic glowing background gradients */}
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] sm:w-[500px] h-[350px] sm:h-[500px] bg-gradient-to-tr from-purple-600/20 to-pink-600/20 rounded-full blur-3xl pointer-events-none animate-pulse" />
+
+          {/* Header HUD */}
+          <div className="relative z-10 w-full flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-gray-500">
+                {activeCall.type === 'video' ? 'Holographic Stream' : 'Neural Voice Link'} Secure
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono font-bold tracking-widest text-purple-400">
+              TIME: {Math.floor(callTimer / 60)}:{(callTimer % 60).toString().padStart(2, '0')}
+            </div>
+          </div>
+
+          {/* Central Hologram Ring & Profile Display */}
+          <div className="relative z-10 flex flex-col items-center my-auto">
+            <div className="relative w-40 h-40 sm:w-56 sm:h-56 flex items-center justify-center">
+              
+              {/* Spinning Cyber Rings */}
+              <div className="absolute inset-0 rounded-full border border-dashed border-purple-500/30 animate-[spin_20s_linear_infinite]" />
+              <div className="absolute -inset-4 rounded-full border border-purple-500/20 animate-[spin_30s_linear_infinite_reverse]" />
+              <div className="absolute -inset-8 rounded-full border border-double border-pink-500/10 animate-[spin_40s_linear_infinite]" />
+              
+              {/* Double Glowing Pulsing Orbs */}
+              <div className="absolute inset-0 rounded-full bg-purple-500/5 animate-ping" style={{ animationDuration: '3s' }} />
+              <div className="absolute inset-0 rounded-full bg-pink-500/5 animate-ping" style={{ animationDuration: '4s', animationDelay: '1s' }} />
+
+              {/* Central Avatar */}
+              <div className="w-32 h-32 sm:w-48 sm:h-48 rounded-full overflow-hidden border-2 border-purple-500/30 relative z-20 shadow-[0_0_50px_rgba(168,85,247,0.3)]">
+                {activeCall.type === 'video' && callVideoEnabled ? (
+                  <div className="w-full h-full bg-[#05050a] relative">
+                    <img src={activeCall.user.photos?.[0]} className="w-full h-full object-cover brightness-[0.7] contrast-[1.1]" alt="" />
+                    {/* Simulated holographic scanning lines */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-purple-500/10 to-transparent bg-[length:100%_4px] animate-[pulse_1s_infinite] pointer-events-none" />
+                    <div className="absolute inset-0 bg-purple-500/5 mix-blend-color" />
+                  </div>
+                ) : (
+                  <img src={activeCall.user.photos?.[0]} className="w-full h-full object-cover" alt="" />
+                )}
+              </div>
+            </div>
+
+            {/* Caller Metadata */}
+            <h3 className="font-syne font-black text-2xl sm:text-4xl text-white mt-10 tracking-tight text-center">
+              {activeCall.user.name}
+            </h3>
+            <p className="text-gray-500 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] mt-2 text-center">
+              {activeCall.user.campus}
+            </p>
+            
+            {/* Real-time Voice Frequency Bar Visualizer */}
+            {!callMuted && (
+              <div className="flex items-end gap-1.5 h-12 mt-8">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(bar => {
+                  const animDuration = 0.4 + Math.random() * 0.5
+                  const animDelay = Math.random() * 0.5
+                  return (
+                    <div 
+                      key={bar}
+                      className="w-1.5 rounded-full bg-gradient-to-t from-purple-500 to-pink-500 animate-[bounce_0.6s_ease-in-out_infinite]"
+                      style={{ 
+                        height: `${20 + Math.random() * 80}%`,
+                        animationDuration: `${animDuration}s`,
+                        animationDelay: `-${animDelay}s`
+                      }}
+                    />
+                  )
+                })}
+              </div>
+            )}
+            {callMuted && (
+              <span className="text-[10px] uppercase font-black tracking-widest text-red-500 mt-8 animate-pulse">
+                Audio link muted
+              </span>
+            )}
+          </div>
+
+          {/* Action Call Controls Panel */}
+          <div className="relative z-10 w-full max-w-md flex items-center justify-around bg-white/[0.02] border border-white/5 backdrop-blur-2xl rounded-full p-4 shadow-[0_15px_50px_rgba(0,0,0,0.5)]">
+            
+            {/* Mute Button */}
+            <button 
+              onClick={() => setCallMuted(!callMuted)}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                callMuted ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+              }`}
+            >
+              {callMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            </button>
+
+            {/* Video Toggle Button (Only for video calls) */}
+            {activeCall.type === 'video' && (
+              <button 
+                onClick={() => setCallVideoEnabled(!callVideoEnabled)}
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                  !callVideoEnabled ? 'bg-red-500 text-white shadow-lg shadow-red-500/20' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                {!callVideoEnabled ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+              </button>
+            )}
+
+            {/* Speaker Button (Only for audio calls) */}
+            {activeCall.type === 'audio' && (
+              <button 
+                onClick={() => setCallSpeaker(!callSpeaker)}
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${
+                  callSpeaker ? 'bg-purple-500/10 text-purple-400' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                {callSpeaker ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+              </button>
+            )}
+
+            {/* Red Decline/End Call Button */}
+            <button 
+              onClick={() => {
+                setActiveCall(null)
+                toast.error('Call ended')
+              }}
+              className="w-14 h-14 bg-red-600 hover:bg-red-500 text-white rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl shadow-red-600/30"
+            >
+              <PhoneOff className="w-6 h-6" />
+            </button>
           </div>
         </div>
       )}
