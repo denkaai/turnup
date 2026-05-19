@@ -690,6 +690,19 @@ export default function Messages() {
           </div>
         </div>
 
+        {/* Offline Warning Banner */}
+        {!isOnline && (
+          <div className="mx-4 sm:mx-6 mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl animate-pulse text-left flex items-start gap-3 shadow-lg shadow-red-500/5 z-10">
+            <Shield className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] text-red-400 font-black uppercase tracking-wider">OFFLINE MODE ACTIVE 📡</p>
+              <p className="text-[9px] text-gray-300 font-bold leading-normal mt-1">
+                Start your phone's Hotspot or join your friend's Wi-Fi network, then tap the pulsing Radar above to chat off-grid with nearby comrades for free!
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto no-scrollbar">
           {filteredConversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center opacity-40">
