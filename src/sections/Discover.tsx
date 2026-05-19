@@ -61,8 +61,12 @@ const DiscoverCard = ({ userProfile }: { userProfile: Profile }) => {
 
   return (
     <motion.div 
-      variants={cardVariants}
-      className="discover-card card-hover group h-[450px] sm:h-[500px] relative overflow-hidden rounded-[32px] bg-[#0A0A0F]"
+      initial={{ scale: 0.9, opacity: 0.5 }}
+      whileInView={{ scale: 1, opacity: 1 }}
+      exit={{ scale: 0.9, opacity: 0.5 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      viewport={{ once: false, amount: 0.6 }}
+      className="discover-card card-hover group h-full w-full max-w-md mx-auto relative overflow-hidden rounded-[2.5rem] bg-[#0A0A0F] border border-white/5 shadow-2xl"
     >
       <div className="cinematic-glow opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       <img
@@ -314,19 +318,16 @@ export default function Discover() {
         )}
 
         {filteredUsers.length > 0 ? (
-          <motion.div 
-            variants={{
-              hidden: { opacity: 0 },
-              visible: { opacity: 1, transition: { staggerChildren: 0.15 } }
-            }}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
+          <div 
+            className="flex flex-col gap-6 overflow-y-auto h-[calc(100vh-220px)] no-scrollbar pb-20"
+            style={{ scrollSnapType: 'y mandatory' }}
           >
             {filteredUsers.map(userProfile => (
-              <DiscoverCard key={userProfile.id} userProfile={userProfile} />
+              <div key={userProfile.id} style={{ scrollSnapAlign: 'start' }} className="flex-shrink-0 h-full">
+                <DiscoverCard userProfile={userProfile} />
+              </div>
             ))}
-          </motion.div>
+          </div>
         ) : (
           <div className="text-center py-20 bg-white/5 rounded-[40px] border border-dashed border-white/10">
             <div className="w-20 h-20 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-6">

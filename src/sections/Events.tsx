@@ -30,6 +30,13 @@ const CATEGORIES = [
   { id: 'social', label: '❤️ Social', color: '#f87171', icon: Users },
 ]
 
+const SPOTS = [
+  { id: '1', name: 'Westlands', image: 'https://images.unsplash.com/photo-1613395034114-f06b9b1d1f05?w=500', area: 'Nairobi', attendees: 12 },
+  { id: '2', name: 'Karen', image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=500', area: 'Nairobi', attendees: 8 },
+  { id: '3', name: 'Ngong Hills', image: 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?w=500', area: 'Kajiado', attendees: 15 },
+  { id: '4', name: 'Nairobi CBD', image: 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=500', area: 'Nairobi', attendees: 20 },
+]
+
 interface Event {
   id: string
   creator_id: string
@@ -272,6 +279,35 @@ export default function Events() {
             value={search} 
             onChange={e => setSearch(e.target.value)} 
           />
+        </div>
+
+        {/* Meetup Spots Scroller */}
+        <div className="mb-8 animate-fade-in">
+          <h2 className="text-[10px] text-white/40 font-black uppercase tracking-widest ml-1 mb-4">Trending Meetup Spots</h2>
+          <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
+            {SPOTS.map(spot => (
+              <div key={spot.id} className="relative w-64 h-80 rounded-[2rem] overflow-hidden flex-shrink-0 border border-white/5 group card-hover bg-[#0A0A0F]">
+                <div className="cinematic-glow opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <img src={spot.image} alt={spot.name} className="w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-[1.05]" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#030305] via-[#030305]/60 to-transparent p-6 flex flex-col justify-end">
+                  <span className="px-3 py-1 rounded-full bg-white/5 text-purple-300 text-[9px] font-black uppercase tracking-widest border border-white/10 w-fit mb-2 backdrop-blur-md flex items-center gap-1">
+                    <MapPin className="w-3 h-3" /> {spot.area}
+                  </span>
+                  <h3 className="font-syne font-black text-2xl text-white mb-3">{spot.name}</h3>
+                  
+                  {/* Who's going */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex -space-x-1.5">
+                      <div className="w-6 h-6 rounded-full bg-purple-500 border-2 border-[#030305] flex items-center justify-center text-[9px] font-black text-white">JD</div>
+                      <div className="w-6 h-6 rounded-full bg-pink-500 border-2 border-[#030305] flex items-center justify-center text-[9px] font-black text-white">SK</div>
+                      <div className="w-6 h-6 rounded-full bg-amber-500 border-2 border-[#030305] flex items-center justify-center text-[9px] font-black text-white">MK</div>
+                    </div>
+                    <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">{spot.attendees}+ going</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Categories */}
