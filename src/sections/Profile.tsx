@@ -620,6 +620,18 @@ export default function Profile() {
             )}
           </div>
 
+          {/* Replay Cinematic Intro */}
+          <button 
+            onClick={() => window.dispatchEvent(new Event('replay_turnup_cinematic'))}
+            className="card w-full flex items-center gap-4 px-5 py-5 hover:bg-purple-500/5 transition-all text-left group border-white/5 bg-white/[0.02] min-h-[64px]"
+          >
+            <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:bg-purple-500/20 transition-all">
+              <Zap className="w-4 h-4 text-purple-400 group-hover:text-purple-300 animate-pulse" />
+            </div>
+            <span className="text-purple-300/80 group-hover:text-purple-300 text-sm font-black uppercase tracking-wider flex-1">Replay Update Cinematic</span>
+            <ChevronRight className="w-4 h-4 text-gray-700 group-hover:text-gray-500 transition-colors" />
+          </button>
+
           {/* Logout */}
           <button onClick={handleSignOut} className="card w-full flex items-center gap-4 px-5 py-5 hover:bg-red-500/5 transition-all text-left group border-white/5 bg-white/[0.02] min-h-[64px]">
             <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center group-hover:bg-red-500/20 transition-all">

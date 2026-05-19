@@ -20,6 +20,7 @@ import Privacy from '@/sections/legal/Privacy'
 import Terms from '@/sections/legal/Terms'
 import Safety from '@/sections/legal/Safety'
 import Support from '@/sections/legal/Support'
+import CinematicIntro from '@/components/CinematicIntro'
 import { WifiOff, RefreshCw } from 'lucide-react'
 
 const pageVariants = {
@@ -117,8 +118,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   const { setUser, fetchProfile, setProfile } = useAuthStore()
   const [ready, setReady] = useState(false)
+  const [showCinematic, setShowCinematic] = useState(false)
   const location = useLocation()
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+
+  useEffect(() => {
+    const handleReplay = () => setShowCinematic(true)
+    window.addEventListener('replay_turnup_cinematic', handleReplay)
+    return () => window.removeEventListener('replay_turnup_cinematic', handleReplay)
+  }, [])
 
   useEffect(() => {
     const handleMove = (e: MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY })
@@ -129,6 +137,8 @@ export default function App() {
   useEffect(() => {
     // Safety timeout to prevent getting stuck on "Loading vibes..."
     const safetyTimer = setTimeout(() => {
+      const hasPlayed = sessionStorage.getItem('turnup_cinematic_played_v3')
+      if (!hasPlayed) setShowCinematic(true)
       setReady(true)
       console.warn('App: Loading safety timeout triggered')
     }, 6000)
@@ -149,10 +159,14 @@ export default function App() {
           .catch(err => console.error('App: Profile fetch error', err))
           .finally(() => {
             clearTimeout(safetyTimer)
+            const hasPlayed = sessionStorage.getItem('turnup_cinematic_played_v3')
+            if (!hasPlayed) setShowCinematic(true)
             setReady(true)
           })
       } else {
         clearTimeout(safetyTimer)
+        const hasPlayed = sessionStorage.getItem('turnup_cinematic_played_v3')
+        if (!hasPlayed) setShowCinematic(true)
         setReady(true)
       }
     })
@@ -250,6 +264,18 @@ export default function App() {
       />
       <InstallBanner />
       <AIAssistant />
+
+      {/* Cinematic Intro Overlay */}
+      <AnimatePresence>
+        {showCinematic && (
+          <CinematicIntro 
+            onComplete={() => {
+              sessionStorage.setItem('turnup_cinematic_played_v3', 'true')
+              setShowCinematic(false)
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Electric Cursor Follower */}
       <motion.div
