@@ -6,7 +6,6 @@ import { toast } from 'sonner'
 import type { Profile } from '@/lib/supabase'
 import FollowButton from '@/components/FollowButton'
 import UserFollowStats from '@/components/UserFollowStats'
-import StoryBubbles from '@/components/StoryBubbles'
 import { CAMPUSES } from '@/lib/constants'
 
 const DEMO_USERS: Profile[] = [
@@ -224,17 +223,7 @@ export default function Discover() {
       </div>
 
       <div className="container-responsive pb-24">
-        {/* Story Section */}
-        <div className="mb-10 overflow-hidden">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Campus Stories</h3>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-              <span className="text-[10px] font-bold text-purple-400">Live</span>
-            </div>
-          </div>
-          <StoryBubbles />
-        </div>
+
 
         <div className="flex flex-col gap-5 mb-8">
           <div className="flex items-center justify-between">
