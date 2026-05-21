@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Camera, Edit2, Shield, Crown, LogOut, ChevronRight, CheckCircle, Star, Zap, MapPin, BookOpen, Save, Loader2, Upload, User, Lock, Settings, Music, ChevronLeft } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Camera, Edit2, Shield, Crown, LogOut, ChevronRight, CheckCircle, Star, Zap, MapPin, BookOpen, Save, Loader2, Upload, User, Lock, Settings, Music, ChevronLeft, Play, Pause } from 'lucide-react'
 import { useAuthStore } from '@/lib/store'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -9,6 +9,32 @@ import FollowListModal from '@/components/FollowListModal'
 import FollowButton from '@/components/FollowButton'
 
 import { CAMPUSES } from '@/lib/constants'
+
+const PRESET_SONGS = [
+  { name: "Bien - Utanipenda 🎙️", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
+  { name: "Sauti Sol - Lil Mama 🎸", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
+  { name: "Wakadinali - Geri Inengi 🦍", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
+  { name: "Burna Boy - Last Last 💔", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" }
+]
+
+const AudioVisualizer = () => (
+  <div className="flex items-end gap-[3px] h-3 px-1">
+    <style>{`
+      @keyframes bounce-bar-1 { 0%, 100% { height: 30%; } 50% { height: 100%; } }
+      @keyframes bounce-bar-2 { 0%, 100% { height: 40%; } 50% { height: 80%; } }
+      @keyframes bounce-bar-3 { 0%, 100% { height: 20%; } 50% { height: 90%; } }
+      @keyframes bounce-bar-4 { 0%, 100% { height: 50%; } 50% { height: 70%; } }
+      .bar-1 { animation: bounce-bar-1 0.6s ease-in-out infinite; }
+      .bar-2 { animation: bounce-bar-2 0.8s ease-in-out infinite; }
+      .bar-3 { animation: bounce-bar-3 0.5s ease-in-out infinite; }
+      .bar-4 { animation: bounce-bar-4 0.7s ease-in-out infinite; }
+    `}</style>
+    <div className="w-[2.5px] bg-purple-400 rounded-full bar-1" style={{ height: '30%' }} />
+    <div className="w-[2.5px] bg-purple-400 rounded-full bar-2" style={{ height: '40%' }} />
+    <div className="w-[2.5px] bg-purple-400 rounded-full bar-3" style={{ height: '20%' }} />
+    <div className="w-[2.5px] bg-purple-400 rounded-full bar-4" style={{ height: '50%' }} />
+  </div>
+)
 
 export default function Profile() {
   const { user, profile, fetchProfile, signOut } = useAuthStore()
@@ -44,8 +70,73 @@ export default function Profile() {
     showUni: true,
     showWhatsAppMatches: true,
     allowDiscovery: true,
-    showOnline: true
+    showOnline: true,
+    whatsappVisibility: 'everyone' as 'everyone' | 'matches' | 'nobody'
   })
+
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [activeSong, setActiveSong] = useState<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  const togglePlay = (songName: string) => {
+    if (activeSong !== songName) {
+      if (audioRef.current) {
+        audioRef.current.pause()
+      }
+      
+      const preset = PRESET_SONGS.find(s => 
+        songName.toLowerCase().includes(s.name.toLowerCase()) || 
+        s.name.toLowerCase().includes(songName.toLowerCase()) ||
+        songName.toLowerCase().includes(s.name.split(' - ')[0].toLowerCase())
+      ) || PRESET_SONGS[0]
+      
+      const newAudio = new Audio(preset.url)
+      newAudio.addEventListener('ended', () => {
+        setIsPlaying(false)
+        setActiveSong(null)
+      })
+      audioRef.current = newAudio
+      audioRef.current.play().catch(err => console.error("Audio play failed:", err))
+      setActiveSong(songName)
+      setIsPlaying(true)
+    } else {
+      if (isPlaying) {
+        audioRef.current?.pause()
+        setIsPlaying(false)
+      } else {
+        audioRef.current?.play().catch(err => console.error("Audio play failed:", err))
+        setIsPlaying(true)
+      }
+    }
+  }
+
+  // Sync privacy from localStorage
+  useEffect(() => {
+    if (user) {
+      const savedPrivacy = localStorage.getItem(`turnup_privacy_${user.id}`)
+      if (savedPrivacy) {
+        try {
+          const parsed = JSON.parse(savedPrivacy)
+          setPrivacy(p => ({
+            ...p,
+            ...parsed,
+            whatsappVisibility: parsed.whatsappVisibility || (parsed.showWhatsAppMatches ? 'matches' : 'everyone')
+          }))
+        } catch (e) {
+          console.error("Failed to parse privacy settings:", e)
+        }
+      }
+    }
+  }, [user])
+
+  // Cleanup audio
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+      }
+    }
+  }, [])
 
   const INTERESTS = ['Music', 'Dancing', 'Coding', 'Gaming', 'Movies', 'Sports', 'Travel', 'Photography', 'Food', 'Fashion', 'Art', 'Reading', 'Hiking', 'Coffee', 'Parties', 'Studying', 'Cars', 'Netflix', 'Gym', 'Finance']
 
@@ -338,17 +429,20 @@ export default function Profile() {
 
         {/* Badges */}
         <div className="flex flex-wrap gap-2 justify-center mb-8">
-          {profile.verified && (
-            <span className="verified-badge px-4 py-1.5"><Shield className="w-3 h-3" /> Student Verified</span>
-          )}
           {profile.premium && (
             <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center gap-1.5">
               <Crown className="w-3 h-3" /> Premium
             </span>
           )}
           {profile.is_registered_voter && (
-            <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#006600]/20 border border-[#006600]/40 text-[#4ade80] flex items-center gap-1.5 shadow-[0_0_10px_rgba(0,102,0,0.2)]">
-              ✓ Nimejisajili — 2027 Ready
+            <span 
+              className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white flex items-center gap-1.5 shadow-[0_0_15px_rgba(0,102,0,0.15)]"
+              style={{
+                background: 'linear-gradient(#0F0F1A, #0F0F1A) padding-box, linear-gradient(to right, #000000 0%, #000000 30%, #ffffff 30%, #ffffff 33%, #BB1A25 33%, #BB1A25 66%, #ffffff 66%, #ffffff 69%, #006600 69%, #006600 100%) border-box',
+                border: '1.5px solid transparent'
+              }}
+            >
+              🇰🇪 Nimejisajili — 2027 Ready
             </span>
           )}
         </div>
@@ -392,6 +486,27 @@ export default function Profile() {
                   onChange={e => setFormStatus({ ...formStatus, now_playing: e.target.value })}
                   maxLength={100}
                 />
+                
+                {/* Hot Presets */}
+                <div className="mt-2">
+                  <p className="text-[7px] text-purple-400/80 font-black uppercase tracking-wider mb-1">🔥 Preset Realhuman Jamz:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {PRESET_SONGS.map(s => (
+                      <button
+                        key={s.name}
+                        type="button"
+                        onClick={() => setFormStatus({ ...formStatus, now_playing: s.name })}
+                        className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-wide border transition-all ${
+                          formStatus.now_playing === s.name
+                            ? 'bg-purple-500/20 border-purple-500/50 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.15)]'
+                            : 'bg-white/5 border-white/5 text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        {s.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -442,12 +557,42 @@ export default function Profile() {
                     <Music className="w-4 h-4 text-purple-400" />
                   </div>
                   <div className="text-left">
-                    <p className="text-[8px] text-gray-500 font-black uppercase tracking-wider leading-none">Song Vibe</p>
+                    <p className="text-[8px] text-gray-500 font-black uppercase tracking-wider leading-none flex items-center gap-1.5">
+                      Song Vibe
+                      {isPlaying && activeSong === profile.now_playing && (
+                        <span className="text-[6px] text-purple-400 font-bold uppercase tracking-widest bg-purple-500/10 px-1 py-0.2 rounded animate-pulse">
+                          Playing Live
+                        </span>
+                      )}
+                    </p>
                     <p className="text-white text-xs font-bold mt-1">
                       {profile.now_playing || <span className="text-gray-600 italic">No song playing...</span>}
                     </p>
                   </div>
                 </div>
+
+                {profile.now_playing && (
+                  <div className="flex items-center gap-2">
+                    {/* Visualizer Waves */}
+                    {isPlaying && activeSong === profile.now_playing && <AudioVisualizer />}
+                    
+                    {/* Play/Pause Button */}
+                    <button
+                      onClick={() => togglePlay(profile.now_playing!)}
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center border transition-all active:scale-90 ${
+                        isPlaying && activeSong === profile.now_playing
+                          ? 'bg-purple-500/20 border-purple-500/30 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.1)]'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      {isPlaying && activeSong === profile.now_playing ? (
+                        <Pause className="w-3.5 h-3.5" />
+                      ) : (
+                        <Play className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Text Vibe Status */}
@@ -472,17 +617,32 @@ export default function Profile() {
                     <span className="text-base">💬</span>
                   </div>
                   <div className="text-left">
-                    <p className="text-[8px] text-gray-500 font-black uppercase tracking-wider leading-none">WhatsApp Link</p>
+                    <p className="text-[8px] text-gray-500 font-black uppercase tracking-wider leading-none flex items-center gap-1.5">
+                      WhatsApp Link
+                      <span className="text-[7px] text-purple-400 font-bold uppercase tracking-widest bg-purple-500/10 px-1 py-0.5 rounded">
+                        {privacy.whatsappVisibility === 'nobody' ? '🔒 Private' : privacy.whatsappVisibility === 'matches' ? '👥 Matches' : '🔓 Public'}
+                      </span>
+                    </p>
                     <p className="text-white text-xs font-bold mt-1">
                       {profile.whatsapp_number ? (
-                        <a 
-                          href={`https://wa.me/${profile.whatsapp_number.replace('+', '')}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-green-400 hover:text-green-300 font-bold transition-colors flex items-center gap-1"
-                        >
-                          {profile.whatsapp_number} ⚡
-                        </a>
+                        privacy.whatsappVisibility === 'nobody' ? (
+                          <span className="text-gray-500 font-semibold flex items-center gap-1">
+                            {profile.whatsapp_number.substring(0, 4)}•••••••• (Hidden - Private 🔒)
+                          </span>
+                        ) : privacy.whatsappVisibility === 'matches' ? (
+                          <span className="text-purple-400 font-semibold flex items-center gap-1">
+                            {profile.whatsapp_number.substring(0, 4)}•••••••• (Matches Only 👥)
+                          </span>
+                        ) : (
+                          <a 
+                            href={`https://wa.me/${profile.whatsapp_number.replace('+', '')}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-green-400 hover:text-green-300 font-bold transition-colors flex items-center gap-1"
+                          >
+                            {profile.whatsapp_number} ⚡
+                          </a>
+                        )
                       ) : (
                         <span className="text-gray-600 italic">Not set. Tap Update to add!</span>
                       )}
@@ -604,18 +764,55 @@ export default function Profile() {
               <div className="px-5 pb-6 pt-2 divide-y divide-white/5 animate-fade-in">
                 {[
                   { key: 'showUni', label: 'Show university on profile' },
-                  { key: 'showWhatsAppMatches', label: 'WhatsApp to matches only' },
                   { key: 'allowDiscovery', label: 'Show me in Discovery' },
                   { key: 'showOnline', label: 'Show my online status' }
                 ].map(({ key, label }) => (
                   <div key={key} className="flex items-center justify-between py-4">
                     <span className="text-xs text-gray-400 font-bold uppercase tracking-tight">{label}</span>
                     <Toggle 
-                      active={privacy[key as keyof typeof privacy]} 
-                      onToggle={() => setPrivacy(p => ({ ...p, [key]: !p[key as keyof typeof privacy] }))} 
+                      active={privacy[key as keyof typeof privacy] as boolean} 
+                      onToggle={() => {
+                        const newPrivacy = { ...privacy, [key]: !privacy[key as keyof typeof privacy] }
+                        setPrivacy(newPrivacy)
+                        if (user) localStorage.setItem(`turnup_privacy_${user.id}`, JSON.stringify(newPrivacy))
+                      }} 
                     />
                   </div>
                 ))}
+
+                {/* WhatsApp Visibility Dropdown */}
+                <div className="py-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-400 font-bold uppercase tracking-tight">WhatsApp Number Visibility</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {([
+                      { value: 'everyone' as const, label: '🔓 Everyone', desc: 'Visible to all' },
+                      { value: 'matches' as const, label: '👥 Matches', desc: 'Matches only' },
+                      { value: 'nobody' as const, label: '🔒 Private', desc: 'Hidden' }
+                    ]).map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => {
+                          const newPrivacy = { ...privacy, whatsappVisibility: opt.value }
+                          setPrivacy(newPrivacy)
+                          if (user) localStorage.setItem(`turnup_privacy_${user.id}`, JSON.stringify(newPrivacy))
+                        }}
+                        className={`flex-1 py-2.5 rounded-xl text-center transition-all border ${
+                          privacy.whatsappVisibility === opt.value
+                            ? 'bg-purple-500/15 border-purple-500/40 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.1)]'
+                            : 'bg-white/[0.03] border-white/5 text-gray-500 hover:text-gray-300 hover:border-white/10'
+                        }`}
+                      >
+                        <span className="text-sm block">{opt.label.split(' ')[0]}</span>
+                        <span className="text-[8px] font-black uppercase tracking-wider block mt-0.5">{opt.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[8px] text-gray-600 mt-2 font-medium">
+                    Controls who can see your WhatsApp number on your profile. Works like WhatsApp's own privacy settings.
+                  </p>
+                </div>
               </div>
             )}
           </div>
