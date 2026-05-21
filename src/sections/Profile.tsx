@@ -36,6 +36,15 @@ const AudioVisualizer = () => (
   </div>
 )
 
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = error => reject(error)
+  })
+}
+
 export default function Profile() {
   const { user, profile, fetchProfile, signOut } = useAuthStore()
   const navigate = useNavigate()
@@ -187,6 +196,24 @@ export default function Profile() {
 
     setPhotoUploading(true)
     try {
+      // Validate profile photo containing human face
+      const base64Img = await fileToBase64(file)
+      const valRes = await fetch('/.netlify/functions/validate-face', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64Img })
+      })
+
+      if (!valRes.ok) {
+        throw new Error('Verification request failed')
+      }
+
+      const valData = await valRes.json()
+      if (!valData.valid) {
+        toast.error('Please upload a clear photo of yourself. Objects, logos and landscapes are not allowed.', { duration: 5000 })
+        return
+      }
+
       const fileExt = file.name.split('.').pop()
       const fileName = `${Math.random()}.${fileExt}`
       const filePath = `${user.id}/${fileName}`
@@ -212,7 +239,7 @@ export default function Profile() {
         toast.success('Photo updated!')
       }
     } catch (err: any) {
-      toast.error('Error uploading photo')
+      toast.error('Could not verify photo. Please check your connection and try again.')
       console.error(err)
     } finally {
       setPhotoUploading(false)

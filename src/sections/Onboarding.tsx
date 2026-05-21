@@ -117,6 +117,24 @@ export default function Onboarding() {
 
     setUploading(true)
     try {
+      // Validate profile photo containing human face
+      const base64Img = await fileToBase64(file)
+      const valRes = await fetch('/.netlify/functions/validate-face', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: base64Img })
+      })
+
+      if (!valRes.ok) {
+        throw new Error('Verification request failed')
+      }
+
+      const valData = await valRes.json()
+      if (!valData.valid) {
+        toast.error('Please upload a clear photo of yourself. Objects, logos and landscapes are not allowed.', { duration: 5000 })
+        return
+      }
+
       const fileExt = file.name.split('.').pop()
       const fileName = `${Math.random()}.${fileExt}`
       const filePath = `${user.id}/${fileName}`
@@ -138,6 +156,7 @@ export default function Onboarding() {
       toast.success('Photo uploaded!')
     } catch (err: any) {
       console.error(err)
+      toast.error('Could not verify photo. Please check your connection and try again.')
     } finally {
       setUploading(false)
     }

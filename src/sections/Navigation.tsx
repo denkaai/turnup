@@ -75,11 +75,7 @@ export default function Navigation() {
           <div className="flex items-center gap-3">
             {user ? (
               <div className="flex items-center gap-2 sm:gap-3">
-                {profile?.verified && (
-                  <span className="verified-badge hidden md:flex shadow-[0_0_15px_rgba(74,222,128,0.2)]">
-                    <Shield className="w-3 h-3" /> Verified
-                  </span>
-                )}
+
                 <button onClick={handleSignOut} className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-all min-h-[44px]">
                   <LogOut className="w-4 h-4" /> <span className="hidden sm:inline">Sign out</span>
                 </button>
