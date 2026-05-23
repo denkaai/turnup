@@ -206,23 +206,16 @@ const handleFinish = async () => {
     premium: false,
     premium_until: null,
   }
-  const overallTimeout = setTimeout(() => {
-    toast.warning('Taking longer than usual — heading in anyway!')
-    navigate('/discover')
-  }, 6000)
   try {
     const success = await safeProfileUpsert(profileData)
     if (success) {
       await fetchProfile(user.id)
-      clearTimeout(overallTimeout)
       navigate('/discover')
     } else {
-      clearTimeout(overallTimeout)
       toast.error('Failed to save profile. Please try again.')
       setLoading(false)
     }
   } catch (err: any) {
-    clearTimeout(overallTimeout)
     console.error('Onboarding save error:', err)
     toast.error('Something went wrong. Please try again.')
     setLoading(false)

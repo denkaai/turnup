@@ -76,16 +76,17 @@ const DiscoverCard = ({
     if (localStorage.getItem(vibeKey)) return toast.info('Vibe already sent today!')
 
     setSendingVibe(true)
+    const prevCount = vibeCount
+    setVibeCount(v => v + 1)
     try {
-      const newCount = vibeCount + 1
-      await supabase.from('profiles').update({ vibe_count: newCount }).eq('id', userProfile.id)
-      setVibeCount(newCount)
+      const { error } = await supabase.from('profiles').update({ vibe_count: vibeCount + 1 }).eq('id', userProfile.id)
+      if (error) throw error
       setVibeSent(true)
       localStorage.setItem(vibeKey, 'true')
       setTimeout(() => setVibeSent(false), 2000)
     } catch {
-      setVibeCount(v => v + 1)
-      setVibeSent(true)
+      setVibeCount(prevCount)
+      toast.error('Could not send vibe. Try again!')
     } finally {
       setSendingVibe(false)
     }
