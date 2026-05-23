@@ -172,6 +172,23 @@ export default function Messages() {
       }
 
       setMessages(combinedMessages)
+
+      // Mark all messages from the other user as read
+      const matchId2 = await getOrCreateMatch(selected)
+      if (matchId2) {
+        supabase
+          .from('messages')
+          .update({ read: true })
+          .eq('match_id', matchId2)
+          .eq('sender_id', selected)
+          .eq('read', false)
+          .then(() => {
+            // Clear unread badge for this conversation
+            setConversations(prev =>
+              prev.map(c => c.id === selected ? { ...c, unread: 0 } : c)
+            )
+          })
+      }
     } catch (err) {
       console.error('Fetch messages catch:', err)
     }
@@ -328,6 +345,17 @@ export default function Messages() {
       if (data) {
         setMessages(prev => [...prev, mapDbMessageToUi(data)])
         setNewMsg('')
+        // Bubble this conversation to top with updated last message
+        setConversations(prev => {
+          const updated = prev.map(c =>
+            c.id === selected
+              ? { ...c, lastMsg: text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), unread: 0 }
+              : c
+          )
+          const thisConvo = updated.find(c => c.id === selected)
+          const rest = updated.filter(c => c.id !== selected)
+          return thisConvo ? [thisConvo, ...rest] : updated
+        })
         setShowEmojis(false)
       }
     } catch (err) {
@@ -725,23 +753,81 @@ export default function Messages() {
   const loadConversations = async (retries = 3, delay = 1000) => {
     if (!user) return
     try {
-      // Fetch direct message chats
-      const { data: profiles, error } = await supabase.from('profiles').select('*').neq('id', user.id).limit(20)
-      if (error) throw error
-      if (profiles) {
-        setConversations(profiles.map(p => ({
-          id: p.id,
-          other: p,
-          lastMsg: 'Tap to chat',
-          time: 'Active'
-        })))
+      // 1. Fetch all matches this user is part of
+      const { data: matches, error: matchErr } = await supabase
+        .from('matches')
+        .select('id, user1_id, user2_id')
+        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+
+      if (matchErr) throw matchErr
+      if (!matches || matches.length === 0) {
+        await fetchJoinedEvents()
+        return
       }
-      // Eagerly fetch joined event group chats
+
+      // 2. For each match, get the latest message + unread count
+      const convos: ChatConversation[] = []
+
+      await Promise.all(matches.map(async (match) => {
+        const otherId = match.user1_id === user.id ? match.user2_id : match.user1_id
+
+        // Fetch other user's profile
+        const { data: otherProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', otherId)
+          .maybeSingle()
+
+        if (!otherProfile) return
+
+        // Fetch latest message in this match
+        const { data: lastMsgData } = await supabase
+          .from('messages')
+          .select('content, created_at, read, sender_id')
+          .eq('match_id', match.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        // Count unread messages sent by the other user
+        const { count: unreadCount } = await supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('match_id', match.id)
+          .eq('sender_id', otherId)
+          .eq('read', false)
+
+        const lastMsg = lastMsgData
+          ? (lastMsgData.content.startsWith('https://') ? '📷 Photo' : lastMsgData.content)
+          : 'Tap to chat'
+
+        const time = lastMsgData
+          ? new Date(lastMsgData.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          : 'Active'
+
+        convos.push({
+          id: otherId,
+          other: otherProfile,
+          lastMsg,
+          time,
+          unread: unreadCount || 0
+        })
+      }))
+
+      // 3. Sort by most recent message first
+      convos.sort((a, b) => {
+        const timeA = a.time || ''
+        const timeB = b.time || ''
+        if (timeA === 'Active') return 1
+        if (timeB === 'Active') return -1
+        return timeB.localeCompare(timeA)
+      })
+
+      setConversations(convos)
       await fetchJoinedEvents()
     } catch (err) {
       console.error('loadConversations error:', err)
       if (retries > 0) {
-        console.warn(`Retrying loadConversations in ${delay}ms... (${retries} attempts left)`)
         setTimeout(() => loadConversations(retries - 1, delay * 2), delay)
       }
     }
