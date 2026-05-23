@@ -5,6 +5,7 @@ import { useAuthStore } from '@/lib/store'
 import { toast } from 'sonner'
 import type { Profile } from '@/lib/supabase'
 import FollowButton from '@/components/FollowButton'
+import StoryBubbles from '@/components/StoryBubbles'
 import { CAMPUSES } from '@/lib/constants'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -57,13 +58,18 @@ const DiscoverCard = ({
   featured?: boolean
   index?: number
 }) => {
-  const { user } = useAuthStore()
+  const { user, profile: myProfile } = useAuthStore()
   const [photoIdx, setPhotoIdx] = useState(0)
   const [vibeCount, setVibeCount] = useState(userProfile.vibe_count || 0)
   const [sendingVibe, setSendingVibe] = useState(false)
   const [vibeSent, setVibeSent] = useState(false)
   const [ripple, setRipple] = useState<{ x: number; y: number } | null>(null)
   const isOnline = (userProfile as any).online
+
+  const sharedInterests = (userProfile.interests || []).filter(i => (myProfile?.interests || []).includes(i))
+  const matchPct = myProfile?.interests?.length 
+    ? Math.round((sharedInterests.length / Math.max(myProfile.interests.length, 1)) * 100)
+    : null
 
   const handleSendVibe = async (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!user) return toast.error('Sign in to send vibes!')
@@ -96,40 +102,35 @@ const DiscoverCard = ({
     <motion.div
       initial={{ opacity: 0, y: 40, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
+      whileHover={{ y: -6, scale: 1.01 }}
       transition={{ delay: index * 0.08, type: 'spring', stiffness: 200, damping: 24 }}
-      className={`discover-card-shell group ${featured ? 'col-span-full' : ''}`}
+      className={`discover-card-shell group ${featured ? 'col-span-full' : ''} transition-all duration-300 hover:shadow-[0_20px_60px_rgba(139,92,246,0.25)]`}
     >
       {/* gradient border glow on hover */}
       <div className="card-glow-border" />
 
-      {/* photo */}
-      <div className={`relative w-full overflow-hidden rounded-t-[26px] ${featured ? 'h-[400px] sm:h-[460px]' : 'h-[280px] sm:h-[320px]'}`}>
+      <div className={`relative w-full rounded-[28px] overflow-hidden group cursor-pointer ${featured ? 'h-[460px] sm:h-[500px]' : 'h-[320px] sm:h-[360px]'}`}>
+        {/* Photo */}
         <img
           src={userProfile.photos?.[photoIdx] || userProfile.photos?.[0]}
           alt={userProfile.name}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
         />
 
-        {/* photo strip nav */}
-        {(userProfile.photos?.length || 0) > 1 && (
-          <div className="absolute top-3 left-0 right-0 flex gap-1 px-4 z-20">
-            {userProfile.photos?.map((_, i) => (
-              <div
-                key={i}
-                className={`flex-1 h-[3px] rounded-full transition-all ${i === photoIdx ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)]' : 'bg-white/25'}`}
-              />
-            ))}
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
+
+        {/* Match Percentage Badge (Top Left) */}
+        {matchPct !== null && matchPct >= 40 && (
+          <div className="absolute top-3 left-3 z-10">
+            <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-purple-500/40 text-purple-300 text-[10px] font-black uppercase tracking-wider">
+              {matchPct}% Match ✨
+            </span>
           </div>
         )}
 
-        {/* click zones */}
-        <div className="absolute inset-0 flex z-10">
-          <div className="flex-1" onClick={() => setPhotoIdx(i => Math.max(0, i - 1))} />
-          <div className="flex-1" onClick={() => setPhotoIdx(i => Math.min((userProfile.photos?.length || 1) - 1, i + 1))} />
-        </div>
-
-        {/* badges top-right */}
-        <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 items-end">
+        {/* Top Badges (Top Right) */}
+        <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end z-10">
           {userProfile.premium && (
             <span className="premium-badge">
               <span className="text-[10px]">👑</span> PRO
@@ -142,79 +143,95 @@ const DiscoverCard = ({
             </span>
           )}
         </div>
-      </div>
 
-      {/* info panel — frosted glass */}
-      <div className="card-info-panel">
-        {/* name row */}
-        <div className="flex items-start justify-between gap-2 mb-1.5">
-          <div className="flex items-center gap-2 min-w-0">
-            <h2 className="text-white font-syne font-black text-xl sm:text-2xl tracking-tight leading-none truncate">
-              {userProfile.name}, {userProfile.age}
-            </h2>
-            {userProfile.verified && (
-              <CheckCircle className="w-5 h-5 text-purple-400 flex-shrink-0 drop-shadow-[0_0_6px_rgba(168,85,247,0.7)]" />
-            )}
-          </div>
-          {userProfile.vibe && (
-            <span className="vibe-tag">{userProfile.vibe}</span>
-          )}
-        </div>
-
-        {/* campus + course */}
-        <div className="flex flex-wrap gap-1.5 mb-2.5">
-          <div className="meta-chip">
-            <MapPin className="w-3 h-3 text-purple-400" />
-            <span className="truncate max-w-[160px]">{userProfile.campus}</span>
-          </div>
-          <div className="meta-chip">
-            <BookOpen className="w-3 h-3 text-pink-400" />
-            <span>{userProfile.course}</span>
-          </div>
-        </div>
-
-        {/* bio */}
-        <p className="text-gray-400 text-xs sm:text-sm leading-relaxed line-clamp-2 mb-3 italic">
-          "{userProfile.bio}"
-        </p>
-
-        {/* interests */}
-        {(userProfile.interests?.length ?? 0) > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-4">
-            {userProfile.interests?.slice(0, 4).map(tag => (
-              <InterestChip key={tag} label={tag} />
+        {/* Photo strip nav dots at top */}
+        {(userProfile.photos?.length || 0) > 1 && (
+          <div className="absolute top-3 left-0 right-0 flex gap-1 px-4 z-20">
+            {userProfile.photos?.map((_, i) => (
+              <div
+                key={i}
+                className={`flex-1 h-[3px] rounded-full transition-all ${i === photoIdx ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)]' : 'bg-white/25'}`}
+              />
             ))}
           </div>
         )}
 
-        {/* action buttons — below photo / outside photo area */}
-        <div className="flex gap-2.5">
-          <FollowButton
-            targetId={userProfile.id}
-            className="flex-1 py-3 rounded-2xl text-xs font-black shadow-lg"
-          />
-          <button
-            onClick={handleSendVibe}
-            disabled={sendingVibe}
-            className={`relative flex-1 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 overflow-hidden
-              ${vibeSent
-                ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)]'
-                : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
-              }`}
-          >
-            {ripple && (
-              <span
-                className="ripple-effect"
-                style={{ left: ripple.x, top: ripple.y }}
-              />
+        {/* Click zones (covers top 60% only so we don't block buttons/text at bottom) */}
+        <div className="absolute inset-x-0 top-0 h-[60%] flex z-10">
+          <div className="flex-1" onClick={() => setPhotoIdx(i => Math.max(0, i - 1))} />
+          <div className="flex-1" onClick={() => setPhotoIdx(i => Math.min((userProfile.photos?.length || 1) - 1, i + 1))} />
+        </div>
+
+        {/* Bottom content overlay */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+          {/* Name row */}
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <h3 className="font-syne font-black text-white text-xl leading-none truncate">
+                {userProfile.name}, {userProfile.age}
+              </h3>
+              {userProfile.verified && (
+                <CheckCircle className="w-5 h-5 text-purple-400 flex-shrink-0 drop-shadow-[0_0_6px_rgba(168,85,247,0.7)]" />
+              )}
+            </div>
+            {userProfile.vibe && (
+              <span className="vibe-tag flex-shrink-0">{userProfile.vibe}</span>
             )}
-            {sendingVibe
-              ? <Loader2 className="w-4 h-4 animate-spin" />
-              : vibeSent
-                ? <><Sparkles className="w-4 h-4" /> Sent!</>
-                : <><Flame className="w-4 h-4 text-orange-400" /> Vibe ({vibeCount})</>
-            }
-          </button>
+          </div>
+
+          {/* Campus + Course */}
+          <div className="flex items-center gap-3 mb-2 flex-wrap">
+            <span className="text-white/60 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+              📍 {userProfile.campus ? (userProfile.campus.length > 18 ? userProfile.campus.substring(0, 18) + '...' : userProfile.campus) : ''}
+            </span>
+            <span className="text-white/60 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+              📚 {userProfile.course}
+            </span>
+          </div>
+
+          {/* Bio */}
+          <p className="text-white/80 text-xs leading-relaxed mb-3 line-clamp-2 italic">
+            "{userProfile.bio}"
+          </p>
+
+          {/* Interest chips (max 3) */}
+          {(userProfile.interests?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {userProfile.interests?.slice(0, 3).map(tag => (
+                <InterestChip key={tag} label={tag} />
+              ))}
+            </div>
+          )}
+
+          {/* Action buttons row */}
+          <div className="flex gap-2">
+            <FollowButton
+              targetId={userProfile.id}
+              className="flex-1 py-2.5 rounded-2xl text-xs font-black shadow-lg"
+            />
+            <button
+              onClick={handleSendVibe}
+              disabled={sendingVibe}
+              className={`relative flex-1 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 overflow-hidden
+                ${vibeSent
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)]'
+                  : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
+                }`}
+            >
+              {ripple && (
+                <span
+                  className="ripple-effect"
+                  style={{ left: ripple.x, top: ripple.y }}
+                />
+              )}
+              {sendingVibe
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : vibeSent
+                  ? <><Sparkles className="w-4 h-4" /> Sent!</>
+                  : <><Flame className="w-4 h-4 text-orange-400" /> Vibe ({vibeCount})</>
+              }
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -394,6 +411,11 @@ export default function Discover() {
           </div>
         </motion.div>
 
+        {/* ── Stories Bar ────────────────────────────────────────────────── */}
+        <div className="mb-6">
+          <StoryBubbles />
+        </div>
+
         {/* ── Search bar ──────────────────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -530,20 +552,15 @@ export default function Discover() {
             ))}
           </div>
         ) : (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20 bg-white/[0.02] rounded-[32px] border border-dashed border-white/10"
-          >
-            <div className="w-16 h-16 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="w-8 h-8 text-purple-500/50" />
+          <div className="col-span-full flex flex-col items-center justify-center py-24 text-center">
+            <div className="w-24 h-24 rounded-[32px] bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-6 animate-pulse">
+              <span className="text-5xl">👀</span>
             </div>
-            <h3 className="text-white font-black text-lg mb-2">No vibes here yet</h3>
-            <p className="text-gray-500 text-sm mb-6">Try changing your filters or check back later.</p>
-            <button onClick={loadUsers} className="px-8 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">
-              Refresh Feed
-            </button>
-          </motion.div>
+            <h3 className="font-syne font-black text-2xl text-white mb-2">No one here yet</h3>
+            <p className="text-gray-500 text-sm max-w-xs mx-auto leading-relaxed">
+              Be the first to show up. Change your filters or check back when more students join your campus.
+            </p>
+          </div>
         )}
       </div>
     </main>
