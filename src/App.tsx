@@ -41,11 +41,23 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) return <Navigate to="/auth" replace />
 
+  const navigate = useNavigate()
   const handleRetry = async () => {
     if (retrying) return
     setRetrying(true)
-    try { await fetchProfile(user.id) } catch (err) {}
-    finally { setRetrying(false) }
+    try {
+      const prof = await fetchProfile(user.id)
+      if (prof && prof.onboarding_completed) {
+        // Profile loaded — clear the error, stay on current page
+        useAuthStore.setState({ profileError: null })
+        const lastPath = localStorage.getItem('turnup_last_path') || '/discover'
+        navigate(lastPath, { replace: true })
+      }
+    } catch (err) {
+      // Still failed, error screen remains
+    } finally {
+      setRetrying(false)
+    }
   }
 
   if (profileError) {
@@ -108,10 +120,17 @@ function AuthStateHandler() {
           const isAuthPage = path === '/auth' || path === '/'
           const isOnboarding = path.includes('/onboarding')
           if (!prof) {
-            if (!isOnboarding) navigate('/onboarding', { replace: true })
+            if (!isOnboarding) {
+              localStorage.setItem('turnup_last_path', window.location.pathname)
+              navigate('/onboarding', { replace: true })
+            }
           } else if (!prof.onboarding_completed) {
-            if (!isOnboarding) navigate('/onboarding', { replace: true })
+            if (!isOnboarding) {
+              localStorage.setItem('turnup_last_path', window.location.pathname)
+              navigate('/onboarding', { replace: true })
+            }
           } else if (isAuthPage || isOnboarding) {
+            localStorage.setItem('turnup_last_path', window.location.pathname)
             navigate('/discover', { replace: true })
           }
         } catch (err) {
