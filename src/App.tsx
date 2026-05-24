@@ -36,51 +36,11 @@ function PageWrapper({ children }: { children: React.ReactNode }) {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, profile, loading, profileError, fetchProfile } = useAuthStore()
-  const [retrying, setRetrying] = useState(false)
+  const { user, profile, loading } = useAuthStore()
 
   if (!user) return <Navigate to="/auth" replace />
 
-  const navigate = useNavigate()
-  const handleRetry = async () => {
-    if (retrying) return
-    setRetrying(true)
-    try {
-      const prof = await fetchProfile(user.id)
-      if (prof && prof.onboarding_completed) {
-        // Profile loaded — clear the error, stay on current page
-        useAuthStore.setState({ profileError: null })
-        const lastPath = localStorage.getItem('turnup_last_path') || '/discover'
-        navigate(lastPath, { replace: true })
-      }
-    } catch (err) {
-      // Still failed, error screen remains
-    } finally {
-      setRetrying(false)
-    }
-  }
-
-  if (profileError) {
-    return (
-      <div className="min-h-[80vh] flex items-center justify-center p-6 bg-[#030305] text-white">
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full text-center glass p-8 rounded-[2.5rem] border border-white/5 relative overflow-hidden shadow-2xl">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500" />
-          <div className="w-16 h-16 rounded-[20px] bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-6">
-            <WifiOff className="w-8 h-8 text-purple-400 animate-pulse" />
-          </div>
-          <h2 className="font-syne font-black text-2xl mb-2 text-white">Connection Lagging ⚡</h2>
-          <p className="text-gray-400 text-xs leading-relaxed mb-8">Your network is taking longer than expected. Let's try reconnecting!</p>
-          <button onClick={handleRetry} disabled={retrying}
-            className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 font-black uppercase text-xs tracking-widest hover:opacity-95 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2">
-            <RefreshCw className={`w-4 h-4 ${retrying ? 'animate-spin' : ''}`} />
-            {retrying ? 'Connecting...' : 'Reconnect Now'}
-          </button>
-        </motion.div>
-      </div>
-    )
-  }
-
+  // Show spinner only on very first load with no cache at all
   if (loading && !profile) {
     return (
       <div className="min-h-screen bg-[#030305] flex items-center justify-center">
@@ -88,20 +48,22 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
           <div className="w-16 h-16 rounded-[24px] grad-bg flex items-center justify-center mx-auto mb-6 animate-pulse shadow-[0_0_40px_rgba(159,122,234,0.4)]">
             <span className="text-white font-syne font-black text-3xl">T</span>
           </div>
-          <h2 className="text-white font-syne font-black text-xl mb-1 tracking-tight">Syncing Vibes...</h2>
-          <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em]">Connecting to Campus Network</p>
+          <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em]">Loading...</p>
         </div>
       </div>
     )
   }
 
-  // If not loading and still no profile, user is new — send to onboarding
+  // No profile after loading — new user, send to onboarding
   if (!loading && !profile) return <Navigate to="/onboarding" replace />
 
+  // Profile incomplete — send to onboarding
   if (!profile?.onboarding_completed) return <Navigate to="/onboarding" replace />
 
+  // All good — show the page
   return <PageWrapper>{children}</PageWrapper>
 }
+
 
 // Auth state handler as component so it can use useNavigate (fixes window.location.href hard reload bug)
 function AuthStateHandler() {
@@ -142,7 +104,7 @@ function AuthStateHandler() {
         useAuthStore.setState({ loading: false })
       }
     })
-    return () => subscription.unsubscribe()
+    return () => subscription.unsubscribe();
   }, [])
 
   return null
