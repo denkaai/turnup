@@ -472,3 +472,17 @@
 .animate-fade-in {
   animation: fade-in 0.25s ease forwards;
 }
+.animated-bg {
+  background: linear-gradient(135deg, #9f7aea, #ec4899);
+  background-size: 200% 200%;
+  animation: gradient-x 12s ease infinite;
+}
+
+.glow-pulse {
+  animation: glowPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { text-shadow: 0 0 10px #9f7aea, 0 0 20px #9f7aea; }
+  50% { text-shadow: 0 0 20px #9f7aea, 0 0 30px #9f7aea; }
+}

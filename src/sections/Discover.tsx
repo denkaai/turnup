@@ -300,8 +300,7 @@ const [retrying, setRetrying] = useState(false)
     try {
       const prof = await fetchProfile(user.id)
       if (prof && prof.onboarding_completed) {
-        // Profile loaded — clear the error, stay on current page
-        useAuthStore.setState({ profileError: null })
+        // Profile loaded — stay on current page
         const lastPath = localStorage.getItem('turnup_last_path') || '/discover'
         navigate(lastPath, { replace: true })
       }

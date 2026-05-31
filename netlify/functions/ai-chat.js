@@ -54,7 +54,23 @@ exports.handler = async (event) => {
     const apiKey = process.env.NVIDIA_API_KEY || process.env.VITE_NVIDIA_API_KEY;
 
     if (!apiKey) {
-      throw new Error("NVIDIA_API_KEY or VITE_NVIDIA_API_KEY is not configured");
+      return {
+        statusCode: 200,
+        headers: { 
+          ...headers,
+          "Content-Type": "application/json" 
+        },
+        body: JSON.stringify({
+          choices: [
+            {
+              message: {
+                role: "assistant",
+                content: "Yo Comrade! 😅 My AI brain is taking a quick nap because the API key is missing. But don't let that stop the sherehe! Jump into the squads and connect with the mbogi! 🚀 [NAVIGATE: /squads]"
+              }
+            }
+          ]
+        }),
+      };
     }
 
     const response = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
