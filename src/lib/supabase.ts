@@ -65,6 +65,16 @@ export type Event = {
   created_at: string
 }
 
+export type Story = {
+  id: string
+  user_id: string
+  image_url: string
+  caption: string
+  created_at: string
+  expires_at: string
+  profile?: { name: string; photos: string[] }
+}
+
 export type SwipeAction = 'like' | 'pass' | 'superlike'
 
 export type Follow = {

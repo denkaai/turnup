@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=Syne:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -17,6 +17,16 @@
     --accent3: #fbbf24;
     --green: #4ade80;
     --bottom-nav-h: 64px;
+    /* Neobrutalist accents */
+    --neon-lime: #BEFF00;
+    --cyber-yellow: #FFE814;
+    --stark-orange: #FF5733;
+    --hot-pink: #FF2D7B;
+    --brutal-black: #000000;
+    --brutal-white: #FFFFFF;
+    --brutal-border: 3px solid #000;
+    --brutal-shadow: 4px 4px 0px #000;
+    --brutal-shadow-lg: 6px 6px 0px #000;
   }
 
   * {
@@ -37,8 +47,12 @@
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
-  h1, h2, h3, h4, h5, h6, .font-syne {
+  h1, h2, h3, h4, h5, h6 {
     font-family: 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: -0.02em;
+  }
+  .font-syne {
+    font-family: 'Syne', 'Plus Jakarta Sans', sans-serif;
     letter-spacing: -0.02em;
   }
 
@@ -432,6 +446,120 @@
     right: -60px;
     background: radial-gradient(circle, rgba(236,72,153,0.14) 0%, transparent 70%);
     animation-delay: -7s;
+  }
+
+  /* ── Neobrutalist Card ── */
+  .neo-card {
+    @apply relative rounded-2xl overflow-hidden;
+    background: #0d0d16;
+    border: 3px solid rgba(255,255,255,0.12);
+    box-shadow: 4px 4px 0px rgba(0,0,0,0.8);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .neo-card:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px rgba(0,0,0,0.9);
+    border-color: var(--neon-lime);
+  }
+
+  /* ── Swipe overlay labels ── */
+  .swipe-label {
+    @apply absolute top-1/3 z-30 text-5xl font-black uppercase tracking-widest;
+    font-family: 'Syne', sans-serif;
+    text-shadow: 3px 3px 0px rgba(0,0,0,0.6);
+    pointer-events: none;
+  }
+  .swipe-label-like {
+    left: 20px;
+    color: var(--neon-lime);
+    border: 4px solid var(--neon-lime);
+    padding: 8px 24px;
+    border-radius: 12px;
+    transform: rotate(-15deg);
+  }
+  .swipe-label-pass {
+    right: 20px;
+    color: #ff4444;
+    border: 4px solid #ff4444;
+    padding: 8px 24px;
+    border-radius: 12px;
+    transform: rotate(15deg);
+  }
+
+  /* ── Story ring styles ── */
+  .story-ring-active {
+    background: conic-gradient(var(--neon-lime), var(--cyber-yellow), var(--neon-lime));
+  }
+  .story-ring-seen {
+    background: rgba(255,255,255,0.15);
+  }
+  .story-ring-create {
+    background: conic-gradient(var(--hot-pink), var(--stark-orange), var(--hot-pink));
+  }
+
+  /* ── Story viewer progress ── */
+  .story-progress-bar {
+    @apply h-[3px] rounded-full;
+    background: rgba(255,255,255,0.25);
+  }
+  .story-progress-fill {
+    @apply h-full rounded-full;
+    background: var(--brutal-white);
+    transition: width 0.1s linear;
+  }
+
+  /* ── Neobrutalist filter pill ── */
+  .neo-filter-pill {
+    @apply px-4 py-2 text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 999px;
+    color: rgba(255,255,255,0.6);
+    background: transparent;
+  }
+  .neo-filter-pill:hover {
+    border-color: var(--neon-lime);
+    color: var(--neon-lime);
+  }
+  .neo-filter-pill-active {
+    background: var(--neon-lime);
+    color: #000;
+    border-color: var(--neon-lime);
+    box-shadow: 3px 3px 0px rgba(0,0,0,0.6);
+  }
+
+  /* ── Neo search input ── */
+  .neo-search-input {
+    @apply w-full py-4 pl-12 pr-10 text-sm text-white rounded-xl outline-none transition-all;
+    background: rgba(13,13,22,0.9);
+    border: 2px solid rgba(255,255,255,0.1);
+  }
+  .neo-search-input::placeholder {
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  .neo-search-input:focus {
+    border-color: var(--neon-lime);
+    box-shadow: 0 0 0 3px rgba(190,255,0,0.15);
+    background: rgba(13,13,22,1);
+  }
+
+  /* ── Neo interest chip ── */
+  .neo-interest-chip {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider;
+    background: rgba(190,255,0,0.08);
+    border: 2px solid rgba(190,255,0,0.2);
+    border-radius: 8px;
+    color: var(--neon-lime);
+  }
+
+  /* ── Neo badge ── */
+  .neo-badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-black uppercase tracking-widest;
+    border: 2px solid currentColor;
+    border-radius: 6px;
   }
 }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { MapPin, BookOpen, CheckCircle, Loader2, X, Flame, UserPlus, Sparkles, Users } from 'lucide-react'
+import { MapPin, BookOpen, CheckCircle, Loader2, X, Flame, UserPlus, Sparkles, Users, Heart, ThumbsDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/lib/store'
 import { useNavigate } from 'react-router-dom'
@@ -9,9 +9,9 @@ import type { Profile } from '@/lib/supabase'
 import FollowButton from '@/components/FollowButton'
 import StoryBubbles from '@/components/StoryBubbles'
 import { CAMPUSES } from '@/lib/constants'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 
-/* ─── Demo users (unchanged) ─────────────────────────────────────────────── */
+/* ─── Demo users ─────────────────────────────────────────────────────────── */
 const DEMO_USERS: Profile[] = [
   { id: 'd1', name: 'Amina', age: 21, campus: 'Gretsa University', course: 'Business Administration', year: 3, bio: 'Weekend vibes only 🎉 Love dancing & good food. Looking for my squad!', photos: ['https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&h=500&fit=crop'], interests: ['Dancing', 'Food', 'Movies', 'Parties'], verified: true, online: true, gender: 'female', looking_for: 'everyone', vibe: '🎉 Party Animal', created_at: new Date().toISOString() } as any,
   { id: 'd2', name: 'Brian', age: 22, campus: 'Jomo Kenyatta University (JKUAT)', course: 'Computer Science', year: 4, bio: 'Tech bro by day, party animal by night 🚀 Always down for weekend plans', photos: ['https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=500&fit=crop'], interests: ['Coding', 'Gaming', 'Parties', 'Music'], verified: true, premium: true, online: true, gender: 'male', looking_for: 'everyone', vibe: '🎮 Gamer', created_at: new Date().toISOString() } as any,
@@ -23,7 +23,7 @@ const DEMO_USERS: Profile[] = [
 
 /* ─── Shimmer skeleton ────────────────────────────────────────────────────── */
 const ShimmerCard = ({ featured = false }: { featured?: boolean }) => (
-  <div className={`discover-card-shell ${featured ? 'col-span-full' : ''} rounded-[28px] overflow-hidden`}>
+  <div className={`neo-card ${featured ? 'col-span-full' : ''}`}>
     <div className={`shimmer-bg ${featured ? 'h-[420px]' : 'h-[340px]'} w-full`} />
     <div className="p-4 space-y-3 bg-[#0d0d14]">
       <div className="shimmer-bg h-5 w-2/3 rounded-full" />
@@ -45,40 +45,45 @@ const vibeEmoji: Record<string, string> = {
   Shopping: '🛍️', Socializing: '🤝', default: '✨',
 }
 const InterestChip = ({ label }: { label: string }) => (
-  <span className="interest-chip">
+  <span className="neo-interest-chip">
     {vibeEmoji[label] ?? vibeEmoji.default} {label}
   </span>
 )
 
-/* ─── Profile card ────────────────────────────────────────────────────────── */
+/* ─── Swipeable Profile Card ─────────────────────────────────────────────── */
+const SWIPE_THRESHOLD = 120
+
 const DiscoverCard = ({
   userProfile,
   featured = false,
   index = 0,
+  onSwiped,
 }: {
   userProfile: Profile
   featured?: boolean
   index?: number
+  onSwiped?: (direction: 'like' | 'pass') => void
 }) => {
   const { user, profile: myProfile } = useAuthStore()
   const [photoIdx, setPhotoIdx] = useState(0)
   const [vibeCount, setVibeCount] = useState(userProfile.vibe_count || 0)
   const [sendingVibe, setSendingVibe] = useState(false)
   const [vibeSent, setVibeSent] = useState(false)
-  const [ripple, setRipple] = useState<{ x: number; y: number } | null>(null)
   const isOnline = (userProfile as any).online
 
+  // Drag state
+  const x = useMotionValue(0)
+  const rotate = useTransform(x, [-300, 0, 300], [-18, 0, 18])
+  const likeOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1])
+  const passOpacity = useTransform(x, [-SWIPE_THRESHOLD, 0], [1, 0])
+
   const sharedInterests = (userProfile.interests || []).filter(i => (myProfile?.interests || []).includes(i))
-  const matchPct = myProfile?.interests?.length 
+  const matchPct = myProfile?.interests?.length
     ? Math.round((sharedInterests.length / Math.max(myProfile.interests.length, 1)) * 100)
     : null
 
   const handleSendVibe = async (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!user) return toast.error('Sign in to send vibes!')
-    const rect = e.currentTarget.getBoundingClientRect()
-    setRipple({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-    setTimeout(() => setRipple(null), 600)
-
     const today = new Date().toISOString().split('T')[0]
     const vibeKey = `vibe_${user.id}_${userProfile.id}_${today}`
     if (localStorage.getItem(vibeKey)) return toast.info('Vibe already sent today!')
@@ -100,33 +105,56 @@ const DiscoverCard = ({
     }
   }
 
+  const handleDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
+    const swipe = info.offset.x
+    const velocity = info.velocity.x
+    if (swipe > SWIPE_THRESHOLD || velocity > 500) {
+      onSwiped?.('like')
+      toast.success(`Liked ${userProfile.name}! 💚`, { duration: 1500 })
+    } else if (swipe < -SWIPE_THRESHOLD || velocity < -500) {
+      onSwiped?.('pass')
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 40, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      whileHover={{ y: -6, scale: 1.01 }}
+      exit={{ opacity: 0, x: 300, rotate: 20, transition: { duration: 0.3 } }}
       transition={{ delay: index * 0.08, type: 'spring', stiffness: 200, damping: 24 }}
-      className={`discover-card-shell group ${featured ? 'col-span-full' : ''} transition-all duration-300 hover:shadow-[0_20px_60px_rgba(139,92,246,0.25)]`}
+      style={{ x, rotate }}
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.8}
+      onDragEnd={handleDragEnd}
+      whileTap={{ cursor: 'grabbing' }}
+      className={`neo-card group ${featured ? 'col-span-full' : ''} touch-none select-none`}
     >
-      {/* gradient border glow on hover */}
-      <div className="card-glow-border" />
+      {/* LIKE / PASS stamp overlays */}
+      <motion.div style={{ opacity: likeOpacity }} className="swipe-label swipe-label-like">
+        LIKE
+      </motion.div>
+      <motion.div style={{ opacity: passOpacity }} className="swipe-label swipe-label-pass">
+        NOPE
+      </motion.div>
 
-      <div className={`relative w-full rounded-[28px] overflow-hidden group cursor-pointer ${featured ? 'h-[460px] sm:h-[500px]' : 'h-[320px] sm:h-[360px]'}`}>
+      <div className={`relative w-full overflow-hidden ${featured ? 'h-[460px] sm:h-[500px]' : 'h-[320px] sm:h-[360px]'}`}>
         {/* Photo */}
         <img
           src={userProfile.photos?.[photoIdx] || userProfile.photos?.[0]}
           alt={userProfile.name}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          draggable={false}
         />
 
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
 
-        {/* Match Percentage Badge (Top Left) */}
+        {/* Match Badge (Top Left) */}
         {matchPct !== null && matchPct >= 40 && (
           <div className="absolute top-3 left-3 z-10">
-            <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-purple-500/40 text-purple-300 text-[10px] font-black uppercase tracking-wider">
-              {matchPct}% Match ✨
+            <span className="neo-badge text-[var(--neon-lime)]">
+              {matchPct}% Match
             </span>
           </div>
         )}
@@ -134,32 +162,31 @@ const DiscoverCard = ({
         {/* Top Badges (Top Right) */}
         <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end z-10">
           {userProfile.premium && (
-            <span className="premium-badge">
+            <span className="neo-badge text-[var(--cyber-yellow)]">
               <span className="text-[10px]">👑</span> PRO
             </span>
           )}
           {isOnline && (
-            <span className="online-pulse-badge">
-              <span className="online-dot" />
-              Live
+            <span className="neo-badge text-[var(--green)]">
+              <span className="online-dot" /> Live
             </span>
           )}
         </div>
 
-        {/* Photo strip nav dots at top */}
+        {/* Photo nav dots */}
         {(userProfile.photos?.length || 0) > 1 && (
           <div className="absolute top-3 left-0 right-0 flex gap-1 px-4 z-20">
             {userProfile.photos?.map((_, i) => (
               <div
                 key={i}
-                className={`flex-1 h-[3px] rounded-full transition-all ${i === photoIdx ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)]' : 'bg-white/25'}`}
+                className={`flex-1 h-[3px] rounded-full transition-all ${i === photoIdx ? 'bg-[var(--neon-lime)] shadow-[0_0_8px_var(--neon-lime)]' : 'bg-white/20'}`}
               />
             ))}
           </div>
         )}
 
-        {/* Click zones (covers top 60% only so we don't block buttons/text at bottom) */}
-        <div className="absolute inset-x-0 top-0 h-[60%] flex z-10">
+        {/* Click zones for photos (top 55% only) */}
+        <div className="absolute inset-x-0 top-0 h-[55%] flex z-10">
           <div className="flex-1" onClick={() => setPhotoIdx(i => Math.max(0, i - 1))} />
           <div className="flex-1" onClick={() => setPhotoIdx(i => Math.min((userProfile.photos?.length || 1) - 1, i + 1))} />
         </div>
@@ -169,34 +196,36 @@ const DiscoverCard = ({
           {/* Name row */}
           <div className="flex items-center justify-between gap-2 mb-1">
             <div className="flex items-center gap-2 min-w-0">
-              <h3 className="font-syne font-black text-white text-xl leading-none truncate">
+              <h3 className="font-syne font-black text-white text-2xl leading-none truncate tracking-tight">
                 {userProfile.name}, {userProfile.age}
               </h3>
               {userProfile.verified && (
-                <CheckCircle className="w-5 h-5 text-purple-400 flex-shrink-0 drop-shadow-[0_0_6px_rgba(168,85,247,0.7)]" />
+                <CheckCircle className="w-5 h-5 text-[var(--neon-lime)] flex-shrink-0" />
               )}
             </div>
             {userProfile.vibe && (
-              <span className="vibe-tag flex-shrink-0">{userProfile.vibe}</span>
+              <span className="flex-shrink-0 text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md border-2 border-[var(--hot-pink)] text-[var(--hot-pink)] bg-[rgba(255,45,123,0.08)]">
+                {userProfile.vibe}
+              </span>
             )}
           </div>
 
           {/* Campus + Course */}
           <div className="flex items-center gap-3 mb-2 flex-wrap">
-            <span className="text-white/60 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+            <span className="text-white/50 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
               📍 {userProfile.campus ? (userProfile.campus.length > 18 ? userProfile.campus.substring(0, 18) + '...' : userProfile.campus) : ''}
             </span>
-            <span className="text-white/60 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+            <span className="text-white/50 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
               📚 {userProfile.course}
             </span>
           </div>
 
           {/* Bio */}
-          <p className="text-white/80 text-xs leading-relaxed mb-3 line-clamp-2 italic">
-            "{userProfile.bio}"
+          <p className="text-white/70 text-xs leading-relaxed mb-3 line-clamp-2 font-medium">
+            {userProfile.bio}
           </p>
 
-          {/* Interest chips (max 3) */}
+          {/* Interest chips */}
           {(userProfile.interests?.length ?? 0) > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-3">
               {userProfile.interests?.slice(0, 3).map(tag => (
@@ -205,32 +234,26 @@ const DiscoverCard = ({
             </div>
           )}
 
-          {/* Action buttons row */}
+          {/* Action buttons */}
           <div className="flex gap-2">
             <FollowButton
               targetId={userProfile.id}
-              className="flex-1 py-2.5 rounded-2xl text-xs font-black shadow-lg"
+              className="flex-1 py-2.5 rounded-xl text-xs font-black shadow-lg border-2 border-white/10 hover:border-[var(--neon-lime)] transition-all"
             />
             <button
               onClick={handleSendVibe}
               disabled={sendingVibe}
-              className={`relative flex-1 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 overflow-hidden
+              className={`relative flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 overflow-hidden border-2
                 ${vibeSent
-                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-[0_0_20px_rgba(168,85,247,0.4)]'
-                  : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
+                  ? 'bg-[var(--neon-lime)] text-black border-[var(--neon-lime)] shadow-[3px_3px_0px_rgba(0,0,0,0.5)]'
+                  : 'bg-transparent border-white/10 text-white hover:border-[var(--stark-orange)] hover:text-[var(--stark-orange)]'
                 }`}
             >
-              {ripple && (
-                <span
-                  className="ripple-effect"
-                  style={{ left: ripple.x, top: ripple.y }}
-                />
-              )}
               {sendingVibe
                 ? <Loader2 className="w-4 h-4 animate-spin" />
                 : vibeSent
                   ? <><Sparkles className="w-4 h-4" /> Sent!</>
-                  : <><Flame className="w-4 h-4 text-orange-400" /> Vibe ({vibeCount})</>
+                  : <><Flame className="w-4 h-4 text-[var(--stark-orange)]" /> Vibe ({vibeCount})</>
               }
             </button>
           </div>
@@ -275,6 +298,7 @@ export default function Discover() {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('All')
   const placeholder = useCyclingPlaceholder()
   const searchRef = useRef<HTMLInputElement>(null)
+  const [swipedIds, setSwipedIds] = useState<Set<string>>(new Set())
 
   const [showKadiBanner, setShowKadiBanner] = useState(
     () => !localStorage.getItem('kadi_banner_dismissed') &&
@@ -284,7 +308,7 @@ export default function Discover() {
   const [kadiCollapsed, setKadiCollapsed] = useState(false)
   const [showSharePrompt, setShowSharePrompt] = useState(false)
   const [registeringKadi, setRegisteringKadi] = useState(false)
-const [retrying, setRetrying] = useState(false)
+  const [retrying, setRetrying] = useState(false)
 
   useEffect(() => {
     if (profile?.is_registered_voter || localStorage.getItem('kadi_registered_locally'))
@@ -300,7 +324,6 @@ const [retrying, setRetrying] = useState(false)
     try {
       const prof = await fetchProfile(user.id)
       if (prof && prof.onboarding_completed) {
-        // Profile loaded — stay on current page
         const lastPath = localStorage.getItem('turnup_last_path') || '/discover'
         navigate(lastPath, { replace: true })
       }
@@ -357,13 +380,24 @@ const [retrying, setRetrying] = useState(false)
     }
   }
 
-  /* ─── filter logic (unchanged) ───────────────────────────────────────── */
-  let filteredUsers = users
+  const handleCardSwiped = (userId: string, direction: 'like' | 'pass') => {
+    setSwipedIds(prev => new Set(prev).add(userId))
+    // Save swipe to Supabase if user is logged in
+    if (user) {
+      supabase.from('swipes').upsert({
+        swiper_id: user.id,
+        target_id: userId,
+        action: direction,
+      }).then(() => {})
+    }
+  }
+
+  /* ─── filter logic ───────────────────────────────────────────────────── */
+  let filteredUsers = users.filter(u => !swipedIds.has(u.id))
   if (activeFilter === 'Same University' && profile?.campus)
-    filteredUsers = users.filter(u => u.campus === profile.campus)
+    filteredUsers = filteredUsers.filter(u => u.campus === profile.campus)
   else if (activeFilter === 'Same Course' && profile?.course)
-    filteredUsers = users.filter(u => u.course === profile.course)
-  
+    filteredUsers = filteredUsers.filter(u => u.course === profile.course)
 
   if (campusFilter)
     filteredUsers = filteredUsers.filter(u => u.campus?.includes(campusFilter))
@@ -383,10 +417,6 @@ const [retrying, setRetrying] = useState(false)
   return (
     <main className="page-main relative overflow-hidden bg-[#06060F] min-h-screen">
 
-      {/* ── ambient orbs ───────────────────────────────────────────────── */}
-      <div className="ambient-orb orb-purple" />
-      <div className="ambient-orb orb-pink" />
-
       {/* ── Kenyan flag bar ─────────────────────────────────────────────── */}
       <div className="absolute top-0 left-0 right-0 h-1 z-[60] flex">
         <div className="flex-1 bg-black" />
@@ -404,11 +434,11 @@ const [retrying, setRetrying] = useState(false)
           className="flex items-center justify-between mb-6 pt-2"
         >
           <div>
-            <h1 className="font-syne font-black text-4xl sm:text-5xl tracking-tight leading-none discover-gradient-text mb-1">
-              Discover
+            <h1 className="font-syne font-black text-4xl sm:text-5xl tracking-tighter leading-none text-white mb-1">
+              DISCOVER<span className="text-[var(--neon-lime)]">.</span>
             </h1>
-            <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">
-              Connect with Campus Students
+            <p className="text-white/30 text-[10px] font-black uppercase tracking-[0.25em]">
+              Swipe · Connect · Turn Up
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
@@ -416,18 +446,18 @@ const [retrying, setRetrying] = useState(false)
               <motion.span
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="online-count-badge"
+                className="neo-badge text-[var(--green)]"
               >
                 <span className="online-dot-sm" />
-                {onlineCount} online
+                {onlineCount} live
               </motion.span>
             )}
             <button
               onClick={() => setShowFilter(!showFilter)}
-              className={`w-11 h-11 rounded-2xl flex items-center justify-center border transition-all ${
+              className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all border-2 ${
                 showFilter
-                  ? 'bg-gradient-to-br from-purple-600 to-pink-600 border-transparent text-white shadow-lg shadow-purple-500/30'
-                  : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'
+                  ? 'bg-[var(--neon-lime)] border-[var(--neon-lime)] text-black shadow-[3px_3px_0px_rgba(0,0,0,0.6)]'
+                  : 'bg-transparent border-white/10 text-white/50 hover:border-[var(--neon-lime)] hover:text-[var(--neon-lime)]'
               }`}
             >
               <Users className="w-4 h-4" />
@@ -447,7 +477,7 @@ const [retrying, setRetrying] = useState(false)
           transition={{ delay: 0.1 }}
           className="relative mb-5 group"
         >
-          <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-purple-400 transition-colors pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 group-focus-within:text-[var(--neon-lime)] transition-colors pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8" strokeWidth="2" />
             <path d="m21 21-4.35-4.35" strokeWidth="2" strokeLinecap="round" />
           </svg>
@@ -456,7 +486,7 @@ const [retrying, setRetrying] = useState(false)
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={placeholder}
-            className="search-input"
+            className="neo-search-input"
           />
           <AnimatePresence>
             {search && (
@@ -465,7 +495,7 @@ const [retrying, setRetrying] = useState(false)
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 onClick={() => { setSearch(''); searchRef.current?.focus() }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/20 transition-all"
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-md bg-white/10 flex items-center justify-center text-white/40 hover:text-white hover:bg-white/20 transition-all border border-white/10"
               >
                 <X className="w-3 h-3" />
               </motion.button>
@@ -482,7 +512,7 @@ const [retrying, setRetrying] = useState(false)
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.15 + i * 0.06 }}
               onClick={() => setActiveFilter(key)}
-              className={`filter-pill whitespace-nowrap ${activeFilter === key ? 'filter-pill-active' : 'filter-pill-inactive'}`}
+              className={`neo-filter-pill whitespace-nowrap ${activeFilter === key ? 'neo-filter-pill-active' : ''}`}
             >
               {label}
             </motion.button>
@@ -498,12 +528,12 @@ const [retrying, setRetrying] = useState(false)
               exit={{ opacity: 0, height: 0, marginBottom: 0 }}
               className="overflow-hidden"
             >
-              <div className="bg-[#0F0F1A] border border-white/5 p-5 rounded-[24px]">
-                <h4 className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-3">Filter by Campus</h4>
+              <div className="bg-[#0d0d16] border-2 border-white/10 p-5 rounded-xl">
+                <h4 className="text-[10px] text-white/30 font-black uppercase tracking-[0.2em] mb-3">Filter by Campus</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     onClick={() => setCampusFilter('')}
-                    className={`text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all ${!campusFilter ? 'bg-gradient-to-r from-purple-600/80 to-pink-600/80 text-white shadow-lg' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
+                    className={`text-left px-4 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all border-2 ${!campusFilter ? 'bg-[var(--neon-lime)] text-black border-[var(--neon-lime)] shadow-[3px_3px_0px_rgba(0,0,0,0.5)]' : 'bg-transparent border-white/10 text-white/50 hover:border-white/30'}`}
                   >
                     All Campuses
                   </button>
@@ -511,7 +541,7 @@ const [retrying, setRetrying] = useState(false)
                     <button
                       key={c}
                       onClick={() => setCampusFilter(c)}
-                      className={`text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all ${campusFilter === c ? 'bg-gradient-to-r from-purple-600/80 to-pink-600/80 text-white shadow-lg' : 'bg-white/5 text-gray-500 hover:bg-white/10'}`}
+                      className={`text-left px-4 py-3 rounded-xl text-xs font-bold transition-all border-2 ${campusFilter === c ? 'bg-[var(--neon-lime)] text-black border-[var(--neon-lime)] shadow-[3px_3px_0px_rgba(0,0,0,0.5)]' : 'bg-transparent border-white/10 text-white/50 hover:border-white/30'}`}
                     >
                       {c}
                     </button>
@@ -529,28 +559,28 @@ const [retrying, setRetrying] = useState(false)
               initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, height: 0 }}
-              className="bg-gradient-to-br from-[#0F0F1A] to-[#08080F] border border-white/5 rounded-[28px] p-5 mb-6 relative overflow-hidden shadow-2xl"
+              className="neo-card p-5 mb-6 relative overflow-hidden"
             >
               <div className="absolute top-0 left-0 right-0 h-1.5 flex">
                 <div className="flex-1 bg-black" />
                 <div className="flex-1 bg-red-600" />
                 <div className="flex-1 bg-green-600" />
               </div>
-              <button onClick={() => setKadiCollapsed(true)} className="absolute top-4 right-4 text-gray-600 hover:text-white transition-colors">
+              <button onClick={() => setKadiCollapsed(true)} className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors">
                 <X className="w-4 h-4" />
               </button>
-              <div className="inline-block px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black text-white mb-3 uppercase tracking-widest">🇰🇪 2027 Ready</div>
-              <h2 className="font-syne font-black text-xl text-white mb-4 leading-tight">Uko na KADI? <br /> Your vote is your power.</h2>
+              <div className="inline-block px-2.5 py-1 rounded-md bg-transparent border-2 border-[var(--stark-orange)] text-[9px] font-black text-[var(--stark-orange)] mb-3 uppercase tracking-widest">🇰🇪 2027 Ready</div>
+              <h2 className="font-syne font-black text-xl text-white mb-4 leading-tight">Uko na KADI? <br />Your vote is your power.</h2>
               {showSharePrompt ? (
-                <button onClick={copyShareLink} className="w-full py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black uppercase text-[10px] tracking-widest shadow-lg">
+                <button onClick={copyShareLink} className="w-full py-3 rounded-xl bg-[var(--neon-lime)] text-black font-black uppercase text-[10px] tracking-widest shadow-[3px_3px_0px_rgba(0,0,0,0.5)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[5px_5px_0px_rgba(0,0,0,0.5)] transition-all">
                   📲 Share & Earn Badge
                 </button>
               ) : (
                 <div className="flex gap-2">
-                  <button onClick={handleRegisterKadi} disabled={registeringKadi} className="flex-1 py-3 rounded-2xl bg-red-600 text-white font-black uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all shadow-lg shadow-red-600/20">
+                  <button onClick={handleRegisterKadi} disabled={registeringKadi} className="flex-1 py-3 rounded-xl bg-red-600 text-white font-black uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all border-2 border-red-500 shadow-[3px_3px_0px_rgba(0,0,0,0.5)]">
                     {registeringKadi ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Yes, I'm Registered"}
                   </button>
-                  <button onClick={dismissKadiBanner} className="flex-1 py-3 rounded-2xl bg-white/5 text-white font-bold text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5">
+                  <button onClick={dismissKadiBanner} className="flex-1 py-3 rounded-xl bg-transparent text-white/50 font-bold text-[10px] uppercase tracking-widest hover:text-white transition-all border-2 border-white/10 hover:border-white/30">
                     Maybe Later
                   </button>
                 </div>
@@ -558,6 +588,20 @@ const [retrying, setRetrying] = useState(false)
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* ── Swipe instruction ────────────────────────────────────────────── */}
+        {!loading && filteredUsers.length > 0 && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="text-center text-white/20 text-[9px] font-black uppercase tracking-[0.3em] mb-4 flex items-center justify-center gap-3"
+          >
+            <span className="flex items-center gap-1"><ThumbsDown className="w-3 h-3" /> ← Swipe</span>
+            <span className="w-1 h-1 rounded-full bg-white/20" />
+            <span className="flex items-center gap-1">Swipe → <Heart className="w-3 h-3" /></span>
+          </motion.p>
+        )}
 
         {/* ── Cards grid ─────────────────────────────────────────────────────── */}
         {loading ? (
@@ -568,22 +612,43 @@ const [retrying, setRetrying] = useState(false)
           </div>
         ) : filteredUsers.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {featured && (
-              <DiscoverCard key={featured.id} userProfile={featured} featured index={0} />
-            )}
-            {rest.map((u, i) => (
-              <DiscoverCard key={u.id} userProfile={u} index={i + 1} />
-            ))}
+            <AnimatePresence mode="popLayout">
+              {featured && (
+                <DiscoverCard
+                  key={featured.id}
+                  userProfile={featured}
+                  featured
+                  index={0}
+                  onSwiped={(dir) => handleCardSwiped(featured.id, dir)}
+                />
+              )}
+              {rest.map((u, i) => (
+                <DiscoverCard
+                  key={u.id}
+                  userProfile={u}
+                  index={i + 1}
+                  onSwiped={(dir) => handleCardSwiped(u.id, dir)}
+                />
+              ))}
+            </AnimatePresence>
           </div>
         ) : (
           <div className="col-span-full flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-24 h-24 rounded-[32px] bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mx-auto mb-6 animate-pulse">
+            <div className="w-24 h-24 rounded-xl bg-transparent border-3 border-white/10 flex items-center justify-center mx-auto mb-6">
               <span className="text-5xl">👀</span>
             </div>
-            <h3 className="font-syne font-black text-2xl text-white mb-2">No one here yet</h3>
-            <p className="text-gray-500 text-sm max-w-xs mx-auto leading-relaxed">
+            <h3 className="font-syne font-black text-2xl text-white mb-2 tracking-tight">No one here yet</h3>
+            <p className="text-white/40 text-sm max-w-xs mx-auto leading-relaxed">
               Be the first to show up. Change your filters or check back when more students join your campus.
             </p>
+            {swipedIds.size > 0 && (
+              <button
+                onClick={() => setSwipedIds(new Set())}
+                className="mt-6 px-6 py-3 rounded-xl bg-[var(--neon-lime)] text-black font-black uppercase text-xs tracking-wider shadow-[3px_3px_0px_rgba(0,0,0,0.5)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[5px_5px_0px_rgba(0,0,0,0.5)] transition-all"
+              >
+                Reset Swipes
+              </button>
+            )}
           </div>
         )}
       </div>

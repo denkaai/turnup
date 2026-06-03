@@ -220,3 +220,40 @@ $$ language plpgsql;
 create trigger on_profile_updated
   before update on public.profiles
   for each row execute procedure public.handle_updated_at();
+
+-- ============================================
+-- STORIES TABLE (24h ephemeral stories)
+-- ============================================
+create table if not exists public.stories (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  image_url text not null,
+  caption text default '',
+  created_at timestamptz default now(),
+  expires_at timestamptz default (now() + interval '24 hours')
+);
+
+alter table public.stories enable row level security;
+
+create policy "Stories are viewable by authenticated users"
+  on public.stories for select
+  using (auth.role() = 'authenticated' and expires_at > now());
+
+create policy "Users can insert their own stories"
+  on public.stories for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can delete their own stories"
+  on public.stories for delete
+  using (auth.uid() = user_id);
+
+-- Auto-cleanup expired stories (run via pg_cron or manually)
+create or replace function public.cleanup_expired_stories()
+returns void as $$
+begin
+  delete from public.stories where expires_at < now();
+end;
+$$ language plpgsql;
+
+-- Enable realtime for stories
+alter publication supabase_realtime add table public.stories;
