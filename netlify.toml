@@ -18,9 +18,6 @@
 [build.environment]
   NODE_VERSION = "20"
 
-[[plugins]]
-  package = "@netlify/plugin-scheduled-functions"
-
 [[scheduled-functions]]
   name = "keep-alive"
   schedule = "0 9 */3 * *"

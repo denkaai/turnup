@@ -1,7 +1,5 @@
-node_modules/
-dist/
-.env.local
-.env
-.netlify/
-*.log
-.DS_Store
+node_modules/ 
+dist/ 
+.env.local 
+.netlify/ 
+.netlify.zip 
