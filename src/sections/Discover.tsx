@@ -333,7 +333,7 @@ const [retrying, setRetrying] = useState(false)
   }
 
   const copyShareLink = () => {
-    navigator.clipboard.writeText("I'm registered to vote in 2027! Are you? Get your KADI badge on TurnUp. https://turnupcampus.netlify.app/")
+    navigator.clipboard.writeText("I'm registered to vote in 2027! Are you? Get your KADI badge on TurnUp. https://turnup-4bl.pages.dev/")
     toast.success('Link copied! Share it with friends.')
     dismissKadiBanner()
   }

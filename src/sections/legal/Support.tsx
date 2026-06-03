@@ -12,13 +12,13 @@ export default function Support() {
         </p>
 
         <div className="space-y-4">
-          <a href="mailto:support@turnupcampus.netlify.app" className="flex items-center gap-4 p-5 rounded-[24px] bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
+          <a href="mailto:support@turnup-4bl.pages.dev" className="flex items-center gap-4 p-5 rounded-[24px] bg-white/5 border border-white/10 hover:bg-white/10 transition-all group">
             <div className="w-12 h-12 rounded-xl grad-bg flex items-center justify-center">
               <Mail className="w-6 h-6 text-white" />
             </div>
             <div>
               <h3 className="text-white font-bold uppercase text-xs tracking-widest mb-1">Email Us</h3>
-              <p className="text-gray-500 text-[10px]">support@turnupcampus.netlify.app</p>
+              <p className="text-gray-500 text-[10px]">support@turnup-4bl.pages.dev</p>
             </div>
           </a>
 

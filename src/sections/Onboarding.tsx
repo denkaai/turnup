@@ -29,6 +29,12 @@ export default function Onboarding() {
   const [step, setStep] = useState(1)
 
   useEffect(() => {
+    if (!user) {
+      navigate('/auth')
+    }
+  }, [user, navigate])
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const s = params.get('step')
     if (s) {
@@ -119,7 +125,7 @@ export default function Onboarding() {
     try {
       // Validate profile photo containing human face
       const base64Img = await fileToBase64(file)
-      const valRes = await fetch('/.netlify/functions/validate-face', {
+      const valRes = await fetch('/api/validate-face', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: base64Img })

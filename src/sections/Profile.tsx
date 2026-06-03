@@ -198,7 +198,7 @@ export default function Profile() {
     try {
       // Validate profile photo containing human face
       const base64Img = await fileToBase64(file)
-      const valRes = await fetch('/.netlify/functions/validate-face', {
+      const valRes = await fetch('/api/validate-face', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: base64Img })
